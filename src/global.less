@@ -92,3 +92,83 @@ ol {
     }
   }
 }
+
+
+
+/* 1. 子菜单变成“一行两个” */
+.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item {
+  float: left;             /* 左浮动实现横排 */
+  width: 50% !important;   /* 强制各占一半宽度 */
+  margin: 0 !important;
+  margin-bottom: 4px !important;
+  
+  /* 10px让子菜单文字完美对齐上一级图标的文字位置 */
+  padding-left: 10px !important; 
+  padding-right: 4px !important;
+  transition: none !important; /* 关掉动画防止卡顿 */
+}
+
+/* 2. 清除浮动 (解决点击收起时卡住的 Bug) */
+.ant-layout-sider .ant-menu-sub.ant-menu-inline::after {
+  display: block;
+  clear: both;
+  height: 0;
+  visibility: hidden;
+}
+
+/* 3.父级菜单选中时，强制保持“深灰色” (不让它变蓝) */
+.ant-layout-sider .ant-menu-submenu-selected > .ant-menu-submenu-title {
+  color: #595959 !important; 
+  font-weight: normal !important;
+}
+/* 6. 防止长文字换行导致布局错位 */
+.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item .ant-menu-title-content {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ant-layout-sider {
+  // 1. 设置四个角为圆角 (数值越大越圆)
+  border-radius: 16px !important;
+  
+  // 2. 关键：保证内部内容不会溢出圆角 (否则直角的背景色会露出来)
+  overflow: hidden !important;
+
+  // 3. 设置距离顶部的距离
+  margin-top: 16px ; 
+  margin-left: 16px; 
+
+
+  // 因为侧边栏是固定定位的，加了 margin-top 后，必须减小高度，否则底部会超出屏幕
+  height: calc(100vh - 88px)!important;
+  
+  // 6. 去掉右边的边框线 (既然都悬浮了，就不需要分割线了)
+  border-right: none !important;
+}
+
+// 1. 选中侧边栏(Sider)、它的子容器(Children) 以及 菜单本体(Menu)
+// 只要是侧边栏里的东西，通通不许显示滚动条
+.ant-layout-sider,
+.ant-layout-sider-children,
+.ant-layout-sider .ant-menu,
+.ant-layout-sider-children > div {
+  
+  // 【针对 Chrome, Safari, Edge (Webkit内核)】
+  &::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
+  }
+
+  // 【针对 Firefox】
+  scrollbar-width: none !important;
+
+  // 【针对 IE 10+】
+  -ms-overflow-style: none !important;
+}
+
+
+

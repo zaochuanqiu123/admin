@@ -66,10 +66,13 @@ export const layout: RunTimeLayoutConfig = ({
   setInitialState,
 }) => {
   return {
+    // 关闭sider菜单栏展开按钮
+    collapsedButtonRender: false,
     actionsRender: () => [
       <Question key="doc" />,
       <SelectLang key="SelectLang" />,
     ],
+    
     avatarProps: {
       src: initialState?.currentUser?.avatar,
       title: <AvatarName />,
