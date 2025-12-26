@@ -1,5 +1,5 @@
 import { LinkOutlined } from '@ant-design/icons';
-import type { Settings as LayoutSettings } from '@ant-design/pro-components';
+import type { MenuDataItem, Settings as LayoutSettings } from '@ant-design/pro-components';
 import { SettingDrawer } from '@ant-design/pro-components';
 import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
 import { history, Link } from '@umijs/max';
@@ -19,6 +19,51 @@ import '@ant-design/v5-patch-for-react-19';
 const isDev =
   process.env.NODE_ENV === 'development' || process.env.CI;
 const loginPath = '/user/login';
+
+// 判断当前 pathname 是否落在某个菜单 path 下（用于匹配“一级菜单”）
+function isPathMatch(basePath: string, pathname: string) {
+  if (!basePath || !pathname) return false;
+  if (basePath === '/') return pathname === '/';
+
+  const base = basePath.endsWith('/') ? basePath.slice(0, -1) : basePath;
+  return pathname === base || pathname.startsWith(`${base}/`);
+}
+
+// 在一级菜单中找到与当前 pathname 最匹配的那一项（取 path 最长的命中项）
+function findTopLevelMenuItem(menuData: MenuDataItem[] | undefined, pathname: string) {
+  if (!menuData || menuData.length === 0) return undefined;
+
+  let best: MenuDataItem | undefined;
+  for (const item of menuData) {
+    const p = item?.path;
+    if (!p) continue;
+    if (isPathMatch(p, pathname)) {
+      if (!best || (best.path?.length ?? 0) < p.length) {
+        best = item;
+      }
+    }
+  }
+
+  return best;
+}
+
+// 统计某个菜单节点下“可展示的叶子页面数量”（用于 A2：<=1 则认为无需展示左侧菜单）
+function countVisibleLeaves(items: MenuDataItem[] | undefined): number {
+  if (!items || items.length === 0) return 0;
+
+  let total = 0;
+  for (const item of items) {
+    if ((item as any)?.hideInMenu) continue;
+    const children = item?.children?.filter((c) => !(c as any)?.hideInMenu);
+    if (children && children.length > 0) {
+      total += countVisibleLeaves(children);
+      continue;
+    }
+    if (item?.path) total += 1;
+  }
+
+  return total;
+}
 
 /**
  * @see https://umijs.org/docs/api/runtime-config#getinitialstate
@@ -66,12 +111,30 @@ export const layout: RunTimeLayoutConfig = ({
   setInitialState,
 }) => {
   return {
+    menu:{
+      locale:false
+    },
     // 关闭sider菜单栏展开按钮
     collapsedButtonRender: false,
     actionsRender: () => [
-      <Question key="doc" />,
-      <SelectLang key="SelectLang" />,
+      // <Question key="doc" />,
+      // <SelectLang key="SelectLang" />,
     ],
+    menuRender: (
+      menuProps: { menuData?: MenuDataItem[]; location?: { pathname?: string } },
+      defaultDom,
+    ) => {
+      const pathname = menuProps?.location?.pathname ?? history.location.pathname;
+      // 1) 先定位：当前属于哪个“一级菜单”
+      const top = findTopLevelMenuItem(menuProps?.menuData, pathname);
+
+      if (!top) return defaultDom;
+
+      // 2) 统计：该一级菜单下可达的“叶子页面”数量
+      const leafCount = countVisibleLeaves(top.children) || (top.path ? 1 : 0);
+      // 3) 规则：叶子页面数量 <= 1 时隐藏左侧（只保留 Header 和内容区）
+      return leafCount <= 1 ? null : defaultDom;
+    },
     
     avatarProps: {
       src: initialState?.currentUser?.avatar,

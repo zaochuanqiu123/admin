@@ -118,7 +118,7 @@ ol {
 
 /* 3.父级菜单选中时，强制保持“深灰色” (不让它变蓝) */
 .ant-layout-sider .ant-menu-submenu-selected > .ant-menu-submenu-title {
-  color: #595959 !important; 
+  color: #36373D !important; 
   font-weight: normal !important;
 }
 /* 6. 防止长文字换行导致布局错位 */
@@ -132,7 +132,7 @@ ol {
 .ant-layout-sider {
   // 1. 设置四个角为圆角 (数值越大越圆)
   border-radius: 16px !important;
-  
+  padding: 14px 0 24px !important;
   // 2. 关键：保证内部内容不会溢出圆角 (否则直角的背景色会露出来)
   overflow: hidden !important;
 
@@ -164,11 +164,91 @@ ol {
   }
 
   // 【针对 Firefox】
-  scrollbar-width: none !important;
+  scrollbar-width: none !important;                            
 
   // 【针对 IE 10+】
   -ms-overflow-style: none !important;
 }
+.ant-pro-top-nav-header-menu {
+ margin-left: 58px;
+}
+.ant-pro-top-nav-header-menu .ant-menu-item .ant-menu-title-content {
+  font-size: 16px !important;  /* 改这里的大小 */
+}
+.ant-pro-top-nav-header-menu .ant-menu-item:hover .ant-menu-title-content,
+.ant-pro-top-nav-header-menu .ant-menu-item-selected .ant-menu-title-content {
+  font-weight: 700 !important;
+}
+.ant-pro-top-nav-header-menu .ant-menu-item:hover,
+.ant-pro-top-nav-header-menu .ant-menu-submenu-title:hover {
+  color: #005BF8 !important; 
+}
+/* 3. 同时把内部文字的过渡也关掉 (双保险) */
+.ant-pro-top-nav-header-menu .ant-menu-item .ant-menu-title-content {
+  transition: none !important;
+}
+.ant-pro-top-nav-header-menu .ant-menu-item,
+.ant-pro-top-nav-header-menu .ant-menu-submenu-title {
+  transition: none !important; 
+}
+// =================================================================
+// 彻底移除侧边栏所有动画 (包括 Hover 变色)
+// =================================================================
 
+// 1. 选中侧边栏里的【所有东西】以及它们的【伪元素】
+.ant-layout-sider *,
+.ant-layout-sider *::before,
+.ant-layout-sider *::after {
+  transition: none !important;
+  animation: none !important;
+}
 
+// 2. 特别针对 Hover 和 Active 状态，强制瞬间变色
+.ant-layout-sider .ant-menu-item:hover,
+.ant-layout-sider .ant-menu-item-active,
+.ant-layout-sider .ant-menu-submenu-title:hover {
+  transition: none !important;
+  
+}
 
+.ant-pro-drawer-sider .ant-drawer-content-wrapper {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.ant-pro-drawer-sider .ant-drawer-content,
+.ant-pro-drawer-sider .ant-drawer-body {
+  background: transparent !important;
+}
+
+.ant-pro-drawer-sider .ant-drawer-body {
+  padding: 16px !important;
+}
+
+.ant-pro-drawer-sider .ant-drawer-body .ant-layout-sider {
+  margin-top: 0 !important;
+  margin-left: 0 !important;
+  height: 100% !important;
+  background: #fff !important;
+  border-right: none !important;
+}
+
+.ant-pro-drawer-sider .ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item {
+  float: none !important;
+  width: 100% !important;
+  padding-left: 50px !important;
+}
+
+.ant-pro-drawer-sider .ant-layout-sider .ant-menu-item-icon,
+.ant-pro-drawer-sider .ant-layout-sider .ant-menu-submenu-title .anticon,
+.ant-pro-drawer-sider .ant-layout-sider .ant-menu-item .anticon {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  color: #36373D !important;
+}
+
+.ant-pro-drawer-sider .ant-layout-sider .ant-menu-item-selected .ant-menu-item-icon,
+.ant-pro-drawer-sider .ant-layout-sider .ant-menu-item-selected .anticon {
+  color: #005BF8 !important;
+}
