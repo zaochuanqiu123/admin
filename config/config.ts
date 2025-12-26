@@ -83,9 +83,10 @@ export default defineConfig({
    * @name layout 插件
    * @doc https://umijs.org/docs/max/layout-menu
    */
-  title: 'Ant Design Pro',
+  
   layout: {
     locale: true,
+    title: 'Ant Design Pro',
     ...defaultSettings,
   },
   /**
@@ -119,6 +120,7 @@ export default defineConfig({
       theme: {
         cssVar: true,
         token: {
+          colorBgLayout: '#E9EDF9',
           fontFamily: 'AlibabaSans, sans-serif',
         },
       },

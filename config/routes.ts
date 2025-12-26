@@ -56,19 +56,64 @@ export default [
         name: 'analysis',
         icon: 'smile',
         path: '/dashboard/analysis',
-        component: './dashboard/analysis',
+        routes: [
+          {
+            path: '/dashboard/analysis',
+            redirect: '/dashboard/analysis/sub1',
+          },
+          {
+            name: '子菜单一',
+            path: '/dashboard/analysis/sub1',
+            component: './dashboard/analysis/sub1',
+          },
+          {
+            name: '子菜单二',
+            path: '/dashboard/analysis/sub2',
+            component: './dashboard/analysis/sub2',
+          },
+        ],
       },
       {
         name: 'monitor',
         icon: 'smile',
         path: '/dashboard/monitor',
-        component: './dashboard/monitor',
+        routes: [
+          {
+            path: '/dashboard/monitor',
+            redirect: '/dashboard/monitor/sub1',
+          },
+          {
+            name: '子菜单一',
+            path: '/dashboard/monitor/sub1',
+            component: './dashboard/monitor/sub1',
+          },
+          {
+            name: '子菜单二',
+            path: '/dashboard/monitor/sub2',
+            component: './dashboard/monitor/sub2',
+          },
+        ],
       },
       {
         name: 'workplace',
         icon: 'smile',
         path: '/dashboard/workplace',
-        component: './dashboard/workplace',
+        routes: [
+          {
+            path: '/dashboard/workplace',
+            redirect: '/dashboard/workplace/sub1',
+          },
+          {
+            name: '子菜单一',
+            path: '/dashboard/workplace/sub1',
+            component: './dashboard/workplace/sub1',
+          },
+          {
+            name: '子菜单二',
+            path: '/dashboard/workplace/sub2',
+            component: './dashboard/workplace/sub2',
+          },
+        ],
       },
     ],
   },
@@ -85,19 +130,64 @@ export default [
         name: 'basic-form',
         icon: 'smile',
         path: '/form/basic-form',
-        component: './form/basic-form',
+        routes: [
+          {
+            path: '/form/basic-form',
+            redirect: '/form/basic-form/sub1',
+          },
+          {
+            name: '子菜单一',
+            path: '/form/basic-form/sub1',
+            component: './form/basic-form/sub1',
+          },
+          {
+            name: '子菜单二',
+            path: '/form/basic-form/sub2',
+            component: './form/basic-form/sub2',
+          },
+        ],
       },
       {
         name: 'step-form',
         icon: 'smile',
         path: '/form/step-form',
-        component: './form/step-form',
+        routes: [
+          {
+            path: '/form/step-form',
+            redirect: '/form/step-form/sub1',
+          },
+          {
+            name: '子菜单一',
+            path: '/form/step-form/sub1',
+            component: './form/step-form/sub1',
+          },
+          {
+            name: '子菜单二',
+            path: '/form/step-form/sub2',
+            component: './form/step-form/sub2',
+          },
+        ],
       },
       {
         name: 'advanced-form',
         icon: 'smile',
         path: '/form/advanced-form',
-        component: './form/advanced-form',
+        routes: [
+          {
+            path: '/form/advanced-form',
+            redirect: '/form/advanced-form/sub1',
+          },
+          {
+            name: '子菜单一',
+            path: '/form/advanced-form/sub1',
+            component: './form/advanced-form/sub1',
+          },
+          {
+            name: '子菜单二',
+            path: '/form/advanced-form/sub2',
+            component: './form/advanced-form/sub2',
+          },
+        ],
       },
     ],
   },
@@ -109,6 +199,7 @@ export default [
       {
         path: '/list/search',
         name: 'search-list',
+        icon: 'table',
         component: './list/search',
         routes: [
           {
@@ -143,19 +234,64 @@ export default [
         name: 'table-list',
         icon: 'smile',
         path: '/list/table-list',
-        component: './table-list',
+        routes: [
+          {
+            path: '/list/table-list',
+            redirect: '/list/table-list/sub1',
+          },
+          {
+            name: '子菜单一',
+            path: '/list/table-list/sub1',
+            component: './table-list/sub1',
+          },
+          {
+            name: '子菜单二',
+            path: '/list/table-list/sub2',
+            component: './table-list/sub2',
+          },
+        ],
       },
       {
         name: 'basic-list',
         icon: 'smile',
         path: '/list/basic-list',
-        component: './list/basic-list',
+        routes: [
+          {
+            path: '/list/basic-list',
+            redirect: '/list/basic-list/sub1',
+          },
+          {
+            name: '子菜单一',
+            path: '/list/basic-list/sub1',
+            component: './list/basic-list/sub1',
+          },
+          {
+            name: '子菜单二',
+            path: '/list/basic-list/sub2',
+            component: './list/basic-list/sub2',
+          },
+        ],
       },
       {
         name: 'card-list',
         icon: 'smile',
         path: '/list/card-list',
-        component: './list/card-list',
+        routes: [
+          {
+            path: '/list/card-list',
+            redirect: '/list/card-list/sub1',
+          },
+          {
+            name: '子菜单一',
+            path: '/list/card-list/sub1',
+            component: './list/card-list/sub1',
+          },
+          {
+            name: '子菜单二',
+            path: '/list/card-list/sub2',
+            component: './list/card-list/sub2',
+          },
+        ],
       },
     ],
   },
@@ -172,13 +308,43 @@ export default [
         name: 'basic',
         icon: 'smile',
         path: '/profile/basic',
-        component: './profile/basic',
+        routes: [
+          {
+            path: '/profile/basic',
+            redirect: '/profile/basic/sub1',
+          },
+          {
+            name: '子菜单一',
+            path: '/profile/basic/sub1',
+            component: './profile/basic/sub1',
+          },
+          {
+            name: '子菜单二',
+            path: '/profile/basic/sub2',
+            component: './profile/basic/sub2',
+          },
+        ],
       },
       {
         name: 'advanced',
         icon: 'smile',
         path: '/profile/advanced',
-        component: './profile/advanced',
+        routes: [
+          {
+            path: '/profile/advanced',
+            redirect: '/profile/advanced/sub1',
+          },
+          {
+            name: '子菜单一',
+            path: '/profile/advanced/sub1',
+            component: './profile/advanced/sub1',
+          },
+          {
+            name: '子菜单二',
+            path: '/profile/advanced/sub2',
+            component: './profile/advanced/sub2',
+          },
+        ],
       },
     ],
   },
@@ -195,13 +361,43 @@ export default [
         name: 'success',
         icon: 'smile',
         path: '/result/success',
-        component: './result/success',
+        routes: [
+          {
+            path: '/result/success',
+            redirect: '/result/success/sub1',
+          },
+          {
+            name: '子菜单一',
+            path: '/result/success/sub1',
+            component: './result/success/sub1',
+          },
+          {
+            name: '子菜单二',
+            path: '/result/success/sub2',
+            component: './result/success/sub2',
+          },
+        ],
       },
       {
         name: 'fail',
         icon: 'smile',
         path: '/result/fail',
-        component: './result/fail',
+        routes: [
+          {
+            path: '/result/fail',
+            redirect: '/result/fail/sub1',
+          },
+          {
+            name: '子菜单一',
+            path: '/result/fail/sub1',
+            component: './result/fail/sub1',
+          },
+          {
+            name: '子菜单二',
+            path: '/result/fail/sub2',
+            component: './result/fail/sub2',
+          },
+        ],
       },
     ],
   },
@@ -218,19 +414,64 @@ export default [
         name: '403',
         icon: 'smile',
         path: '/exception/403',
-        component: './exception/403',
+        routes: [
+          {
+            path: '/exception/403',
+            redirect: '/exception/403/sub1',
+          },
+          {
+            name: '子菜单一',
+            path: '/exception/403/sub1',
+            component: './exception/403/sub1',
+          },
+          {
+            name: '子菜单二',
+            path: '/exception/403/sub2',
+            component: './exception/403/sub2',
+          },
+        ],
       },
       {
         name: '404',
         icon: 'smile',
         path: '/exception/404',
-        component: './exception/404',
+        routes: [
+          {
+            path: '/exception/404',
+            redirect: '/exception/404/sub1',
+          },
+          {
+            name: '子菜单一',
+            path: '/exception/404/sub1',
+            component: './exception/404/sub1',
+          },
+          {
+            name: '子菜单二',
+            path: '/exception/404/sub2',
+            component: './exception/404/sub2',
+          },
+        ],
       },
       {
         name: '500',
         icon: 'smile',
         path: '/exception/500',
-        component: './exception/500',
+        routes: [
+          {
+            path: '/exception/500',
+            redirect: '/exception/500/sub1',
+          },
+          {
+            name: '子菜单一',
+            path: '/exception/500/sub1',
+            component: './exception/500/sub1',
+          },
+          {
+            name: '子菜单二',
+            path: '/exception/500/sub2',
+            component: './exception/500/sub2',
+          },
+        ],
       },
     ],
   },
@@ -247,13 +488,43 @@ export default [
         name: 'center',
         icon: 'smile',
         path: '/account/center',
-        component: './account/center',
+        routes: [
+          {
+            path: '/account/center',
+            redirect: '/account/center/sub1',
+          },
+          {
+            name: '子菜单一',
+            path: '/account/center/sub1',
+            component: './account/center/sub1',
+          },
+          {
+            name: '子菜单二',
+            path: '/account/center/sub2',
+            component: './account/center/sub2',
+          },
+        ],
       },
       {
         name: 'settings',
         icon: 'smile',
         path: '/account/settings',
-        component: './account/settings',
+        routes: [
+          {
+            path: '/account/settings',
+            redirect: '/account/settings/sub1',
+          },
+          {
+            name: '子菜单一',
+            path: '/account/settings/sub1',
+            component: './account/settings/sub1',
+          },
+          {
+            name: '子菜单二',
+            path: '/account/settings/sub2',
+            component: './account/settings/sub2',
+          },
+        ],
       },
     ],
   },
