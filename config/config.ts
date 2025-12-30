@@ -139,6 +139,24 @@ export default defineConfig({
    */
   access: {},
   /**
+   * @name qiankun 微前端插件
+   * @description 配置主应用
+   * @doc https://umijs.org/docs/max/micro-frontend
+   */
+  qiankun: {
+    master: {
+      apps: [
+        {
+          name: 'ziadmin',
+          entry: '//localhost:8002',
+        },
+      ],
+      sandbox: {
+        experimentalStyleIsolation: true,
+      },
+    },
+  },
+  /**
    * @name <head> 中额外的 script
    * @description 配置 <head> 中额外的 script
    */

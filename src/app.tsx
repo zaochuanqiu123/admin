@@ -9,13 +9,7 @@ import { history, Link } from '@umijs/max';
 import { Switch, Tooltip } from 'antd';
 import React from 'react';
 import { currentUser as queryCurrentUser } from '@/api/user';
-import {
-  AvatarDropdown,
-  AvatarName,
-  Footer,
-  Question,
-  SelectLang,
-} from '@/components';
+import { AvatarDropdown, AvatarName, Footer } from '@/components';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
 import '@ant-design/v5-patch-for-react-19';

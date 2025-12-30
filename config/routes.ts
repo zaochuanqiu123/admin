@@ -460,6 +460,12 @@ const routes = [
     component: './account',
   },
   {
+    name: 'micro-app',
+    icon: 'appstore',
+    path: '/micro-app/*',
+    component: './micro-app',
+  },
+  {
     path: '/',
     redirect: '/dashboard/analysis',
   },
