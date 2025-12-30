@@ -8,6 +8,7 @@ import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
 import { history, Link } from '@umijs/max';
 import { Switch, Tooltip } from 'antd';
 import React from 'react';
+import { currentUser as queryCurrentUser } from '@/api/user';
 import {
   AvatarDropdown,
   AvatarName,
@@ -15,13 +16,29 @@ import {
   Question,
   SelectLang,
 } from '@/components';
-import { currentUser as queryCurrentUser } from '@/services/ant-design-pro/api';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
 import '@ant-design/v5-patch-for-react-19';
+import { clearToken } from '@/api/storage';
 
 const isDev = process.env.NODE_ENV === 'development' || process.env.CI;
 const loginPath = '/user/login';
+const devBypassAuth =
+  typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
+
+const apiBase = typeof __API_BASE__ !== 'undefined' ? __API_BASE__ : undefined;
+
+if (isDev && typeof window !== 'undefined') {
+  (window as any).__DEV_BYPASS_AUTH__ = devBypassAuth;
+  (window as any).__API_BASE__ = apiBase;
+}
+
+function getDevUser(): API.CurrentUser {
+  return {
+    name: 'Dev Admin',
+    access: 'admin',
+  };
+}
 
 // 判断当前 pathname 是否落在某个菜单 path 下（用于匹配“一级菜单”）
 function isPathMatch(basePath: string, pathname: string) {
@@ -80,13 +97,23 @@ export async function getInitialState(): Promise<{
   loading?: boolean;
   fetchUserInfo?: () => Promise<API.CurrentUser | undefined>;
 }> {
+  if (devBypassAuth) {
+    const currentUser = getDevUser();
+    return {
+      fetchUserInfo: async () => currentUser,
+      currentUser,
+      settings: defaultSettings as Partial<LayoutSettings>,
+    };
+  }
+
   const fetchUserInfo = async () => {
     try {
       const msg = await queryCurrentUser({
         skipErrorHandler: true,
       });
-      return msg.data;
+      return msg;
     } catch (_error) {
+      clearToken();
       history.push(loginPath);
     }
     return undefined;
@@ -179,6 +206,7 @@ export const layout: RunTimeLayoutConfig = ({
     },
     footerRender: () => <Footer />,
     onPageChange: () => {
+      if (devBypassAuth) return;
       const { location } = history;
       // 如果没有登录，重定向到 login
       if (!initialState?.currentUser && location.pathname !== loginPath) {
@@ -248,6 +276,6 @@ export const layout: RunTimeLayoutConfig = ({
  * @doc https://umijs.org/docs/max/request#配置
  */
 export const request: RequestConfig = {
-  baseURL: 'https://proapi.azurewebsites.net',
+  baseURL: apiBase,
   ...errorConfig,
 };

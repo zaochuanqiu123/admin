@@ -1,6 +1,12 @@
 ﻿import type { RequestOptions } from '@@/plugin-request/request';
 import type { RequestConfig } from '@umijs/max';
+import { history } from '@umijs/max';
 import { message, notification } from 'antd';
+import { clearToken, getToken } from '@/api/storage';
+
+const loginPath = '/user/login';
+const devBypassAuth =
+  typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
 
 // 错误处理方案： 错误类型
 enum ErrorShowType {
@@ -72,6 +78,25 @@ export const errorConfig: RequestConfig = {
       } else if (error.response) {
         // Axios 的错误
         // 请求成功发出且服务器也响应了状态码，但状态代码超出了 2xx 的范围
+        if (error.response.status === 401) {
+          if (devBypassAuth) {
+            return;
+          }
+          clearToken();
+          const { search, pathname } = window.location;
+          const urlParams = new URL(window.location.href).searchParams;
+          const redirect = urlParams.get('redirect');
+          if (pathname !== loginPath && !redirect) {
+            const searchParams = new URLSearchParams({
+              redirect: pathname + search,
+            });
+            history.replace({
+              pathname: loginPath,
+              search: searchParams.toString(),
+            });
+          }
+          return;
+        }
         message.error(`Response status:${error.response.status}`);
       } else if (error.request) {
         // 请求已经成功发起，但没有收到响应
@@ -89,20 +114,19 @@ export const errorConfig: RequestConfig = {
   requestInterceptors: [
     (config: RequestOptions) => {
       // 拦截请求配置，进行个性化处理。
-      const url = config?.url?.concat('?token=123');
-      return { ...config, url };
+      const token = getToken();
+      const headers = {
+        ...(config.headers || {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+
+      return { ...config, headers };
     },
   ],
 
   // 响应拦截器
   responseInterceptors: [
     (response) => {
-      // 拦截响应数据，进行个性化处理
-      const { data } = response as unknown as ResponseStructure;
-
-      if (data?.success === false) {
-        message.error('请求失败！');
-      }
       return response;
     },
   ],

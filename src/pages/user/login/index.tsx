@@ -23,10 +23,13 @@ import { Alert, App, Tabs } from 'antd';
 import { createStyles } from 'antd-style';
 import React, { useState } from 'react';
 import { flushSync } from 'react-dom';
+import { setToken } from '@/api/storage';
+import { getFakeCaptcha, login } from '@/api/user';
 import { Footer } from '@/components';
-import { login } from '@/services/ant-design-pro/api';
-import { getFakeCaptcha } from '@/services/ant-design-pro/login';
 import Settings from '../../../../config/defaultSettings';
+
+const devBypassAuth =
+  typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
 
 const useStyles = createStyles(({ token }) => {
   return {
@@ -133,9 +136,25 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (values: API.LoginParams) => {
     try {
+      if (devBypassAuth) {
+        setToken('dev-bypass');
+        const defaultLoginSuccessMessage = intl.formatMessage({
+          id: 'pages.login.success',
+          defaultMessage: '登录成功！',
+        });
+        message.success(defaultLoginSuccessMessage);
+        await fetchUserInfo();
+        const urlParams = new URL(window.location.href).searchParams;
+        window.location.href = urlParams.get('redirect') || '/';
+        return;
+      }
       // 登录
       const msg = await login({ ...values, type });
       if (msg.status === 'ok') {
+        const token = (msg as any)?.token ?? (msg as any)?.data?.token;
+        if (typeof token === 'string' && token.length > 0) {
+          setToken(token);
+        }
         const defaultLoginSuccessMessage = intl.formatMessage({
           id: 'pages.login.success',
           defaultMessage: '登录成功！',

@@ -9,7 +9,7 @@ import {
 import { FormattedMessage, useIntl, useRequest } from '@umijs/max';
 import { Modal, message } from 'antd';
 import React, { cloneElement, useCallback, useState } from 'react';
-import { updateRule } from '@/services/ant-design-pro/api';
+import { updateRule } from '@/api/rule';
 
 export type FormValueType = {
   target?: string;
