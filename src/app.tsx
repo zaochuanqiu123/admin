@@ -1,8 +1,12 @@
-import { LinkOutlined } from '@ant-design/icons';
-import type { MenuDataItem, Settings as LayoutSettings } from '@ant-design/pro-components';
+import { LinkOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons';
+import type {
+  Settings as LayoutSettings,
+  MenuDataItem,
+} from '@ant-design/pro-components';
 import { SettingDrawer } from '@ant-design/pro-components';
 import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
 import { history, Link } from '@umijs/max';
+import { Switch, Tooltip } from 'antd';
 import React from 'react';
 import {
   AvatarDropdown,
@@ -16,8 +20,7 @@ import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
 import '@ant-design/v5-patch-for-react-19';
 
-const isDev =
-  process.env.NODE_ENV === 'development' || process.env.CI;
+const isDev = process.env.NODE_ENV === 'development' || process.env.CI;
 const loginPath = '/user/login';
 
 // 判断当前 pathname 是否落在某个菜单 path 下（用于匹配“一级菜单”）
@@ -30,7 +33,10 @@ function isPathMatch(basePath: string, pathname: string) {
 }
 
 // 在一级菜单中找到与当前 pathname 最匹配的那一项（取 path 最长的命中项）
-function findTopLevelMenuItem(menuData: MenuDataItem[] | undefined, pathname: string) {
+function findTopLevelMenuItem(
+  menuData: MenuDataItem[] | undefined,
+  pathname: string,
+) {
   if (!menuData || menuData.length === 0) return undefined;
 
   let best: MenuDataItem | undefined;
@@ -111,20 +117,45 @@ export const layout: RunTimeLayoutConfig = ({
   setInitialState,
 }) => {
   return {
-    menu:{
-      locale:false
+    menu: {
+      locale: false,
+      defaultOpenAll: true,
     },
     // 关闭sider菜单栏展开按钮
     collapsedButtonRender: false,
-    actionsRender: () => [
-      // <Question key="doc" />,
-      // <SelectLang key="SelectLang" />,
-    ],
+    actionsRender: () => {
+      const checked = (initialState?.settings as any)?.navTheme === 'realDark';
+
+      return [
+        <Tooltip key="theme" title={checked ? '切换亮色模式' : '切换暗黑模式'}>
+          <Switch
+            checked={checked}
+            checkedChildren={<MoonOutlined />}
+            unCheckedChildren={<SunOutlined />}
+            onChange={(nextChecked) => {
+              setInitialState((preInitialState) => ({
+                ...preInitialState,
+                settings: {
+                  ...(preInitialState?.settings || {}),
+                  navTheme: nextChecked ? 'realDark' : 'light',
+                } as Partial<LayoutSettings>,
+              }));
+            }}
+          />
+        </Tooltip>,
+        // <Question key="doc" />,
+        // <SelectLang key="SelectLang" />,
+      ];
+    },
     menuRender: (
-      menuProps: { menuData?: MenuDataItem[]; location?: { pathname?: string } },
+      menuProps: {
+        menuData?: MenuDataItem[];
+        location?: { pathname?: string };
+      },
       defaultDom,
     ) => {
-      const pathname = menuProps?.location?.pathname ?? history.location.pathname;
+      const pathname =
+        menuProps?.location?.pathname ?? history.location.pathname;
       // 1) 先定位：当前属于哪个“一级菜单”
       const top = findTopLevelMenuItem(menuProps?.menuData, pathname);
 
@@ -135,7 +166,7 @@ export const layout: RunTimeLayoutConfig = ({
       // 3) 规则：叶子页面数量 <= 1 时隐藏左侧（只保留 Header 和内容区）
       return leafCount <= 1 ? null : defaultDom;
     },
-    
+
     avatarProps: {
       src: initialState?.currentUser?.avatar,
       title: <AvatarName />,

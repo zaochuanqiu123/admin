@@ -10,7 +10,7 @@
  * @param icon 配置路由的图标，取值参考 https://ant.design/components/icon-cn， 注意去除风格后缀和大小写，如想要配置图标为 <StepBackwardOutlined /> 则取值应为 stepBackward 或 StepBackward，如想要配置图标为 <UserOutlined /> 则取值应为 user 或者 User
  * @doc https://umijs.org/docs/guides/routes
  */
-export default [
+const routes = [
   {
     path: '/user',
     layout: false,
@@ -46,7 +46,6 @@ export default [
   {
     path: '/dashboard',
     name: 'dashboard',
-    icon: 'dashboard',
     routes: [
       {
         path: '/dashboard',
@@ -119,7 +118,6 @@ export default [
   },
   {
     path: '/form',
-    icon: 'form',
     name: 'form',
     routes: [
       {
@@ -141,7 +139,7 @@ export default [
             component: './form/basic-form/sub1',
           },
           {
-            name: '子菜单二',
+            name: '子菜单二123123',
             path: '/form/basic-form/sub2',
             component: './form/basic-form/sub2',
           },
@@ -193,7 +191,6 @@ export default [
   },
   {
     path: '/list',
-    icon: 'table',
     name: 'list',
     routes: [
       {
@@ -298,7 +295,6 @@ export default [
   {
     path: '/profile',
     name: 'profile',
-    icon: 'profile',
     routes: [
       {
         path: '/profile',
@@ -350,7 +346,6 @@ export default [
   },
   {
     name: 'result',
-    icon: 'CheckCircleOutlined',
     path: '/result',
     routes: [
       {
@@ -361,22 +356,7 @@ export default [
         name: 'success',
         icon: 'smile',
         path: '/result/success',
-        routes: [
-          {
-            path: '/result/success',
-            redirect: '/result/success/sub1',
-          },
-          {
-            name: '子菜单一',
-            path: '/result/success/sub1',
-            component: './result/success/sub1',
-          },
-          {
-            name: '子菜单二',
-            path: '/result/success/sub2',
-            component: './result/success/sub2',
-          },
-        ],
+        component: './result/success',
       },
       {
         name: 'fail',
@@ -403,7 +383,6 @@ export default [
   },
   {
     name: 'exception',
-    icon: 'warning',
     path: '/exception',
     routes: [
       {
@@ -477,56 +456,8 @@ export default [
   },
   {
     name: 'account',
-    icon: 'user',
     path: '/account',
-    routes: [
-      {
-        path: '/account',
-        redirect: '/account/center',
-      },
-      {
-        name: 'center',
-        icon: 'smile',
-        path: '/account/center',
-        routes: [
-          {
-            path: '/account/center',
-            redirect: '/account/center/sub1',
-          },
-          {
-            name: '子菜单一',
-            path: '/account/center/sub1',
-            component: './account/center/sub1',
-          },
-          {
-            name: '子菜单二',
-            path: '/account/center/sub2',
-            component: './account/center/sub2',
-          },
-        ],
-      },
-      {
-        name: 'settings',
-        icon: 'smile',
-        path: '/account/settings',
-        routes: [
-          {
-            path: '/account/settings',
-            redirect: '/account/settings/sub1',
-          },
-          {
-            name: '子菜单一',
-            path: '/account/settings/sub1',
-            component: './account/settings/sub1',
-          },
-          {
-            name: '子菜单二',
-            path: '/account/settings/sub2',
-            component: './account/settings/sub2',
-          },
-        ],
-      },
-    ],
+    component: './account',
   },
   {
     path: '/',
@@ -537,3 +468,94 @@ export default [
     path: '/*',
   },
 ];
+
+type RouteItem = {
+  path?: string;
+  redirect?: string;
+  component?: string;
+  routes?: RouteItem[];
+  [key: string]: any;
+};
+
+function isAbsolutePath(p: string) {
+  return p.startsWith('/');
+}
+
+function joinPath(base: string, next: string) {
+  const b = base.endsWith('/') ? base.slice(0, -1) : base;
+  const n = next.startsWith('/') ? next.slice(1) : next;
+  return `${b}/${n}`;
+}
+
+function normalizeRedirect(redirect: string, parentPath?: string) {
+  if (isAbsolutePath(redirect)) return redirect;
+  if (!parentPath) return redirect;
+  if (redirect.startsWith('./')) return joinPath(parentPath, redirect.slice(2));
+  return joinPath(parentPath, redirect);
+}
+
+function findFirstReachablePath(
+  children: RouteItem[],
+  parentPath?: string,
+): string | undefined {
+  for (const child of children) {
+    if (typeof child.redirect === 'string' && child.redirect) {
+      return normalizeRedirect(child.redirect, child.path ?? parentPath);
+    }
+    if (typeof child.path === 'string' && child.path && child.component) {
+      return child.path;
+    }
+    if (Array.isArray(child.routes) && child.routes.length > 0) {
+      const found = findFirstReachablePath(
+        child.routes,
+        child.path ?? parentPath,
+      );
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
+function ensureIndexRedirect(
+  children: RouteItem[],
+  parentPath: string,
+  target: string,
+) {
+  if (!target || target === parentPath) return children;
+
+  const idx = children.findIndex((c) => c?.path === parentPath);
+  const redirectRoute: RouteItem = {
+    ...(idx >= 0 ? children[idx] : {}),
+    path: parentPath,
+    redirect: target,
+  };
+
+  const next = idx >= 0 ? children.filter((_, i) => i !== idx) : [...children];
+  next.unshift(redirectRoute);
+  return next;
+}
+
+function patchRoutes(list: RouteItem[], parentPath?: string): RouteItem[] {
+  return list.map((route) => {
+    const next: RouteItem = { ...route };
+
+    if (typeof next.redirect === 'string' && next.redirect) {
+      next.redirect = normalizeRedirect(next.redirect, parentPath);
+    }
+
+    if (Array.isArray(next.routes) && next.routes.length > 0) {
+      next.routes = patchRoutes(next.routes, next.path ?? parentPath);
+
+      if (typeof next.path === 'string' && next.path) {
+        const target = findFirstReachablePath(next.routes, next.path);
+        if (target) {
+          next.routes = ensureIndexRedirect(next.routes, next.path, target);
+        }
+      }
+    }
+
+    return next;
+  });
+}
+
+export default patchRoutes(routes);

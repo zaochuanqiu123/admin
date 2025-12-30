@@ -98,13 +98,14 @@ ol {
 /* 1. 子菜单变成“一行两个” */
 .ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item {
   float: left;             /* 左浮动实现横排 */
-  width: 50% !important;   /* 强制各占一半宽度 */
+  width: 47% !important;   /* 右侧整体往左挪一点，让省略号更好对齐 */
+  box-sizing: border-box !important;
   margin: 0 !important;
   margin-bottom: 4px !important;
   
   /* 10px让子菜单文字完美对齐上一级图标的文字位置 */
   padding-left: 10px !important; 
-  padding-right: 4px !important;
+  padding-right: 0 !important;
   transition: none !important; /* 关掉动画防止卡顿 */
 }
 
@@ -118,7 +119,7 @@ ol {
 
 /* 3.父级菜单选中时，强制保持“深灰色” (不让它变蓝) */
 .ant-layout-sider .ant-menu-submenu-selected > .ant-menu-submenu-title {
-  color: #36373D !important; 
+  color: var(--ant-color-text) !important; 
   font-weight: normal !important;
 }
 /* 6. 防止长文字换行导致布局错位 */
@@ -133,6 +134,7 @@ ol {
   // 1. 设置四个角为圆角 (数值越大越圆)
   border-radius: 16px !important;
   padding: 14px 0 24px !important;
+  background: var(--ant-color-bg-container) !important;
   // 2. 关键：保证内部内容不会溢出圆角 (否则直角的背景色会露出来)
   overflow: hidden !important;
 
@@ -169,6 +171,19 @@ ol {
   // 【针对 IE 10+】
   -ms-overflow-style: none !important;
 }
+
+.ant-layout-sider .ant-menu-submenu-title .ant-menu-title-content {
+  font-size: 14px !important;
+}
+
+.ant-layout-sider .ant-menu-item .ant-menu-title-content {
+  font-size: 12px !important;
+  max-width: 6.5em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .ant-pro-top-nav-header-menu {
  margin-left: 58px;
 }
@@ -191,6 +206,28 @@ ol {
 .ant-pro-top-nav-header-menu .ant-menu-submenu-title {
   transition: none !important; 
 }
+
+.ant-layout-sider .ant-menu-item-selected,
+.ant-layout-sider .ant-menu-item-active,
+.ant-layout-sider .ant-menu-item-selected::after {
+  background-color: transparent !important;
+}
+
+.ant-layout-sider .ant-menu-submenu-selected > .ant-menu-submenu-title,
+.ant-layout-sider .ant-menu-submenu-active > .ant-menu-submenu-title,
+.ant-layout-sider .ant-menu-submenu-selected > .ant-menu-submenu-title::after {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.ant-pro-top-nav-header-menu .ant-menu-item-selected {
+  background: transparent !important;
+}
+
+.ant-pro-top-nav-header-menu .ant-menu-submenu-selected > .ant-menu-submenu-title {
+  background: transparent !important;
+}
+
 // =================================================================
 // 彻底移除侧边栏所有动画 (包括 Hover 变色)
 // =================================================================
@@ -229,7 +266,6 @@ ol {
   margin-top: 0 !important;
   margin-left: 0 !important;
   height: 100% !important;
-  background: #fff !important;
   border-right: none !important;
 }
 
@@ -245,7 +281,7 @@ ol {
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  color: #36373D !important;
+  color: var(--ant-color-text) !important;
 }
 
 .ant-pro-drawer-sider .ant-layout-sider .ant-menu-item-selected .ant-menu-item-icon,

@@ -89,7 +89,8 @@ const Lang = () => {
   const { styles } = useStyles();
 
   return (
-    <div className={styles.lang} data-lang>
+    <div className={styles.lang} data-lang style={{ display: 'none' }}>
+      {/* 国际化按钮已隐藏 */}
       {SelectLang && <SelectLang />}
     </div>
   );
@@ -159,16 +160,16 @@ const Login: React.FC = () => {
   };
   const { status, type: loginType } = userLoginState;
 
+  const appTitle = typeof Settings.title === 'string' ? Settings.title : '';
+  const pageTitle = `${intl.formatMessage({
+    id: 'menu.login',
+    defaultMessage: '登录页',
+  })}${appTitle ? ` - ${appTitle}` : ''}`;
+
   return (
     <div className={styles.container}>
       <Helmet>
-        <title>
-          {intl.formatMessage({
-            id: 'menu.login',
-            defaultMessage: '登录页',
-          })}
-          {Settings.title && ` - ${Settings.title}`}
-        </title>
+        <title>{pageTitle}</title>
       </Helmet>
       <Lang />
       <div
