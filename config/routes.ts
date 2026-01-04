@@ -45,7 +45,7 @@ const routes = [
   },
   {
     path: '/dashboard',
-    name: 'dashboard',
+    name: '工作台',
     routes: [
       {
         path: '/dashboard',
@@ -58,7 +58,7 @@ const routes = [
         routes: [
           {
             path: '/dashboard/analysis',
-            redirect: '/dashboard/analysis/sub1',
+            component: './dashboard/analysis/index',
           },
           {
             name: '子菜单一',

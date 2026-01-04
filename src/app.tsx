@@ -9,7 +9,7 @@ import { history, Link } from '@umijs/max';
 import { Switch, Tooltip } from 'antd';
 import React from 'react';
 import { currentUser as queryCurrentUser } from '@/api/user';
-import { AvatarDropdown, AvatarName, Footer } from '@/components';
+import { AvatarDropdown, AvatarName, Footer, NoticeBell } from '@/components';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
 import '@ant-design/v5-patch-for-react-19';
@@ -141,6 +141,7 @@ export const layout: RunTimeLayoutConfig = ({
     menu: {
       locale: false,
       defaultOpenAll: true,
+      autoClose: false,
     },
     // 关闭sider菜单栏展开按钮
     collapsedButtonRender: false,
@@ -151,8 +152,34 @@ export const layout: RunTimeLayoutConfig = ({
         <Tooltip key="theme" title={checked ? '切换亮色模式' : '切换暗黑模式'}>
           <Switch
             checked={checked}
-            checkedChildren={<MoonOutlined />}
-            unCheckedChildren={<SunOutlined />}
+            className="theme-switch"
+            style={{ minWidth: 52, borderRadius: 999, marginRight: 20 }}
+            checkedChildren={
+              <span
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '100%',
+                  lineHeight: 1,
+                }}
+              >
+                <MoonOutlined style={{ fontSize: 11, lineHeight: 1 }} />
+              </span>
+            }
+            unCheckedChildren={
+              <span
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '100%',
+                  lineHeight: 1,
+                }}
+              >
+                <SunOutlined style={{ fontSize: 11, lineHeight: 1 }} />
+              </span>
+            }
             onChange={(nextChecked) => {
               setInitialState((preInitialState) => ({
                 ...preInitialState,
@@ -164,6 +191,7 @@ export const layout: RunTimeLayoutConfig = ({
             }}
           />
         </Tooltip>,
+        <NoticeBell key="notice" />,
         // <Question key="doc" />,
         // <SelectLang key="SelectLang" />,
       ];
@@ -227,14 +255,6 @@ export const layout: RunTimeLayoutConfig = ({
         width: '331px',
       },
     ],
-    links: isDev
-      ? [
-          <Link key="openapi" to="/umi/plugin/openapi" target="_blank">
-            <LinkOutlined />
-            <span>OpenAPI 文档</span>
-          </Link>,
-        ]
-      : [],
     menuHeaderRender: undefined,
     // 自定义 403 页面
     // unAccessible: <div>unAccessible</div>,

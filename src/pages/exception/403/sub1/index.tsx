@@ -1,7 +1,17 @@
-import React from 'react';
+import { Link } from '@umijs/max';
+import { Button, Card, Result } from 'antd';
 
-const Page: React.FC = () => {
-  return <div>子菜单一</div>;
-};
-
-export default Page;
+export default () => (
+  <Card variant="borderless">
+    <Result
+      status="403"
+      title="403"
+      subTitle="Sorry, you are not authorized to access this page."
+      extra={
+        <Link to="/">
+          <Button type="primary">Back to home</Button>
+        </Link>
+      }
+    />
+  </Card>
+);
