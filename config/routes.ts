@@ -118,7 +118,7 @@ const routes = [
   },
   {
     path: '/form',
-    name: 'form',
+    name: '门店',
     routes: [
       {
         path: '/form',
@@ -191,7 +191,7 @@ const routes = [
   },
   {
     path: '/list',
-    name: 'list',
+    name: '商品',
     routes: [
       {
         path: '/list/search',
@@ -294,7 +294,7 @@ const routes = [
   },
   {
     path: '/profile',
-    name: 'profile',
+    name: '进销存',
     routes: [
       {
         path: '/profile',
@@ -345,7 +345,7 @@ const routes = [
     ],
   },
   {
-    name: 'result',
+    name: '订单',
     path: '/result',
     routes: [
       {
@@ -382,7 +382,7 @@ const routes = [
     ],
   },
   {
-    name: 'exception',
+    name: '会员',
     path: '/exception',
     routes: [
       {
@@ -455,7 +455,7 @@ const routes = [
     ],
   },
   {
-    name: 'account',
+    name: '数据',
     path: '/account',
     component: './account',
   },
@@ -472,6 +472,11 @@ const routes = [
   {
     component: '404',
     path: '/*',
+  },
+  {
+    path: '/admin',
+    name: '旧系统',
+    component: './iframe-view', // 指向刚才写的 iframe 组件
   },
 ];
 

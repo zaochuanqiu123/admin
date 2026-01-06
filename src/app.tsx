@@ -143,6 +143,54 @@ export const layout: RunTimeLayoutConfig = ({
       defaultOpenAll: true,
       autoClose: false,
     },
+    menuItemRender: (item, dom) => {
+      // 1. 🔥 定义你的 iframe 路由路径 (把需要传参的路由都写在这里)
+      // 如果你有多个老系统，可以在数组里写多个: ['/ziadmin', '/old-erp']
+      const IFRAME_PATHS = ['/admin'];
+
+      return (
+        <div
+          style={{ cursor: 'pointer', width: '100%', height: '100%' }}
+          onClick={() => {
+            // 2. 🔥 核心判断：当前点的这个菜单，是不是 iframe 页面？
+            const isIframePage = item.path && IFRAME_PATHS.includes(item.path);
+
+            if (isIframePage) {
+              // ==========================================
+              // 情况 A：点击的是 iframe 页面 (要做特殊处理)
+              // ==========================================
+              console.log('🔥 [Sender] 点击了 iframe 菜单:', item.name);
+
+              // 发送广播
+              window.dispatchEvent(
+                new CustomEvent('main-app:header-click', {
+                  detail: {
+                    type: 'MENU_CLICK',
+                    path: item.path,
+                    name: item.name,
+                    time: Date.now(),
+                    Token: '123123',
+                  },
+                }),
+              );
+
+              // 带参数跳转 (解决首次加载没数据的问题)
+              history.push(`${item.path}`);
+            } else {
+              // ==========================================
+              // 情况 B：点击的是普通页面 (Dashboard, 设置等)
+              // ==========================================
+              // 直接跳转，不带任何后缀，也不会有闪烁
+              if (item.path) {
+                history.push(item.path);
+              }
+            }
+          }}
+        >
+          {dom}
+        </div>
+      );
+    },
     // 关闭sider菜单栏展开按钮
     collapsedButtonRender: false,
     actionsRender: () => {
