@@ -1,10 +1,24 @@
-import { useLocation } from '@umijs/max';
+import { history, useLocation } from '@umijs/max';
 import { Card, message, Spin } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 
+// 🔥 1. 定义 [ID -> 路由] 的映射表
+// 这是核心配置：当子应用发来 ID 时，主应用查这张表决定去哪里
+const ID_TO_PATH_MAP: Record<string, string> = {
+  '163': '/dashboard/index', // 工作台
+  //   '1457': '/shop/index',          // 门店
+  //   '1459': '/goods/list',          // 商品
+  //   '206':  '/storage/index',       // 进销存
+  //   '1432': '/order/list',          // 订单
+  //   '215':  '/member/index',        // 会员
+  //   '1917': '/data/analysis',       // 数据
+  //   '1464': '/finance/index',       // 财务
+  //   '303':  '/settings/index',      // 设置
+  '1495': '/admin', // 应用
+};
+
 /**
  * 微应用容器页面
- * 🔥 纯 URL 驱动模式：进入页面/切换菜单 -> iframe重载 -> onLoad 自动发消息
  */
 const MicroAppContainer: React.FC = () => {
   const location = useLocation();
@@ -24,30 +38,64 @@ const MicroAppContainer: React.FC = () => {
     }
   };
 
-  // 🔄 2. 监听 URL 变化
-  // 只要 URL 变了（比如菜单点了不同的项，参数变了），就强制销毁并重建 iframe
+  // 🔄 2. 监听 URL 变化，重载 iframe
   useEffect(() => {
     console.log('🔄 路由/参数变化，刷新 iframe:', location.search);
     setLoading(true);
-    setIframeKey((prev) => prev + 1); // 👈 这一步会让 iframe 重新加载，从而触发 onLoad
-  }, [location.pathname, location.search]); // 监听 search，参数变了也刷新
+    setIframeKey((prev) => prev + 1);
+  }, [location.pathname, location.search]);
 
-  // ✅ 3. 核心：Iframe 加载完毕，直接把 URL 里的参数发过去
+  // 🔥🔥🔥 3. 核心新增：监听子应用发来的"ID跳转请求" 🔥🔥🔥
+  useEffect(() => {
+    const handleSubAppMessage = (event: MessageEvent) => {
+      // 1. 获取最外层的 type 和 payload
+      const { type, payload } = event.data || {};
+
+      // 2. 校验消息类型
+      if (type !== 'FROM_CHILD_APP') return;
+
+      // 🔥🔥🔥 核心修正：从 payload 里面提取 targetId 🔥🔥🔥
+      // 你的数据结构是 event.data.payload.targetId
+      const targetId = payload?.targetId;
+
+      console.log(`🚀 [主应用] 收到跳转请求, 原始ID: ${targetId}`);
+
+      if (!targetId) {
+        console.warn('⚠️ 收到消息但缺少 targetId');
+        return;
+      }
+
+      // 3. 查表：根据 ID 找路径
+      const targetPath = ID_TO_PATH_MAP[String(targetId)];
+
+      if (targetPath) {
+        console.log(`✅ 匹配成功: ${targetPath}, 正在跳转...`);
+
+        // 4. 执行跳转
+        history.push(`${targetPath}?targetId=${targetId}`);
+      } else {
+        console.error(
+          `❌ 未找到 ID [${targetId}] 对应的路由，请检查 ID_TO_PATH_MAP 配置`,
+        );
+        message.error('未找到对应模块，请联系管理员');
+      }
+    };
+
+    window.addEventListener('message', handleSubAppMessage);
+    return () => window.removeEventListener('message', handleSubAppMessage);
+  }, []);
+
+  // ✅ 5. Iframe 加载完毕，发送初始化数据
   const handleIframeLoad = () => {
     console.log('✅ iframe 加载完成，开始解析参数...');
     setLoading(false);
 
-    // 1. 解析当前浏览器地址栏里的参数
     const query = new URLSearchParams(location.search);
 
-    // 2. 组装数据 (模拟广播的数据结构)
     const initPayload = {
       msg: '页面加载完毕(自动触发)',
-
-      // 🔥 核心：直接把 URL 里的 targetId 拿出来发给子应用
-      // 这样子应用一启动就能拿到 ID，不需要再点一次
+      // 把 URL 里的 targetId 发给子应用
       targetId: query.get('targetId'),
-      // 其他辅助信息
       path: location.pathname,
       timestamp: Date.now(),
       userData: {
@@ -57,13 +105,7 @@ const MicroAppContainer: React.FC = () => {
       },
     };
 
-    // 3. 发送！
-    // 这里的 type 既可以是 INIT_DATA，也可以直接伪装成 HEADER_CLICK
-    // 看你子应用里监听的是哪个，这里统一发过去
     sendMessage('INIT_DATA', initPayload);
-
-    // 如果子应用只监听 HEADER_CLICK，你也可以多发一条：
-    // sendMessage('HEADER_CLICK', initPayload);
   };
 
   return (
@@ -72,10 +114,9 @@ const MicroAppContainer: React.FC = () => {
         style={{
           position: 'relative',
           overflow: 'hidden',
-          height: 'calc(100vh - 59px)',
+          height: 'calc(100vh - 55px)',
         }}
       >
-        {/* 加载状态 */}
         {loading && (
           <div
             style={{
@@ -97,9 +138,8 @@ const MicroAppContainer: React.FC = () => {
           </div>
         )}
 
-        {/* 🔥 使用 iframe 加载子应用 */}
         <iframe
-          key={iframeKey} // 利用 key 强制刷新
+          key={iframeKey}
           ref={iframeRef}
           src={subAppUrl}
           title="micro-app"
@@ -107,7 +147,6 @@ const MicroAppContainer: React.FC = () => {
             width: '100%',
             height: '100%',
             border: 'none',
-            // 🔥 必须用 visibility，否则 contentWindow 为空，无法发送 onLoad 消息
             visibility: loading ? 'hidden' : 'visible',
           }}
           onLoad={handleIframeLoad}

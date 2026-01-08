@@ -49,7 +49,13 @@ const routes = [
     routes: [
       {
         path: '/dashboard',
-        redirect: '/dashboard/analysis',
+        redirect: '/dashboard/index',
+      },
+      {
+        path: '/dashboard/index',
+        name: '首页',
+        component: './dashboard/index',
+        hideInMenu: true,
       },
       {
         name: 'analysis',
@@ -117,342 +123,352 @@ const routes = [
     ],
   },
   {
-    path: '/form',
     name: '门店',
-    routes: [
-      {
-        path: '/form',
-        redirect: '/form/basic-form',
-      },
-      {
-        name: 'basic-form',
-        icon: 'smile',
-        path: '/form/basic-form',
-        routes: [
-          {
-            path: '/form/basic-form',
-            redirect: '/form/basic-form/sub1',
-          },
-          {
-            name: '子菜单一',
-            path: '/form/basic-form/sub1',
-            component: './form/basic-form/sub1',
-          },
-          {
-            name: '子菜单二123123',
-            path: '/form/basic-form/sub2',
-            component: './form/basic-form/sub2',
-          },
-        ],
-      },
-      {
-        name: 'step-form',
-        icon: 'smile',
-        path: '/form/step-form',
-        routes: [
-          {
-            path: '/form/step-form',
-            redirect: '/form/step-form/sub1',
-          },
-          {
-            name: '子菜单一',
-            path: '/form/step-form/sub1',
-            component: './form/step-form/sub1',
-          },
-          {
-            name: '子菜单二',
-            path: '/form/step-form/sub2',
-            component: './form/step-form/sub2',
-          },
-        ],
-      },
-      {
-        name: 'advanced-form',
-        icon: 'smile',
-        path: '/form/advanced-form',
-        routes: [
-          {
-            path: '/form/advanced-form',
-            redirect: '/form/advanced-form/sub1',
-          },
-          {
-            name: '子菜单一',
-            path: '/form/advanced-form/sub1',
-            component: './form/advanced-form/sub1',
-          },
-          {
-            name: '子菜单二',
-            path: '/form/advanced-form/sub2',
-            component: './form/advanced-form/sub2',
-          },
-        ],
-      },
-    ],
+    path: '/form',
+    component: './form',
+    // routes: [
+    //   {
+    //     path: '/form',
+    //     redirect: '/form/index',
+    //   },
+    //   {
+    //   path: '/form/index',
+    //   component: './form/index',
+    //   hideInMenu: true,
+    // },
+    //   {
+    //     name: 'basic-form',
+    //     icon: 'smile',
+    //     path: '/form/basic-form',
+    //     routes: [
+    //       {
+    //         path: '/form/basic-form',
+    //         redirect: '/form/basic-form/sub1',
+    //       },
+    //       {
+    //         name: '子菜单一',
+    //         path: '/form/basic-form/sub1',
+    //         component: './form/basic-form/sub1',
+    //       },
+    //       {
+    //         name: '子菜单二123123',
+    //         path: '/form/basic-form/sub2',
+    //         component: './form/basic-form/sub2',
+    //       },
+    //     ],
+    //   },
+    //   {
+    //     name: 'step-form',
+    //     icon: 'smile',
+    //     path: '/form/step-form',
+    //     routes: [
+    //       {
+    //         path: '/form/step-form',
+    //         redirect: '/form/step-form/sub1',
+    //       },
+    //       {
+    //         name: '子菜单一',
+    //         path: '/form/step-form/sub1',
+    //         component: './form/step-form/sub1',
+    //       },
+    //       {
+    //         name: '子菜单二',
+    //         path: '/form/step-form/sub2',
+    //         component: './form/step-form/sub2',
+    //       },
+    //     ],
+    //   },
+    //   {
+    //     name: 'advanced-form',
+    //     icon: 'smile',
+    //     path: '/form/advanced-form',
+    //     routes: [
+    //       {
+    //         path: '/form/advanced-form',
+    //         redirect: '/form/advanced-form/sub1',
+    //       },
+    //       {
+    //         name: '子菜单一',
+    //         path: '/form/advanced-form/sub1',
+    //         component: './form/advanced-form/sub1',
+    //       },
+    //       {
+    //         name: '子菜单二',
+    //         path: '/form/advanced-form/sub2',
+    //         component: './form/advanced-form/sub2',
+    //       },
+    //     ],
+    //   },
+    // ],
   },
   {
-    path: '/list',
     name: '商品',
-    routes: [
-      {
-        path: '/list/search',
-        name: 'search-list',
-        icon: 'table',
-        component: './list/search',
-        routes: [
-          {
-            path: '/list/search',
-            redirect: '/list/search/articles',
-          },
-          {
-            name: 'articles',
-            icon: 'smile',
-            path: '/list/search/articles',
-            component: './list/search/articles',
-          },
-          {
-            name: 'projects',
-            icon: 'smile',
-            path: '/list/search/projects',
-            component: './list/search/projects',
-          },
-          {
-            name: 'applications',
-            icon: 'smile',
-            path: '/list/search/applications',
-            component: './list/search/applications',
-          },
-        ],
-      },
-      {
-        path: '/list',
-        redirect: '/list/table-list',
-      },
-      {
-        name: 'table-list',
-        icon: 'smile',
-        path: '/list/table-list',
-        routes: [
-          {
-            path: '/list/table-list',
-            redirect: '/list/table-list/sub1',
-          },
-          {
-            name: '子菜单一',
-            path: '/list/table-list/sub1',
-            component: './table-list/sub1',
-          },
-          {
-            name: '子菜单二',
-            path: '/list/table-list/sub2',
-            component: './table-list/sub2',
-          },
-        ],
-      },
-      {
-        name: 'basic-list',
-        icon: 'smile',
-        path: '/list/basic-list',
-        routes: [
-          {
-            path: '/list/basic-list',
-            redirect: '/list/basic-list/sub1',
-          },
-          {
-            name: '子菜单一',
-            path: '/list/basic-list/sub1',
-            component: './list/basic-list/sub1',
-          },
-          {
-            name: '子菜单二',
-            path: '/list/basic-list/sub2',
-            component: './list/basic-list/sub2',
-          },
-        ],
-      },
-      {
-        name: 'card-list',
-        icon: 'smile',
-        path: '/list/card-list',
-        routes: [
-          {
-            path: '/list/card-list',
-            redirect: '/list/card-list/sub1',
-          },
-          {
-            name: '子菜单一',
-            path: '/list/card-list/sub1',
-            component: './list/card-list/sub1',
-          },
-          {
-            name: '子菜单二',
-            path: '/list/card-list/sub2',
-            component: './list/card-list/sub2',
-          },
-        ],
-      },
-    ],
+    path: '/list',
+    component: './list',
+    // routes: [
+    //   {
+    //     path: '/list/search',
+    //     name: 'search-list',
+    //     icon: 'table',
+    //     component: './list/search',
+    //     routes: [
+    //       {
+    //         path: '/list/search',
+    //         redirect: '/list/search/articles',
+    //       },
+    //       {
+    //         name: 'articles',
+    //         icon: 'smile',
+    //         path: '/list/search/articles',
+    //         component: './list/search/articles',
+    //       },
+    //       {
+    //         name: 'projects',
+    //         icon: 'smile',
+    //         path: '/list/search/projects',
+    //         component: './list/search/projects',
+    //       },
+    //       {
+    //         name: 'applications',
+    //         icon: 'smile',
+    //         path: '/list/search/applications',
+    //         component: './list/search/applications',
+    //       },
+    //     ],
+    //   },
+    //   {
+    //     path: '/list',
+    //     redirect: '/list/table-list',
+    //   },
+    //   {
+    //     name: 'table-list',
+    //     icon: 'smile',
+    //     path: '/list/table-list',
+    //     routes: [
+    //       {
+    //         path: '/list/table-list',
+    //         redirect: '/list/table-list/sub1',
+    //       },
+    //       {
+    //         name: '子菜单一',
+    //         path: '/list/table-list/sub1',
+    //         component: './table-list/sub1',
+    //       },
+    //       {
+    //         name: '子菜单二',
+    //         path: '/list/table-list/sub2',
+    //         component: './table-list/sub2',
+    //       },
+    //     ],
+    //   },
+    //   {
+    //     name: 'basic-list',
+    //     icon: 'smile',
+    //     path: '/list/basic-list',
+    //     routes: [
+    //       {
+    //         path: '/list/basic-list',
+    //         redirect: '/list/basic-list/sub1',
+    //       },
+    //       {
+    //         name: '子菜单一',
+    //         path: '/list/basic-list/sub1',
+    //         component: './list/basic-list/sub1',
+    //       },
+    //       {
+    //         name: '子菜单二',
+    //         path: '/list/basic-list/sub2',
+    //         component: './list/basic-list/sub2',
+    //       },
+    //     ],
+    //   },
+    //   {
+    //     name: 'card-list',
+    //     icon: 'smile',
+    //     path: '/list/card-list',
+    //     routes: [
+    //       {
+    //         path: '/list/card-list',
+    //         redirect: '/list/card-list/sub1',
+    //       },
+    //       {
+    //         name: '子菜单一',
+    //         path: '/list/card-list/sub1',
+    //         component: './list/card-list/sub1',
+    //       },
+    //       {
+    //         name: '子菜单二',
+    //         path: '/list/card-list/sub2',
+    //         component: './list/card-list/sub2',
+    //       },
+    //     ],
+    //   },
+    // ],
   },
   {
     path: '/profile',
     name: '进销存',
-    routes: [
-      {
-        path: '/profile',
-        redirect: '/profile/basic',
-      },
-      {
-        name: 'basic',
-        icon: 'smile',
-        path: '/profile/basic',
-        routes: [
-          {
-            path: '/profile/basic',
-            redirect: '/profile/basic/sub1',
-          },
-          {
-            name: '子菜单一',
-            path: '/profile/basic/sub1',
-            component: './profile/basic/sub1',
-          },
-          {
-            name: '子菜单二',
-            path: '/profile/basic/sub2',
-            component: './profile/basic/sub2',
-          },
-        ],
-      },
-      {
-        name: 'advanced',
-        icon: 'smile',
-        path: '/profile/advanced',
-        routes: [
-          {
-            path: '/profile/advanced',
-            redirect: '/profile/advanced/sub1',
-          },
-          {
-            name: '子菜单一',
-            path: '/profile/advanced/sub1',
-            component: './profile/advanced/sub1',
-          },
-          {
-            name: '子菜单二',
-            path: '/profile/advanced/sub2',
-            component: './profile/advanced/sub2',
-          },
-        ],
-      },
-    ],
+    component: './profile',
+    // routes: [
+    //   {
+    //     path: '/profile',
+    //     redirect: '/profile/basic',
+    //   },
+    //   {
+    //     name: 'basic',
+    //     icon: 'smile',
+    //     path: '/profile/basic',
+    //     routes: [
+    //       {
+    //         path: '/profile/basic',
+    //         redirect: '/profile/basic/sub1',
+    //       },
+    //       {
+    //         name: '子菜单一',
+    //         path: '/profile/basic/sub1',
+    //         component: './profile/basic/sub1',
+    //       },
+    //       {
+    //         name: '子菜单二',
+    //         path: '/profile/basic/sub2',
+    //         component: './profile/basic/sub2',
+    //       },
+    //     ],
+    //   },
+    //   {
+    //     name: 'advanced',
+    //     icon: 'smile',
+    //     path: '/profile/advanced',
+    //     routes: [
+    //       {
+    //         path: '/profile/advanced',
+    //         redirect: '/profile/advanced/sub1',
+    //       },
+    //       {
+    //         name: '子菜单一',
+    //         path: '/profile/advanced/sub1',
+    //         component: './profile/advanced/sub1',
+    //       },
+    //       {
+    //         name: '子菜单二',
+    //         path: '/profile/advanced/sub2',
+    //         component: './profile/advanced/sub2',
+    //       },
+    //     ],
+    //   },
+    // ],
   },
   {
     name: '订单',
     path: '/result',
-    routes: [
-      {
-        path: '/result',
-        redirect: '/result/success',
-      },
-      {
-        name: 'success',
-        icon: 'smile',
-        path: '/result/success',
-        component: './result/success',
-      },
-      {
-        name: 'fail',
-        icon: 'smile',
-        path: '/result/fail',
-        routes: [
-          {
-            path: '/result/fail',
-            redirect: '/result/fail/sub1',
-          },
-          {
-            name: '子菜单一',
-            path: '/result/fail/sub1',
-            component: './result/fail/sub1',
-          },
-          {
-            name: '子菜单二',
-            path: '/result/fail/sub2',
-            component: './result/fail/sub2',
-          },
-        ],
-      },
-    ],
+    component: './result',
+    // routes: [
+    //   {
+    //     path: '/result',
+    //     redirect: '/result/success',
+    //   },
+    //   {
+    //     name: 'success',
+    //     icon: 'smile',
+    //     path: '/result/success',
+    //     component: './result/success',
+    //   },
+    //   {
+    //     name: 'fail',
+    //     icon: 'smile',
+    //     path: '/result/fail',
+    //     routes: [
+    //       {
+    //         path: '/result/fail',
+    //         redirect: '/result/fail/sub1',
+    //       },
+    //       {
+    //         name: '子菜单一',
+    //         path: '/result/fail/sub1',
+    //         component: './result/fail/sub1',
+    //       },
+    //       {
+    //         name: '子菜单二',
+    //         path: '/result/fail/sub2',
+    //         component: './result/fail/sub2',
+    //       },
+    //     ],
+    //   },
+    // ],
   },
   {
     name: '会员',
     path: '/exception',
-    routes: [
-      {
-        path: '/exception',
-        redirect: '/exception/403',
-      },
-      {
-        name: '403',
-        icon: 'smile',
-        path: '/exception/403',
-        routes: [
-          {
-            path: '/exception/403',
-            redirect: '/exception/403/sub1',
-          },
-          {
-            name: '子菜单一',
-            path: '/exception/403/sub1',
-            component: './exception/403/sub1',
-          },
-          {
-            name: '子菜单二',
-            path: '/exception/403/sub2',
-            component: './exception/403/sub2',
-          },
-        ],
-      },
-      {
-        name: '404',
-        icon: 'smile',
-        path: '/exception/404',
-        routes: [
-          {
-            path: '/exception/404',
-            redirect: '/exception/404/sub1',
-          },
-          {
-            name: '子菜单一',
-            path: '/exception/404/sub1',
-            component: './exception/404/sub1',
-          },
-          {
-            name: '子菜单二',
-            path: '/exception/404/sub2',
-            component: './exception/404/sub2',
-          },
-        ],
-      },
-      {
-        name: '500',
-        icon: 'smile',
-        path: '/exception/500',
-        routes: [
-          {
-            path: '/exception/500',
-            redirect: '/exception/500/sub1',
-          },
-          {
-            name: '子菜单一',
-            path: '/exception/500/sub1',
-            component: './exception/500/sub1',
-          },
-          {
-            name: '子菜单二',
-            path: '/exception/500/sub2',
-            component: './exception/500/sub2',
-          },
-        ],
-      },
-    ],
+    component: './exception',
+    // routes: [
+    //   {
+    //     path: '/exception',
+    //     redirect: '/exception/403',
+    //   },
+    //   {
+    //     name: '403',
+    //     icon: 'smile',
+    //     path: '/exception/403',
+    //     routes: [
+    //       {
+    //         path: '/exception/403',
+    //         redirect: '/exception/403/sub1',
+    //       },
+    //       {
+    //         name: '子菜单一',
+    //         path: '/exception/403/sub1',
+    //         component: './exception/403/sub1',
+    //       },
+    //       {
+    //         name: '子菜单二',
+    //         path: '/exception/403/sub2',
+    //         component: './exception/403/sub2',
+    //       },
+    //     ],
+    //   },
+    //   {
+    //     name: '404',
+    //     icon: 'smile',
+    //     path: '/exception/404',
+    //     routes: [
+    //       {
+    //         path: '/exception/404',
+    //         redirect: '/exception/404/sub1',
+    //       },
+    //       {
+    //         name: '子菜单一',
+    //         path: '/exception/404/sub1',
+    //         component: './exception/404/sub1',
+    //       },
+    //       {
+    //         name: '子菜单二',
+    //         path: '/exception/404/sub2',
+    //         component: './exception/404/sub2',
+    //       },
+    //     ],
+    //   },
+    //   {
+    //     name: '500',
+    //     icon: 'smile',
+    //     path: '/exception/500',
+    //     routes: [
+    //       {
+    //         path: '/exception/500',
+    //         redirect: '/exception/500/sub1',
+    //       },
+    //       {
+    //         name: '子菜单一',
+    //         path: '/exception/500/sub1',
+    //         component: './exception/500/sub1',
+    //       },
+    //       {
+    //         name: '子菜单二',
+    //         path: '/exception/500/sub2',
+    //         component: './exception/500/sub2',
+    //       },
+    //     ],
+    //   },
+    // ],
   },
   {
     name: '数据',
@@ -460,14 +476,18 @@ const routes = [
     component: './account',
   },
   {
-    name: 'micro-app',
-    icon: 'appstore',
-    path: '/micro-app/*',
-    component: './micro-app',
+    name: '财务',
+    path: '/finance',
+    component: './finance',
+  },
+  {
+    name: '设置',
+    path: '/set',
+    component: './set',
   },
   {
     path: '/',
-    redirect: '/dashboard/analysis',
+    redirect: '/dashboard/index',
   },
   {
     component: '404',
@@ -475,8 +495,14 @@ const routes = [
   },
   {
     path: '/admin',
-    name: '旧系统',
+    name: '应用',
     component: './iframe-view', // 指向刚才写的 iframe 组件
+  },
+  {
+    name: 'micro-app',
+    icon: 'appstore',
+    path: '/micro-app/*',
+    component: './micro-app',
   },
 ];
 

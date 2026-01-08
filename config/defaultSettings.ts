@@ -15,7 +15,7 @@ const Settings: ProLayoutProps & {
   fixSiderbar: true,
   pwa: true,
   logo: 'https://gw.alipayobjects.com/zos/rmsportal/KDpgvguMpGfqaHPjicRK.svg',
-  siderWidth: 224,
+  siderWidth: 239,
   token: {
     sider: {
       colorMenuBackground: 'var(--ant-color-bg-container)', //menu 的背景颜色

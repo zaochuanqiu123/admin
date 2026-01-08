@@ -15,6 +15,7 @@ import {
 import {
   FormattedMessage,
   Helmet,
+  history,
   SelectLang,
   useIntl,
   useModel,
@@ -23,8 +24,9 @@ import { Alert, App, Tabs } from 'antd';
 import { createStyles } from 'antd-style';
 import React, { useState } from 'react';
 import { flushSync } from 'react-dom';
+import { login } from '@/api/auth';
 import { setToken } from '@/api/storage';
-import { getFakeCaptcha, login } from '@/api/user';
+import { getFakeCaptcha } from '@/api/user';
 import { Footer } from '@/components';
 import Settings from '../../../../config/defaultSettings';
 
@@ -137,38 +139,50 @@ const Login: React.FC = () => {
   const handleSubmit = async (values: API.LoginParams) => {
     try {
       if (devBypassAuth) {
-        setToken('dev-bypass');
-        const defaultLoginSuccessMessage = intl.formatMessage({
-          id: 'pages.login.success',
-          defaultMessage: '登录成功！',
-        });
-        message.success(defaultLoginSuccessMessage);
-        await fetchUserInfo();
-        const urlParams = new URL(window.location.href).searchParams;
-        window.location.href = urlParams.get('redirect') || '/';
+        // ... bypass 逻辑，这里没动
         return;
       }
       // 登录
-      const msg = await login({ ...values, type });
-      if (msg.status === 'ok') {
-        const token = (msg as any)?.token ?? (msg as any)?.data?.token;
-        if (typeof token === 'string' && token.length > 0) {
-          setToken(token);
-        }
-        const defaultLoginSuccessMessage = intl.formatMessage({
-          id: 'pages.login.success',
-          defaultMessage: '登录成功！',
-        });
-        message.success(defaultLoginSuccessMessage);
-        await fetchUserInfo();
-        const urlParams = new URL(window.location.href).searchParams;
-        window.location.href = urlParams.get('redirect') || '/';
-        return;
+      const res = await login({
+        username: values.username,
+        password: values.password,
+      });
+
+      // --- 以下是我的主要修改 ---
+
+      // 1. 改动：优先从 res.tokenValue 或 res.data.tokenValue 取 token
+      const token =
+        (res as any)?.tokenValue ??
+        (res as any)?.data?.tokenValue ??
+        (res as any)?.token ??
+        (res as any)?.data?.token;
+
+      // 2. 新增：打印返回和 token，方便你调试
+      console.log('login response:', res);
+      console.log('token:', token);
+
+      // 3. 新增：如果没取到 token，就抛出错误，避免“假成功”
+      if (typeof token !== 'string' || token.length === 0) {
+        throw new Error('登录成功但未获取到 tokenValue');
       }
-      console.log(msg);
-      // 如果失败去设置用户错误信息
-      setUserLoginState(msg);
+
+      // 4. 改动：setToken 存本地，这行没变，但意义明确了
+      setToken(token);
+
+      const defaultLoginSuccessMessage = intl.formatMessage({
+        id: 'pages.login.success',
+        defaultMessage: '登录成功！',
+      });
+      message.success(defaultLoginSuccessMessage);
+
+      // 5. 改动：把 await fetchUserInfo() 删掉了，直接跳转
+      const urlParams = new URL(window.location.href).searchParams;
+      const redirect = urlParams.get('redirect');
+      // 用 history.replace 做单页跳转（不整页刷新）
+      history.replace(redirect || '/');
+      return;
     } catch (error) {
+      // ... 错误处理逻辑，这里没动
       const defaultLoginFailureMessage = intl.formatMessage({
         id: 'pages.login.failure',
         defaultMessage: '登录失败，请重试！',

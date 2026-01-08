@@ -13,7 +13,7 @@ import { AvatarDropdown, AvatarName, Footer, NoticeBell } from '@/components';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
 import '@ant-design/v5-patch-for-react-19';
-import { clearToken } from '@/api/storage';
+import { clearToken, getToken } from '@/api/storage';
 
 const isDev = process.env.NODE_ENV === 'development' || process.env.CI;
 const loginPath = '/user/login';
@@ -67,7 +67,6 @@ function findTopLevelMenuItem(
 // 统计某个菜单节点下“可展示的叶子页面数量”（用于 A2：<=1 则认为无需展示左侧菜单）
 function countVisibleLeaves(items: MenuDataItem[] | undefined): number {
   if (!items || items.length === 0) return 0;
-
   let total = 0;
   for (const item of items) {
     if ((item as any)?.hideInMenu) continue;
@@ -107,8 +106,13 @@ export async function getInitialState(): Promise<{
       });
       return msg;
     } catch (_error) {
-      clearToken();
-      history.push(loginPath);
+      // 方案1（临时策略）：用户信息接口未接通前，不要因为拉用户信息失败就清 token/踢回登录
+      // 只要本地有 token，就先允许进入系统；等用户信息接口就绪后再恢复严格逻辑。
+      // TODO(接口完成后回滚)：恢复为“拉用户信息失败 => clearToken() + history.push(loginPath)”
+      if (!getToken()) {
+        clearToken();
+        history.push(loginPath);
+      }
     }
     return undefined;
   };
@@ -132,6 +136,21 @@ export async function getInitialState(): Promise<{
   };
 }
 
+//ID 的对照表
+const MENU_ID_MAP: Record<string, number> = {
+  工作台: 163,
+  门店: 1457,
+  商品: 1459,
+  进销存: 206,
+  订单: 1432,
+  会员: 215,
+  数据: 1917,
+  财务: 1464,
+  设置: 303,
+  应用: 1495,
+};
+//=======================//
+
 // ProLayout 支持的api https://procomponents.ant.design/components/layout
 export const layout: RunTimeLayoutConfig = ({
   initialState,
@@ -144,46 +163,71 @@ export const layout: RunTimeLayoutConfig = ({
       autoClose: false,
     },
     menuItemRender: (item, dom) => {
-      // 1. 🔥 定义你的 iframe 路由路径 (把需要传参的路由都写在这里)
-      // 如果你有多个老系统，可以在数组里写多个: ['/ziadmin', '/old-erp']
-      const IFRAME_PATHS = ['/admin'];
+      // 定义 iframe 路由白名单
+      const IFRAME_PATHS = [
+        '/admin',
+        '/dashboard/index',
+        '/dashboard',
+        '/account',
+        '/form',
+        '/list',
+        '/profile',
+        '/exception',
+        '/result',
+        '/set',
+        '/finance',
+      ]; // 你的实际 iframe 路由
 
       return (
         <div
           style={{ cursor: 'pointer', width: '100%', height: '100%' }}
-          onClick={() => {
-            // 2. 🔥 核心判断：当前点的这个菜单，是不是 iframe 页面？
+          // 建议用 onClickCapture 以防被 Antd 内部拦截
+          onClickCapture={() => {
+            // 2. 🔥 核心：根据菜单名字查 ID
+            // 如果查不到，默认给个 0 或者空字符串
+            const currentId = MENU_ID_MAP[item.name || ''] || 0;
+
+            console.log(`🔥 点击菜单: [${item.name}], 匹配 ID: ${currentId}`);
+
             const isIframePage = item.path && IFRAME_PATHS.includes(item.path);
 
             if (isIframePage) {
-              // ==========================================
-              // 情况 A：点击的是 iframe 页面 (要做特殊处理)
-              // ==========================================
-              console.log('🔥 [Sender] 点击了 iframe 菜单:', item.name);
-
-              // 发送广播
+              // ==============================
+              // 情况 A: Iframe 页面 -> 传值并跳转
+              // ==============================
+              // 3. 发送广播 (带上 targetId)
               window.dispatchEvent(
                 new CustomEvent('main-app:header-click', {
                   detail: {
                     type: 'MENU_CLICK',
                     path: item.path,
                     name: item.name,
+                    targetId: currentId, // 🔥 把 ID 放进广播包
                     time: Date.now(),
                     Token: '123123',
                   },
                 }),
               );
-
-              // 带参数跳转 (解决首次加载没数据的问题)
-              history.push(`${item.path}`);
-            } else {
-              // ==========================================
-              // 情况 B：点击的是普通页面 (Dashboard, 设置等)
-              // ==========================================
-              // 直接跳转，不带任何后缀，也不会有闪烁
-              if (item.path) {
-                history.push(item.path);
+              let finalPath = item.path;
+              if (finalPath === '/dashboard') {
+                finalPath = '/dashboard/index';
               }
+
+              // 执行带参跳转
+              if (finalPath) {
+                history.push(`${finalPath}?targetId=${currentId}`);
+              }
+              // 4. 带参跳转 (带上 targetId)
+              // 这样 iframe 刷新或刚进来也能拿到 ID
+              // if (item.path) {
+              //   history.push(`${item.path}?targetId=${currentId}`);
+              // }
+            } else {
+              // ==============================
+              // 情况 B: 普通页面 -> 正常跳转
+              // ==============================
+              // 如果普通页面也需要这个 ID，也可以在这里 push 带参数
+              history.push(`${item.path}`);
             }
           }}
         >
@@ -274,12 +318,21 @@ export const layout: RunTimeLayoutConfig = ({
     waterMarkProps: {
       content: initialState?.currentUser?.name,
     },
-    footerRender: () => <Footer />,
+    // footerRender: () => <Footer />,
     onPageChange: () => {
       if (devBypassAuth) return;
       const { location } = history;
-      // 如果没有登录，重定向到 login
-      if (!initialState?.currentUser && location.pathname !== loginPath) {
+
+      // 方案1（临时策略）：用户信息接口未接通前，允许“仅凭 token”进入系统
+      // TODO(接口完成后回滚)：恢复为“!initialState?.currentUser 时直接跳登录”（不以 token 放行）
+      const hasToken = !!getToken();
+
+      // 如果既没有 currentUser，也没有 token，才认为未登录
+      if (
+        !initialState?.currentUser &&
+        !hasToken &&
+        location.pathname !== loginPath
+      ) {
         history.push(loginPath);
       }
     },

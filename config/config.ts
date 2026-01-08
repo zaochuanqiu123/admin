@@ -64,11 +64,14 @@ export default defineConfig({
     '/Retail': { target: 'https://test.suifuda.com', changeOrigin: true },
     '/Public': { target: 'https://test.suifuda.com', changeOrigin: true },
     // '/Uploads': { target: 'https://test.suifuda.com', changeOrigin: true },
-    // '/static': { target: 'https://test.suifuda.com', changeOrigin: true },
-    // '/assets': { target: 'https://test.suifuda.com', changeOrigin: true },
-    // '/images': { target: 'https://test.suifuda.com', changeOrigin: true },
-    // '/img':    { target: 'https://test.suifuda.com', changeOrigin: true },
-    // '/js':     { target: 'https://test.suifuda.com', changeOrigin: true },
+    // '/': { target: 'https://test.suifuda.com', changeOrigin: true },
+    '/AggregationCode': {
+      target: 'https://test.suifuda.com',
+      changeOrigin: true,
+    },
+    '/index.php': { target: 'https://test.suifuda.com', changeOrigin: true },
+    '/AIScale': { target: 'https://test.suifuda.com', changeOrigin: true },
+    '/PointsMall': { target: 'https://test.suifuda.com', changeOrigin: true },
     '/Currency': { target: 'https://test.suifuda.com', changeOrigin: true },
 
     // // 如果老项目有 /api 开头的请求，也代理过去

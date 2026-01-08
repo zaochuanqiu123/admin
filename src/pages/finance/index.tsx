@@ -61,9 +61,6 @@ const MicroAppContainer: React.FC = () => {
     // 这里的 type 既可以是 INIT_DATA，也可以直接伪装成 HEADER_CLICK
     // 看你子应用里监听的是哪个，这里统一发过去
     sendMessage('INIT_DATA', initPayload);
-
-    // 如果子应用只监听 HEADER_CLICK，你也可以多发一条：
-    // sendMessage('HEADER_CLICK', initPayload);
   };
 
   return (
