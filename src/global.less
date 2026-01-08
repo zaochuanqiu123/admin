@@ -197,7 +197,7 @@ ol {
 }
 
 .ant-layout-sider .ant-menu-submenu-title .ant-menu-title-content {
-  font-size: 14px !important;
+  font-size: 16px !important;
 }
 
 .ant-layout-sider .ant-menu-item .ant-menu-title-content {
@@ -211,16 +211,76 @@ ol {
 .ant-pro-top-nav-header-menu {
  margin-left: 58px;
 }
+
+/* =============================================================
+   顶部 Header / 顶部菜单高度：统一从默认 48 改为 60
+   - ProLayout 的 header 容器高度可由 defaultSettings.ts 的
+     token.header.heightLayoutHeader 控制
+   - 但 AntD 的 horizontal menu item 默认仍是 48，这里强制同步到 60
+   ============================================================= */
+
+/* Header 容器高度（部分版本需要用 CSS 再兜底一次） */
+.ant-pro-layout .ant-pro-layout-header {
+  height: 60px !important;
+  line-height: 60px !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* 页面滚动后：Header 变白 + 分割线 + 阴影（通过 JS 给 body 加 class 控制） */
+body.header-scrolled .ant-pro-layout .ant-pro-layout-header {
+  background: #fff !important;
+  background-color: #fff !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* 兜底：部分场景分割线在 ant-layout-header 上 */
+.ant-layout-header {
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 顶部横向菜单：菜单项高度/行高改为 60 */
+.ant-pro-top-nav-header-menu.ant-menu-horizontal > .ant-menu-item,
+.ant-pro-top-nav-header-menu.ant-menu-horizontal > .ant-menu-submenu {
+  height: 60px !important;
+  line-height: 60px !important;
+}
+
+/* 顶部横向菜单：子菜单标题也跟随 60（防止 submenu 仍是 48） */
+.ant-pro-top-nav-header-menu.ant-menu-horizontal > .ant-menu-submenu > .ant-menu-submenu-title {
+  height: 60px !important;
+  line-height: 60px !important;
+}
+
+/* 有些版本顶部菜单不是直接挂在 .ant-pro-top-nav-header-menu 上，而是其内部的 .ant-menu */
+.ant-pro-top-nav-header-menu .ant-menu-horizontal > .ant-menu-item,
+.ant-pro-top-nav-header-menu .ant-menu-horizontal > .ant-menu-submenu,
+.ant-pro-top-nav-header-menu .ant-menu-horizontal > .ant-menu-submenu > .ant-menu-submenu-title {
+  height: 60px !important;
+  line-height: 60px !important;
+}
+
+/* 顶部导航栏：把外层容器也统一成 60，避免出现“菜单 60 但外层仍是 48/59”的情况 */
+.ant-pro-top-nav-header,
+.ant-pro-top-nav-header-main,
+.ant-pro-top-nav-header-menu,
+.ant-pro-top-nav-header-menu .ant-menu-horizontal {
+  height: 60px !important;
+  line-height: 60px !important;
+  min-height: 60px !important;
+  font-size: 16px !important;
+}
+
 .ant-pro-top-nav-header-menu .ant-menu-item .ant-menu-title-content {
   font-size: 16px !important;  /* 改这里的大小 */
+  line-height: 60px !important; /* 同步行高，确保垂直居中 */
 }
 .ant-pro-top-nav-header-menu .ant-menu-item:hover .ant-menu-title-content,
 .ant-pro-top-nav-header-menu .ant-menu-item-selected .ant-menu-title-content {
   font-weight: 700 !important;
-}
-.ant-pro-top-nav-header-menu .ant-menu-item:hover,
-.ant-pro-top-nav-header-menu .ant-menu-submenu-title:hover {
-  color: #005BF8 !important; 
 }
 /* 3. 同时把内部文字的过渡也关掉 (双保险) */
 .ant-pro-top-nav-header-menu .ant-menu-item .ant-menu-title-content {
@@ -302,14 +362,23 @@ ol {
   color: var(--ant-color-text) !important;
 }
 
-.ant-pro-drawer-sider .ant-layout-sider .ant-menu-item-selected .ant-menu-item-icon,
-.ant-pro-drawer-sider .ant-layout-sider .ant-menu-item-selected .anticon {
-  color: #005BF8 !important;
-}
 
 .ant-pro-layout .ant-pro-layout-content{
  padding: 0;
 }
+
+/* 全局页面背景：强制纯色，覆盖掉 ProLayout/AntD 的渐变/背景图 */
+.ant-pro-layout,
+.ant-layout {
+  background: #E7EDFB !important;
+  background-image: none !important; /* 关键：去掉渐变/背景图 */
+}
+
+/* ProLayout 可能会生成一个专门的背景图层，直接隐藏 */
+.ant-pro-layout-bg-list {
+  display: none !important;
+}
+
 .ant-card{
   border: none;
   background-color: transparent !important;

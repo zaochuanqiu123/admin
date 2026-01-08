@@ -7,7 +7,7 @@ import { SettingDrawer } from '@ant-design/pro-components';
 import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
 import { history, Link } from '@umijs/max';
 import { Switch, Tooltip } from 'antd';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { currentUser as queryCurrentUser } from '@/api/user';
 import { AvatarDropdown, AvatarName, Footer, NoticeBell } from '@/components';
 import defaultSettings from '../config/defaultSettings';
@@ -21,6 +21,32 @@ const devBypassAuth =
   typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
 
 const apiBase = typeof __API_BASE__ !== 'undefined' ? __API_BASE__ : undefined;
+
+// 监听滚动：用于“滚动经过 Header 后，Header 变白 + 分割线 + 阴影”
+const HeaderScrollWatcher: React.FC = () => {
+  useEffect(() => {
+    const handler = () => {
+      // 兼容 window 滚动与容器滚动
+      const y =
+        window.scrollY ||
+        document.documentElement.scrollTop ||
+        document.body.scrollTop ||
+        0;
+
+      if (y > 0) {
+        document.body.classList.add('header-scrolled');
+      } else {
+        document.body.classList.remove('header-scrolled');
+      }
+    };
+
+    handler();
+    window.addEventListener('scroll', handler, { passive: true } as any);
+    return () => window.removeEventListener('scroll', handler as any);
+  }, []);
+
+  return null;
+};
 
 if (isDev && typeof window !== 'undefined') {
   (window as any).__DEV_BYPASS_AUTH__ = devBypassAuth;
@@ -195,24 +221,10 @@ export const layout: RunTimeLayoutConfig = ({
               // ==============================
               // 情况 A: Iframe 页面 -> 传值并跳转
               // ==============================
-              // 3. 发送广播 (带上 targetId)
-              window.dispatchEvent(
-                new CustomEvent('main-app:header-click', {
-                  detail: {
-                    type: 'MENU_CLICK',
-                    path: item.path,
-                    name: item.name,
-                    targetId: currentId, // 🔥 把 ID 放进广播包
-                    time: Date.now(),
-                    Token: '123123',
-                  },
-                }),
-              );
               let finalPath = item.path;
               if (finalPath === '/dashboard') {
                 finalPath = '/dashboard/index';
               }
-
               // 执行带参跳转
               if (finalPath) {
                 history.push(`${finalPath}?targetId=${currentId}`);
@@ -364,6 +376,7 @@ export const layout: RunTimeLayoutConfig = ({
       // if (initialState?.loading) return <PageLoading />;
       return (
         <>
+          <HeaderScrollWatcher />
           {children}
           {isDev && (
             <SettingDrawer

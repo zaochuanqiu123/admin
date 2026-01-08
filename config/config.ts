@@ -141,7 +141,7 @@ export default defineConfig({
       theme: {
         cssVar: true,
         token: {
-          colorBgLayout: '#E9EDF9',
+          colorBgLayout: '#5F3237',
           fontFamily: 'AlibabaSans, sans-serif',
         },
       },

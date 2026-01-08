@@ -498,12 +498,12 @@ const routes = [
     name: '应用',
     component: './iframe-view', // 指向刚才写的 iframe 组件
   },
-  {
-    name: 'micro-app',
-    icon: 'appstore',
-    path: '/micro-app/*',
-    component: './micro-app',
-  },
+  //qiankun子应用
+  //   name: 'micro-app',
+  //   icon: 'appstore',
+  //   path: '/micro-app/*',
+  //   component: './micro-app',
+  // },
 ];
 
 type RouteItem = {

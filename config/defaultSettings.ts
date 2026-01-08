@@ -29,9 +29,9 @@ const Settings: ProLayoutProps & {
       colorTextMenu: 'var(--ant-color-text)',
     },
     header: {
-      colorTextMenuActive: 'var(--ant-color-primary)',
+      colorTextMenuActive: '#005bf8',
       heightLayoutHeader: 60,
-      colorTextMenuSelected: 'var(--ant-color-primary)',
+      colorTextMenuSelected: '#005bf8',
       colorBgMenuItemHover: 'transparent',
     },
   },

@@ -6,8 +6,17 @@
  * 布局组件
  */
 import Footer from './Footer';
+import MicroIframe from './MicroIframe';
 import { Question, SelectLang } from './RightContent';
 import { AvatarDropdown, AvatarName } from './RightContent/AvatarDropdown';
 import NoticeBell from './RightContent/NoticeBell';
 
-export { AvatarDropdown, AvatarName, Footer, Question, SelectLang, NoticeBell };
+export {
+  AvatarDropdown,
+  AvatarName,
+  Footer,
+  Question,
+  SelectLang,
+  NoticeBell,
+  MicroIframe,
+};
