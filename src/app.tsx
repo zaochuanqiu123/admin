@@ -1,15 +1,15 @@
-import { LinkOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons';
+import { MoonOutlined, SunOutlined } from '@ant-design/icons';
 import type {
   Settings as LayoutSettings,
   MenuDataItem,
 } from '@ant-design/pro-components';
 import { SettingDrawer } from '@ant-design/pro-components';
 import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
-import { history, Link } from '@umijs/max';
+import { history } from '@umijs/max';
 import { Switch, Tooltip } from 'antd';
 import React, { useEffect } from 'react';
 import { currentUser as queryCurrentUser } from '@/api/user';
-import { AvatarDropdown, AvatarName, Footer, NoticeBell } from '@/components';
+import { AvatarName, NoticeBell } from '@/components';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
 import '@ant-design/v5-patch-for-react-19';
@@ -33,7 +33,7 @@ const HeaderScrollWatcher: React.FC = () => {
         document.body.scrollTop ||
         0;
 
-      if (y > 0) {
+      if (y > 16) {
         document.body.classList.add('header-scrolled');
       } else {
         document.body.classList.remove('header-scrolled');
@@ -323,8 +323,41 @@ export const layout: RunTimeLayoutConfig = ({
     avatarProps: {
       src: initialState?.currentUser?.avatar,
       title: <AvatarName />,
+      // 点击头像/用户名区域直接跳转到个人设置页，移除下拉菜单
       render: (_, avatarChildren) => {
-        return <AvatarDropdown>{avatarChildren}</AvatarDropdown>;
+        return (
+          <span
+            style={{
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              height: 48,
+              padding: '0 16px',
+              margin: 16,
+              borderRadius: 6,
+              transition: 'background-color 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLSpanElement).style.backgroundColor =
+                'rgba(0, 0, 0, 0.04)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLSpanElement).style.backgroundColor =
+                'transparent';
+            }}
+            onMouseDown={(e) => {
+              (e.currentTarget as HTMLSpanElement).style.backgroundColor =
+                'rgba(0, 0, 0, 0.08)';
+            }}
+            onMouseUp={(e) => {
+              (e.currentTarget as HTMLSpanElement).style.backgroundColor =
+                'rgba(0, 0, 0, 0.04)';
+            }}
+            onClick={() => history.push('/dashboard/settings')}
+          >
+            {avatarChildren}
+          </span>
+        );
       },
     },
     waterMarkProps: {

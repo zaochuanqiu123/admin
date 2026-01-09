@@ -3,7 +3,7 @@ import MicroIframe from '@/components/MicroIframe';
 // 🔥 1. [ID -> 路由] 映射表 (子应用点击 -> 主应用跳转)
 const ID_TO_PATH_MAP: Record<string, string> = {
   '163': '/dashboard/index',
-  '1457': '/shop/index',
+  '1457': '/form',
   '1459': '/goods/list',
   '1495': '/admin',
 };
@@ -11,7 +11,7 @@ const ID_TO_PATH_MAP: Record<string, string> = {
 // 🔥 2. [路由 -> ID] 反向映射表 (刷新页面 -> 找回 ID)
 const PATH_TO_ID_MAP: Record<string, string> = {
   '/dashboard/index': '163',
-  '/shop/index': '1457',
+  '/form': '1457',
   '/goods/list': '1459',
   '/admin': '1495',
 };

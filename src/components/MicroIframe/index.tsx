@@ -65,7 +65,6 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
   heightOffset = 20,
   withCard = true,
   loadingText = '系统加载中...',
-  buildInitPayload,
 }) => {
   const location = useLocation();
   const [loading, setLoading] = useState(true);
@@ -94,9 +93,9 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
     // 3) 复制默认参数
     const params = new URLSearchParams(defaultParams || {});
 
-    // 4) 如果拿到了 targetId，就拼接到 iframe 的 src 上（参数名用 id）
+    // 4) 如果拿到了 targetId，就拼接到 iframe 的 src 上（参数名用 id，因为子应用读取的是 id）
     if (targetId) {
-      params.set('targetId', targetId);
+      params.set('targetId', targetId); // 子应用读取的是 id，不是 targetId
     }
     // 5) 生成最终 URL
     const queryString = params.toString();
@@ -109,12 +108,6 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
     location.search,
     pathToIdMap,
   ]);
-
-  const sendMessage = useCallback((type: string, payload: any) => {
-    const win = iframeRef.current?.contentWindow;
-    if (!win) return;
-    win.postMessage({ type, payload }, '*');
-  }, []);
 
   // URL 变化 / 子应用 URL 变化：显示 loading（iframe 会因 key 变化被重建）
   useEffect(() => {
@@ -130,8 +123,8 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
       const { type, payload } = (event.data || {}) as MicroIframeMessage;
 
       // A) 子应用请求主应用跳转
-      if (type === navigateMessageType) {
-        const targetId = payload?.id;
+      if (type === 'FROM_CHILD_APP') {
+        const targetId = payload?.targetId;
         if (!targetId) return;
 
         const targetPath = idToPathMap?.[String(targetId)];
@@ -178,33 +171,21 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
     navigateMessageType,
   ]);
 
-  // iframe load：发 INIT + 请求高度
-  const handleIframeLoad = () => {
+  // iframe load：关闭 loading
+  const handleIframeLoad = useCallback(() => {
     setLoading(false);
-
-    const query = new URLSearchParams(location.search);
-    const id = query.get(idParamKey);
-
-    const baseInit = {
-      msg: '页面加载完毕',
-      [idParamKey]: id,
-      path: location.pathname,
-      timestamp: Date.now(),
-    };
-
-    const extra =
-      buildInitPayload?.({
-        id,
-        pathname: location.pathname,
-        search: location.search,
-      }) || {};
-
-    sendMessage(initType, { ...baseInit, ...extra });
-    sendMessage(requestHeightType, {});
-  };
+  }, []);
 
   const content = (
-    <div style={{ position: 'relative', overflow: 'visible', height: 'auto' }}>
+    <div
+      style={{
+        position: 'relative',
+        overflow: 'hidden',
+        height: 'auto',
+        margin: 16,
+        borderRadius: 16,
+      }}
+    >
       {loading && (
         <div
           style={{
@@ -214,7 +195,7 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
-            background: '#fff',
+            background: '#E7EDFB',
             zIndex: 10,
           }}
         >
