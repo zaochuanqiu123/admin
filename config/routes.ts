@@ -79,6 +79,12 @@ const routes = [
         ],
       },
       {
+        path: '/dashboard/settings',
+        name: 'settings',
+        component: './dashboard/settings',
+        hideInMenu: true,
+      },
+      {
         name: 'monitor',
         icon: 'smile',
         path: '/dashboard/monitor',
