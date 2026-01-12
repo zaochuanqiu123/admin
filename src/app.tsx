@@ -1,12 +1,46 @@
-import { MoonOutlined, SunOutlined } from '@ant-design/icons';
+import {
+  AppstoreOutlined,
+  CloseOutlined,
+  MenuOutlined,
+  MoonOutlined,
+  PlusCircleOutlined,
+  RightOutlined,
+  SunOutlined,
+} from '@ant-design/icons';
 import type {
   Settings as LayoutSettings,
   MenuDataItem,
 } from '@ant-design/pro-components';
 import { SettingDrawer } from '@ant-design/pro-components';
+import type { UniqueIdentifier } from '@dnd-kit/core';
+import {
+  closestCenter,
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  rectSortingStrategy,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
 import { history } from '@umijs/max';
-import { Switch, Tooltip } from 'antd';
+import {
+  Button,
+  Drawer,
+  message,
+  Space,
+  Switch,
+  Tooltip,
+  Typography,
+} from 'antd';
 import React, { useEffect } from 'react';
 import { currentUser as queryCurrentUser } from '@/api/user';
 import { AvatarName, NoticeBell } from '@/components';
@@ -22,11 +56,10 @@ const devBypassAuth =
 
 const apiBase = typeof __API_BASE__ !== 'undefined' ? __API_BASE__ : undefined;
 
-// 监听滚动：用于“滚动经过 Header 后，Header 变白 + 分割线 + 阴影”
+// 监听滚动
 const HeaderScrollWatcher: React.FC = () => {
   useEffect(() => {
     const handler = () => {
-      // 兼容 window 滚动与容器滚动
       const y =
         window.scrollY ||
         document.documentElement.scrollTop ||
@@ -60,22 +93,18 @@ function getDevUser(): API.CurrentUser {
   };
 }
 
-// 判断当前 pathname 是否落在某个菜单 path 下（用于匹配“一级菜单”）
 function isPathMatch(basePath: string, pathname: string) {
   if (!basePath || !pathname) return false;
   if (basePath === '/') return pathname === '/';
-
   const base = basePath.endsWith('/') ? basePath.slice(0, -1) : basePath;
   return pathname === base || pathname.startsWith(`${base}/`);
 }
 
-// 在一级菜单中找到与当前 pathname 最匹配的那一项（取 path 最长的命中项）
 function findTopLevelMenuItem(
   menuData: MenuDataItem[] | undefined,
   pathname: string,
 ) {
   if (!menuData || menuData.length === 0) return undefined;
-
   let best: MenuDataItem | undefined;
   for (const item of menuData) {
     const p = item?.path;
@@ -86,11 +115,9 @@ function findTopLevelMenuItem(
       }
     }
   }
-
   return best;
 }
 
-// 统计某个菜单节点下“可展示的叶子页面数量”（用于 A2：<=1 则认为无需展示左侧菜单）
 function countVisibleLeaves(items: MenuDataItem[] | undefined): number {
   if (!items || items.length === 0) return 0;
   let total = 0;
@@ -103,13 +130,9 @@ function countVisibleLeaves(items: MenuDataItem[] | undefined): number {
     }
     if (item?.path) total += 1;
   }
-
   return total;
 }
 
-/**
- * @see https://umijs.org/docs/api/runtime-config#getinitialstate
- * */
 export async function getInitialState(): Promise<{
   settings?: Partial<LayoutSettings>;
   currentUser?: API.CurrentUser;
@@ -132,9 +155,6 @@ export async function getInitialState(): Promise<{
       });
       return msg;
     } catch (_error) {
-      // 方案1（临时策略）：用户信息接口未接通前，不要因为拉用户信息失败就清 token/踢回登录
-      // 只要本地有 token，就先允许进入系统；等用户信息接口就绪后再恢复严格逻辑。
-      // TODO(接口完成后回滚)：恢复为“拉用户信息失败 => clearToken() + history.push(loginPath)”
       if (!getToken()) {
         clearToken();
         history.push(loginPath);
@@ -142,7 +162,7 @@ export async function getInitialState(): Promise<{
     }
     return undefined;
   };
-  // 如果不是登录页面，执行
+
   const { location } = history;
   if (
     ![loginPath, '/user/register', '/user/register-result'].includes(
@@ -162,7 +182,6 @@ export async function getInitialState(): Promise<{
   };
 }
 
-//ID 的对照表
 const MENU_ID_MAP: Record<string, number> = {
   工作台: 163,
   门店: 1457,
@@ -175,7 +194,1060 @@ const MENU_ID_MAP: Record<string, number> = {
   设置: 303,
   应用: 1495,
 };
-//=======================//
+
+type CommonAction = {
+  id: string;
+  title: string;
+  path: string;
+};
+
+const DEFAULT_COMMON_ACTIONS: CommonAction[] = [
+  { id: 'recharge', title: '充值', path: '/finance' },
+  { id: 'coupon', title: '优惠券管理', path: '/set' },
+  { id: 'batch-pay', title: '批量付款', path: '/finance' },
+  { id: 'withdraw', title: '提现', path: '/finance' },
+  { id: 'bill-download', title: '账单下载', path: '/finance' },
+  { id: 'pay-gift', title: '支付有礼', path: '/set' },
+  { id: 'transfer', title: '转账', path: '/finance' },
+];
+
+/**
+ * 左侧二级菜单 Item (Level 2)
+ */
+function SubGroupRow({
+  title,
+  active,
+  onClick,
+}: {
+  title: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const [hovering, setHovering] = React.useState(false);
+  const high = active || hovering;
+  return (
+    <button
+      type="button"
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        height: 36,
+        marginBottom: 8,
+        padding: '12px 24px',
+        cursor: 'pointer',
+        userSelect: 'none',
+        fontSize: 14,
+        color: high ? '#005BF8' : '#333',
+        background: 'transparent',
+        border: 0,
+        outline: 'none',
+        appearance: 'none',
+        WebkitAppearance: 'none',
+        font: 'inherit',
+        textAlign: 'left',
+        width: '100%',
+      }}
+    >
+      <span
+        style={{
+          minWidth: 0,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {title}
+      </span>
+      <RightOutlined
+        style={{
+          color: high ? '#005BF8' : '#999',
+          fontSize: 12,
+          marginLeft: 8,
+        }}
+      />
+    </button>
+  );
+}
+
+/**
+ * 左侧一级菜单 Item (Level 1)
+ * 支持拖拽排序
+ */
+function GroupRow({
+  id,
+  active,
+  icon,
+  title,
+  onClick,
+}: {
+  id: string;
+  active: boolean;
+  icon: React.ReactNode;
+  title: string;
+  onClick: () => void;
+}) {
+  const [hovering, setHovering] = React.useState(false);
+  const sortableId = `group:${id}` as UniqueIdentifier;
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: sortableId });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flex: 1,
+    height: 36,
+    marginBottom: 8,
+    padding: 0,
+    cursor: 'pointer',
+    userSelect: 'none',
+    fontSize: 14,
+    color: active || hovering ? '#005BF8' : '#333',
+    background: 'transparent',
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
+      {...attributes}
+      {...listeners}
+      onClick={onClick}
+    >
+      <div
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 10,
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            color: active || hovering ? '#005BF8' : undefined,
+          }}
+        >
+          {icon}
+        </span>
+        <span
+          style={{
+            minWidth: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {title}
+        </span>
+      </div>
+      <RightOutlined
+        style={{
+          color: active || hovering ? '#005BF8' : '#999',
+          fontSize: 12,
+          marginLeft: 8,
+        }}
+      />
+    </div>
+  );
+}
+
+const COMMON_ACTION_MAX = 10;
+const COMMON_ACTION_PREVIEW_COUNT = 7;
+
+function readCommonActionsFromStorage(
+  storageKey: string,
+): CommonAction[] | null {
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    const list: CommonAction[] = parsed
+      .filter((x: any) => x && typeof x === 'object')
+      .filter(
+        (x: any) =>
+          typeof x.id === 'string' &&
+          typeof x.title === 'string' &&
+          typeof x.path === 'string',
+      )
+      .map((x: any) => ({ id: x.id, title: x.title, path: x.path }));
+    return list.length ? list : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCommonActionsToStorage(storageKey: string, list: CommonAction[]) {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(list));
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * 顶部已选中的胶囊样式
+ * 支持拖拽排序
+ */
+function CommonChip({
+  item,
+  onRemove,
+}: {
+  item: CommonAction;
+  onRemove: (id: string) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+    isSorting,
+  } = useSortable({ id: item.id as UniqueIdentifier });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition: isSorting ? 'none' : transition,
+    opacity: isDragging ? 0.5 : 1,
+    background: '#F4F6F8',
+    borderRadius: 16,
+    padding: '4px 12px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    userSelect: 'none',
+    cursor: isDragging ? 'grabbing' : 'grab',
+    fontSize: 13,
+    color: '#333',
+    boxSizing: 'border-box',
+    height: 28,
+    lineHeight: '20px',
+    width: '100%',
+    justifyContent: 'space-between',
+    minWidth: 0,
+    willChange: 'transform',
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        ...style,
+        opacity: 1,
+        background: isDragging ? 'transparent' : style.background,
+        border: isDragging
+          ? '1px dashed var(--ant-color-primary)'
+          : '1px solid transparent',
+      }}
+      {...attributes}
+      {...listeners}
+    >
+      <span
+        style={{
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          minWidth: 0,
+          flex: 1,
+        }}
+      >
+        {item.title}
+      </span>
+      <button
+        type="button"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 14,
+          height: 14,
+          borderRadius: '50%',
+          background: '#C0C4CC',
+          color: '#fff',
+          cursor: 'pointer',
+          fontSize: 8,
+          border: 0,
+          padding: 0,
+        }}
+        onMouseDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove(item.id);
+        }}
+      >
+        <CloseOutlined />
+      </button>
+    </div>
+  );
+}
+
+/**
+ * 右侧待选列表项 (Level 3)
+ * **移除拖拽功能**，仅保留点击添加，修复占位问题
+ */
+function CandidateRow({
+  item,
+  disabled,
+  onAdd,
+}: {
+  item: CommonAction;
+  disabled: boolean;
+  onAdd: () => void;
+}) {
+  const [hovering, setHovering] = React.useState(false);
+
+  const style: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '8px 0',
+    background: 'transparent',
+    cursor: 'default',
+    userSelect: 'none',
+    fontSize: 14,
+    color: hovering && !disabled ? '#005BF8' : disabled ? '#ccc' : '#333',
+  };
+  return (
+    <div
+      style={style}
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
+    >
+      <div style={{ whiteSpace: 'nowrap', paddingRight: 12 }}>{item.title}</div>
+
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => {
+          if (disabled) return;
+          onAdd();
+        }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          border: 0,
+          padding: 0,
+          background: 'transparent',
+        }}
+      >
+        <PlusCircleOutlined
+          style={{
+            fontSize: 12,
+            color: disabled
+              ? '#ccc'
+              : hovering
+                ? '#005BF8'
+                : 'var(--ant-color-primary)',
+          }}
+        />
+      </button>
+    </div>
+  );
+}
+
+type CommonSubGroup = {
+  id: string;
+  title: string;
+  children: CommonAction[];
+};
+
+type CommonGroup = {
+  id: string;
+  title: string;
+  icon: React.ReactNode;
+  children: CommonSubGroup[];
+};
+
+const BASE_COMMON_GROUPS: CommonGroup[] = [
+  {
+    id: 'goods',
+    title: '商品',
+    icon: <AppstoreOutlined />,
+    children: [
+      {
+        id: 'goods-manage',
+        title: '商品管理',
+        children: [
+          { id: 'goods', title: '商品', path: '/goods' },
+          { id: 'category', title: '类目管理', path: '/category' }, // 模拟数据填充 Grid
+          { id: 'inventory', title: '库存查询', path: '/inventory' },
+        ],
+      },
+      {
+        id: 'goods-settings',
+        title: '商品设置',
+        children: [{ id: 'tags', title: '标签管理', path: '/tags' }],
+      },
+    ],
+  },
+  {
+    id: 'service',
+    title: '服务',
+    icon: <AppstoreOutlined />,
+    children: [
+      {
+        id: 'service-manage',
+        title: '服务管理',
+        children: [{ id: 'service', title: '服务', path: '/service' }],
+      },
+    ],
+  },
+  {
+    id: 'order',
+    title: '订单',
+    icon: <AppstoreOutlined />,
+    children: [
+      {
+        id: 'order-manage',
+        title: '订单管理',
+        children: [{ id: 'order', title: '订单', path: '/order' }],
+      },
+    ],
+  },
+];
+
+const EXTRA_COMMON_GROUPS: CommonGroup[] = [
+  {
+    id: 'private',
+    title: '私域',
+    icon: <AppstoreOutlined />,
+    children: [
+      {
+        id: 'private-mini',
+        title: '小程序',
+        children: [
+          {
+            id: 'private-mini-home',
+            title: '小程序首页',
+            path: '/private/mini/home',
+          },
+        ],
+      },
+    ],
+  },
+];
+
+const COMMON_GROUPS: CommonGroup[] = [
+  ...EXTRA_COMMON_GROUPS,
+  ...BASE_COMMON_GROUPS,
+];
+
+const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
+  storageKey,
+}) => {
+  const [open, setOpen] = React.useState(false);
+  const [savedList, setSavedList] = React.useState<CommonAction[]>(
+    DEFAULT_COMMON_ACTIONS,
+  );
+  const [draftList, setDraftList] = React.useState<CommonAction[]>(
+    DEFAULT_COMMON_ACTIONS,
+  );
+  const [activeId, setActiveId] = React.useState<UniqueIdentifier | null>(null);
+  const [savedGroupOrder, setSavedGroupOrder] = React.useState<string[]>(
+    COMMON_GROUPS.map((g) => g.id),
+  );
+  const [draftGroupOrder, setDraftGroupOrder] = React.useState<string[]>(
+    COMMON_GROUPS.map((g) => g.id),
+  );
+  const [activeGroupId, setActiveGroupId] = React.useState<string>(
+    COMMON_GROUPS[0]?.id ?? 'goods',
+  );
+  const [activeSubGroupId, setActiveSubGroupId] = React.useState<string>(
+    COMMON_GROUPS[0]?.children?.[0]?.id ?? '',
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = readCommonActionsFromStorage(storageKey);
+    if (stored) {
+      setSavedList(stored);
+      setDraftList(stored);
+    }
+
+    try {
+      const rawOrder = localStorage.getItem(`${storageKey}__groupOrder`);
+      if (rawOrder) {
+        const parsed = JSON.parse(rawOrder);
+        if (Array.isArray(parsed)) {
+          const base = COMMON_GROUPS.map((g) => g.id);
+          const filtered = parsed.filter((x: any) => typeof x === 'string');
+          const uniq: string[] = [];
+          for (const x of filtered) if (!uniq.includes(x)) uniq.push(x);
+          const merged = [
+            ...uniq.filter((x) => base.includes(x)),
+            ...base.filter((x) => !uniq.includes(x)),
+          ];
+          setSavedGroupOrder(merged);
+          setDraftGroupOrder(merged);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [storageKey]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+  );
+
+  const drawerBodyRef = React.useRef<HTMLDivElement | null>(null);
+  const restrictToDrawer = React.useMemo(() => {
+    return ({ transform, activeNodeRect }: any) => {
+      const el = drawerBodyRef.current;
+      if (!el || !activeNodeRect) return transform;
+      const rect = el.getBoundingClientRect();
+
+      const left = activeNodeRect.left + transform.x;
+      const right = activeNodeRect.right + transform.x;
+      const top = activeNodeRect.top + transform.y;
+      const bottom = activeNodeRect.bottom + transform.y;
+
+      let x = transform.x;
+      let y = transform.y;
+
+      if (left < rect.left) x += rect.left - left;
+      if (right > rect.right) x -= right - rect.right;
+      if (top < rect.top) y += rect.top - top;
+      if (bottom > rect.bottom) y -= bottom - rect.bottom;
+
+      return { ...transform, x, y };
+    };
+  }, []);
+
+  const openDrawer = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setDraftList(savedList.map((x) => ({ ...x })));
+    setDraftGroupOrder(savedGroupOrder.map((x) => x));
+    setOpen(true);
+  };
+
+  const restoreDefault = () => {
+    setDraftList(DEFAULT_COMMON_ACTIONS.map((x) => ({ ...x })));
+  };
+
+  const cancelEdit = () => {
+    setOpen(false);
+    setDraftList(savedList.map((x) => ({ ...x })));
+    setDraftGroupOrder(savedGroupOrder.map((x) => x));
+  };
+
+  const confirmEdit = () => {
+    setSavedList(draftList.map((x) => ({ ...x })));
+    writeCommonActionsToStorage(storageKey, draftList);
+    setSavedGroupOrder(draftGroupOrder.map((x) => x));
+    try {
+      localStorage.setItem(
+        `${storageKey}__groupOrder`,
+        JSON.stringify(draftGroupOrder),
+      );
+    } catch {
+      // ignore
+    }
+    setOpen(false);
+  };
+
+  const removeFromDraft = (id: string) => {
+    setDraftList((prev) => prev.filter((x) => x.id !== id));
+  };
+
+  const addToDraft = (item: CommonAction) => {
+    setDraftList((prev) => {
+      if (prev.some((x) => x.id === item.id)) return prev;
+      if (prev.length >= COMMON_ACTION_MAX) {
+        message.warning(`最多可添加 ${COMMON_ACTION_MAX} 个常用入口`);
+        return prev;
+      }
+      return [...prev, item];
+    });
+  };
+
+  const onDragEnd = (event: any) => {
+    const { active, over } = event;
+    setActiveId(null);
+    if (!over) return;
+
+    const activeStr = String(active.id);
+    const overStr = String(over.id);
+
+    // 1. 处理左侧 Level 1 菜单排序
+    if (activeStr.startsWith('group:') && overStr.startsWith('group:')) {
+      const from = activeStr.replace('group:', '');
+      const to = overStr.replace('group:', '');
+      setDraftGroupOrder((prev) => {
+        const oldIndex = prev.indexOf(from);
+        const newIndex = prev.indexOf(to);
+        if (oldIndex < 0 || newIndex < 0) return prev;
+        return arrayMove(prev, oldIndex, newIndex);
+      });
+      return;
+    }
+
+    // 2. 处理顶部已选 Chips 排序
+    if (active.id !== over.id && overStr !== 'selected') {
+      // 确保是在 Top Area 内部拖拽
+      const oldIndex = draftList.findIndex((x) => x.id === active.id);
+      const newIndex = draftList.findIndex((x) => x.id === over.id);
+      if (oldIndex >= 0 && newIndex >= 0) {
+        setDraftList((items) => arrayMove(items, oldIndex, newIndex));
+      }
+    }
+  };
+
+  const previewList = savedList.slice(0, COMMON_ACTION_PREVIEW_COUNT);
+  const draftIds = draftList.map((x) => x.id);
+  const { setNodeRef: setSelectedDroppableRef } = useDroppable({
+    id: 'selected' as UniqueIdentifier,
+  });
+
+  const orderedGroups = React.useMemo(() => {
+    const map = new Map(COMMON_GROUPS.map((g) => [g.id, g] as const));
+    return draftGroupOrder
+      .map((id) => map.get(id))
+      .filter(Boolean) as CommonGroup[];
+  }, [draftGroupOrder]);
+
+  const activeGroup =
+    orderedGroups.find((g) => g.id === activeGroupId) ?? orderedGroups[0];
+
+  React.useEffect(() => {
+    const first = activeGroup?.children?.[0]?.id ?? '';
+    setActiveSubGroupId((prev) => {
+      if (!first) return '';
+      return prev && activeGroup?.children?.some((x) => x.id === prev)
+        ? prev
+        : first;
+    });
+  }, [activeGroupId, activeGroup]);
+
+  const activeSubGroup =
+    activeGroup?.children?.find((x) => x.id === activeSubGroupId) ??
+    activeGroup?.children?.[0];
+
+  return (
+    <>
+      <div className="workplace-common">
+        <div className="workplace-common-card">
+          <button
+            type="button"
+            className="ant-menu-submenu-title workplace-common-header"
+            onClick={openDrawer}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              width: '100%',
+              background: 'transparent',
+              border: 0,
+              padding: 0,
+              textAlign: 'left',
+              cursor: 'pointer',
+            }}
+          >
+            <span className="ant-menu-item-icon">
+              <AppstoreOutlined />
+            </span>
+            <span className="ant-menu-title-content">常用</span>
+            <MenuOutlined
+              className="workplace-common-header-extra"
+              onClick={openDrawer}
+            />
+          </button>
+          <div
+            className="ant-menu-sub ant-menu-inline workplace-common-actions"
+            role="menu"
+          >
+            {previewList.map((a) => (
+              <div
+                key={a.id}
+                className="ant-menu-item"
+                role="menuitem"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    history.push(a.path);
+                  }
+                }}
+                onClick={() => {
+                  history.push(a.path);
+                }}
+              >
+                <span className="ant-menu-title-content">{a.title}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <Drawer
+        open={open}
+        closable={false}
+        placement="right"
+        width={650}
+        onClose={cancelEdit}
+        // 自定义 Header：按钮胶囊样式，恢复默认文字链接
+        style={{ background: '#FAFCFF' }}
+        styles={{
+          header: {
+            padding: '16px 24px',
+            borderBottom: '1px solid #f0f0f0',
+            background: '#FAFCFF',
+          },
+          body: {
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            overflow: 'hidden',
+            padding: 0,
+            background: '#FAFCFF',
+          },
+        }}
+        title={
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span style={{ fontSize: 16, fontWeight: 600 }}>编辑快捷导航</span>
+            <Space size={12}>
+              <Button
+                type="link"
+                size="small"
+                onClick={restoreDefault}
+                style={{ padding: 0, fontSize: 13 }}
+              >
+                恢复默认
+              </Button>
+              <Button
+                size="small"
+                onClick={cancelEdit}
+                style={{
+                  borderRadius: 16,
+                  fontSize: 14,
+                  padding: '0 15px',
+                  height: 32,
+                  lineHeight: '32px',
+                }}
+              >
+                取消
+              </Button>
+              <Button
+                size="small"
+                type="primary"
+                onClick={confirmEdit}
+                style={{
+                  borderRadius: 16,
+                  fontSize: 14,
+                  padding: '0 15px',
+                  height: 32,
+                  lineHeight: '32px',
+                }}
+              >
+                确定
+              </Button>
+            </Space>
+          </div>
+        }
+      >
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          modifiers={[restrictToDrawer]}
+          onDragStart={(e) => setActiveId(e.active.id)}
+          onDragCancel={() => setActiveId(null)}
+          onDragEnd={onDragEnd}
+        >
+          <div
+            ref={drawerBodyRef}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%',
+              minHeight: 0,
+            }}
+          >
+            {/* 顶部已选中区域 */}
+            <div style={{ padding: '20px 24px' }}>
+              <Typography.Text
+                style={{
+                  fontSize: 13,
+                  color: '#666',
+                  display: 'block',
+                  marginBottom: 12,
+                }}
+              >
+                当前已选中 ({draftList.length}/{COMMON_ACTION_MAX}){' '}
+                <span style={{ color: '#999', marginLeft: 8 }}>
+                  移动可调整顺序
+                </span>
+              </Typography.Text>
+
+              <SortableContext items={draftIds} strategy={rectSortingStrategy}>
+                <div
+                  ref={setSelectedDroppableRef}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+                    gridAutoFlow: 'row',
+                    alignContent: 'start',
+                    minHeight: 40,
+                    gap: '12px',
+                  }}
+                >
+                  {draftList.map((item) => (
+                    <CommonChip
+                      key={item.id}
+                      item={item}
+                      onRemove={removeFromDraft}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </div>
+
+            {/* 底部选择区域 */}
+            <div style={{ padding: '16px 24px 0' }}>
+              <Typography.Text style={{ fontSize: 13, color: '#333' }}>
+                选择菜单添加{' '}
+                <span style={{ color: '#999', fontSize: 12, marginLeft: 10 }}>
+                  {' '}
+                  一级菜单支持拖拽排序
+                </span>
+              </Typography.Text>
+            </div>
+
+            <div
+              style={{
+                flex: 1,
+                minHeight: 0,
+                display: 'flex',
+                marginTop: 12,
+                padding: '0 24px',
+              }}
+            >
+              <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+                {/* 左侧：Level 1 一级菜单 (可拖拽) */}
+                <div
+                  style={{
+                    width: 170,
+                    background: '#FAFCFF',
+                    overflowY: 'auto',
+                    padding: 0,
+                    margin: 0,
+                  }}
+                >
+                  <SortableContext
+                    items={draftGroupOrder.map(
+                      (id) => `group:${id}` as UniqueIdentifier,
+                    )}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {orderedGroups.map((g) => (
+                      <GroupRow
+                        key={g.id}
+                        id={g.id}
+                        active={g.id === activeGroupId}
+                        onClick={() => setActiveGroupId(g.id)}
+                        icon={g.icon}
+                        title={g.title}
+                      />
+                    ))}
+                  </SortableContext>
+                </div>
+
+                {/* 中间：Level 2 二级菜单列表 */}
+                <div
+                  style={{
+                    width: 202,
+                    background: '#fff',
+                    borderRadius: 16,
+                    overflowY: 'auto',
+                    padding: 0,
+                    marginLeft: 8,
+                  }}
+                >
+                  {activeGroup?.children?.map((sub) => (
+                    <SubGroupRow
+                      key={sub.id}
+                      title={sub.title}
+                      active={sub.id === activeSubGroupId}
+                      onClick={() => setActiveSubGroupId(sub.id)}
+                    />
+                  ))}
+                  {(!activeGroup?.children ||
+                    activeGroup.children.length === 0) && (
+                    <div
+                      style={{
+                        color: '#999',
+                        textAlign: 'center',
+                        marginTop: 40,
+                      }}
+                    >
+                      暂无子菜单
+                    </div>
+                  )}
+                </div>
+
+                {/* 右侧：Level 3 三级菜单列表 */}
+                <div
+                  style={{
+                    width: 210,
+                    overflowY: 'auto',
+                    padding: '12px 24px 12px 32px',
+                    background: '#fff',
+                    borderRadius: 16,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 12,
+                    }}
+                  >
+                    {(activeSubGroup?.children ?? []).map((item) => {
+                      const exists = draftList.some((x) => x.id === item.id);
+                      const disabled =
+                        exists || draftList.length >= COMMON_ACTION_MAX;
+                      return (
+                        <CandidateRow
+                          key={item.id}
+                          item={item}
+                          disabled={disabled}
+                          onAdd={() => addToDraft(item)}
+                        />
+                      );
+                    })}
+                  </div>
+
+                  {(!activeSubGroup?.children ||
+                    activeSubGroup.children.length === 0) && (
+                    <div
+                      style={{
+                        color: '#999',
+                        textAlign: 'center',
+                        marginTop: 40,
+                      }}
+                    >
+                      暂无三级菜单
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DragOverlay>
+            {activeId
+              ? (() => {
+                  const activeStr = String(activeId);
+
+                  // 拖拽左侧 Level 1 菜单的效果
+                  if (activeStr.startsWith('group:')) {
+                    const id = activeStr.replace('group:', '');
+                    const it = orderedGroups.find((x) => x.id === id);
+                    if (!it) return null;
+                    return (
+                      <div
+                        style={{
+                          padding: '12px 24px',
+                          background: '#fff',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                          borderRadius: 4,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                        }}
+                      >
+                        {it.icon}
+                        {it.title}
+                      </div>
+                    );
+                  }
+
+                  // 拖拽顶部 Chips：拖动时展示完整样式（含背景/关闭按钮）
+                  const it = draftList.find((x) => x.id === activeId);
+                  if (!it) return null;
+                  return (
+                    <div
+                      style={{
+                        background: '#F4F6F8',
+                        borderRadius: 16,
+                        padding: '4px 12px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        userSelect: 'none',
+                        cursor: 'grabbing',
+                        fontSize: 13,
+                        color: '#333',
+                        boxSizing: 'border-box',
+                        height: 28,
+                        lineHeight: '20px',
+                        minWidth: 0,
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                      }}
+                    >
+                      <span
+                        style={{
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          minWidth: 0,
+                          flex: 1,
+                        }}
+                      >
+                        {it.title}
+                      </span>
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 14,
+                          height: 14,
+                          borderRadius: '50%',
+                          background: '#C0C4CC',
+                          color: '#fff',
+                          fontSize: 8,
+                        }}
+                      >
+                        <CloseOutlined />
+                      </span>
+                    </div>
+                  );
+                })()
+              : null}
+          </DragOverlay>
+        </DndContext>
+      </Drawer>
+    </>
+  );
+};
 
 // ProLayout 支持的api https://procomponents.ant.design/components/layout
 export const layout: RunTimeLayoutConfig = ({
@@ -202,43 +1274,25 @@ export const layout: RunTimeLayoutConfig = ({
         '/result',
         '/set',
         '/finance',
-      ]; // 你的实际 iframe 路由
+      ];
 
       return (
         <div
           style={{ cursor: 'pointer', width: '100%', height: '100%' }}
-          // 建议用 onClickCapture 以防被 Antd 内部拦截
           onClickCapture={() => {
-            // 2. 🔥 核心：根据菜单名字查 ID
-            // 如果查不到，默认给个 0 或者空字符串
             const currentId = MENU_ID_MAP[item.name || ''] || 0;
-
             console.log(`🔥 点击菜单: [${item.name}], 匹配 ID: ${currentId}`);
-
             const isIframePage = item.path && IFRAME_PATHS.includes(item.path);
 
             if (isIframePage) {
-              // ==============================
-              // 情况 A: Iframe 页面 -> 传值并跳转
-              // ==============================
               let finalPath = item.path;
               if (finalPath === '/dashboard') {
                 finalPath = '/dashboard/index';
               }
-              // 执行带参跳转
               if (finalPath) {
                 history.push(`${finalPath}?targetId=${currentId}`);
               }
-              // 4. 带参跳转 (带上 targetId)
-              // 这样 iframe 刷新或刚进来也能拿到 ID
-              // if (item.path) {
-              //   history.push(`${item.path}?targetId=${currentId}`);
-              // }
             } else {
-              // ==============================
-              // 情况 B: 普通页面 -> 正常跳转
-              // ==============================
-              // 如果普通页面也需要这个 ID，也可以在这里 push 带参数
               history.push(`${item.path}`);
             }
           }}
@@ -247,7 +1301,6 @@ export const layout: RunTimeLayoutConfig = ({
         </div>
       );
     },
-    // 关闭sider菜单栏展开按钮
     collapsedButtonRender: false,
     actionsRender: () => {
       const checked = (initialState?.settings as any)?.navTheme === 'realDark';
@@ -296,8 +1349,6 @@ export const layout: RunTimeLayoutConfig = ({
           />
         </Tooltip>,
         <NoticeBell key="notice" />,
-        // <Question key="doc" />,
-        // <SelectLang key="SelectLang" />,
       ];
     },
     menuRender: (
@@ -309,21 +1360,42 @@ export const layout: RunTimeLayoutConfig = ({
     ) => {
       const pathname =
         menuProps?.location?.pathname ?? history.location.pathname;
-      // 1) 先定位：当前属于哪个“一级菜单”
       const top = findTopLevelMenuItem(menuProps?.menuData, pathname);
 
       if (!top) return defaultDom;
-
-      // 2) 统计：该一级菜单下可达的“叶子页面”数量
       const leafCount = countVisibleLeaves(top.children) || (top.path ? 1 : 0);
-      // 3) 规则：叶子页面数量 <= 1 时隐藏左侧（只保留 Header 和内容区）
       return leafCount <= 1 ? null : defaultDom;
+    },
+
+    menuContentRender: (
+      menuProps: {
+        menuData?: MenuDataItem[];
+        location?: { pathname?: string };
+      },
+      defaultDom,
+    ) => {
+      const pathname =
+        menuProps?.location?.pathname ?? history.location.pathname;
+      const isInDashboard =
+        pathname === '/dashboard' || pathname.startsWith('/dashboard/');
+
+      if (!isInDashboard) return defaultDom;
+
+      const storageKey = `workplace_common_actions_${
+        initialState?.currentUser?.name ?? 'guest'
+      }`;
+
+      return (
+        <div>
+          <WorkplaceCommonMenu storageKey={storageKey} />
+          {defaultDom}
+        </div>
+      );
     },
 
     avatarProps: {
       src: initialState?.currentUser?.avatar,
       title: <AvatarName />,
-      // 点击头像/用户名区域直接跳转到个人设置页，移除下拉菜单
       render: (_, avatarChildren) => {
         return (
           <span
@@ -363,16 +1435,10 @@ export const layout: RunTimeLayoutConfig = ({
     waterMarkProps: {
       content: initialState?.currentUser?.name,
     },
-    // footerRender: () => <Footer />,
     onPageChange: () => {
       if (devBypassAuth) return;
       const { location } = history;
-
-      // 方案1（临时策略）：用户信息接口未接通前，允许“仅凭 token”进入系统
-      // TODO(接口完成后回滚)：恢复为“!initialState?.currentUser 时直接跳登录”（不以 token 放行）
       const hasToken = !!getToken();
-
-      // 如果既没有 currentUser，也没有 token，才认为未登录
       if (
         !initialState?.currentUser &&
         !hasToken &&
@@ -402,11 +1468,7 @@ export const layout: RunTimeLayoutConfig = ({
       },
     ],
     menuHeaderRender: undefined,
-    // 自定义 403 页面
-    // unAccessible: <div>unAccessible</div>,
-    // 增加一个 loading 的状态
     childrenRender: (children) => {
-      // if (initialState?.loading) return <PageLoading />;
       return (
         <>
           <HeaderScrollWatcher />
@@ -431,11 +1493,6 @@ export const layout: RunTimeLayoutConfig = ({
   };
 };
 
-/**
- * @name request 配置，可以配置错误处理
- * 它基于 axios 和 ahooks 的 useRequest 提供了一套统一的网络请求和错误处理方案。
- * @doc https://umijs.org/docs/max/request#配置
- */
 export const request: RequestConfig = {
   baseURL: apiBase,
   ...errorConfig,

@@ -58,8 +58,6 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
   idToPathMap,
   heightMessageType = 'IFRAME_HEIGHT',
   navigateMessageType = 'FROM_CHILD_APP',
-  requestHeightType = 'REQUEST_HEIGHT',
-  initType = 'INIT_DATA',
   heightPayloadKey = 'scrollHeight',
   minHeight = 300,
   heightOffset = 20,
