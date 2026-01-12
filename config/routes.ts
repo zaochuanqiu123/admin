@@ -76,6 +76,11 @@ const routes = [
             path: '/dashboard/analysis/sub2',
             component: './dashboard/analysis/sub2',
           },
+          {
+            name: '子菜单二',
+            path: '/dashboard/analysis/sub2',
+            component: './dashboard/analysis/sub2',
+          },
         ],
       },
       {
