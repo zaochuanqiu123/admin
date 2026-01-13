@@ -1,3 +1,16 @@
+/**
+ * 应用运行时入口（Umi Max Runtime）
+ *
+ * 这个文件主要负责：
+ * - 初始化全局运行时状态（getInitialState）：拉取当前用户、处理登录态
+ * - 配置 ProLayout（layout）：菜单渲染、顶部操作区、头像下拉等
+ * - 实现“工作台-常用入口”侧边栏模块：包含本地缓存、编辑抽屉、拖拽排序
+ * - 统一 request 配置（baseURL + errorConfig）
+ */
+
+/**
+ * UI 图标依赖：主要用于侧边栏常用入口、拖拽列表、主题切换等
+ */
 import {
   AppstoreOutlined,
   CloseOutlined,
@@ -7,11 +20,25 @@ import {
   RightOutlined,
   SunOutlined,
 } from '@ant-design/icons';
+/**
+ * ProLayout / ProComponents：
+ * - LayoutSettings：运行时布局配置类型（主题、布局、菜单等）
+ * - MenuDataItem：菜单项结构（用于自定义菜单渲染与筛选）
+ * - SettingDrawer：仅在开发环境下启用的可视化配置面板
+ */
 import type {
   Settings as LayoutSettings,
   MenuDataItem,
 } from '@ant-design/pro-components';
 import { SettingDrawer } from '@ant-design/pro-components';
+
+/**
+ * dnd-kit：用于实现“常用入口”编辑抽屉中的拖拽排序
+ * - UniqueIdentifier：拖拽项的 id 类型
+ * - DndContext/SortableContext：拖拽上下文与可排序容器
+ * - useSortable/useDroppable：拖拽项/投放区 hooks
+ * - arrayMove：排序后的数组重排
+ */
 import type { UniqueIdentifier } from '@dnd-kit/core';
 import {
   closestCenter,
@@ -35,6 +62,8 @@ import { history } from '@umijs/max';
 import {
   Button,
   Drawer,
+  Dropdown,
+  type MenuProps,
   message,
   Space,
   Switch,
@@ -42,7 +71,7 @@ import {
   Typography,
 } from 'antd';
 import React, { useEffect } from 'react';
-import { currentUser as queryCurrentUser } from '@/api/user';
+import { outLogin, currentUser as queryCurrentUser } from '@/api/user';
 import { AvatarName, NoticeBell } from '@/components';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
@@ -56,7 +85,15 @@ const devBypassAuth =
 
 const apiBase = typeof __API_BASE__ !== 'undefined' ? __API_BASE__ : undefined;
 
-// 监听滚动
+/**
+ * HeaderScrollWatcher
+ *
+ * 用途：监听 window 滚动位置，给 body 动态加/减 `header-scrolled` class。
+ * - 典型场景：顶部 Header 在滚动后需要阴影/背景变化（由 CSS 负责具体样式）
+ * - 实现要点：
+ *   - 使用 passive listener 提升滚动性能
+ *   - 初次挂载立即执行一次 handler，确保刷新后状态正确
+ */
 const HeaderScrollWatcher: React.FC = () => {
   useEffect(() => {
     const handler = () => {
@@ -1397,38 +1434,75 @@ export const layout: RunTimeLayoutConfig = ({
       src: initialState?.currentUser?.avatar,
       title: <AvatarName />,
       render: (_, avatarChildren) => {
+        // 退出登录处理函数
+        const handleLogout = async () => {
+          try {
+            // 调用退出登录 API
+            await outLogin();
+          } catch (error) {
+            // 即使 API 调用失败，也继续执行退出流程
+            console.error('退出登录 API 调用失败:', error);
+          } finally {
+            // 清除本地 token
+            clearToken();
+            // 清除用户信息
+            setInitialState((s) => ({
+              ...s,
+              currentUser: undefined,
+            }));
+            // 跳转到登录页
+            history.push(loginPath);
+            message.success('已退出登录');
+          }
+        };
+
+        // 下拉菜单配置
+        const menuItems: MenuProps['items'] = [
+          {
+            key: 'logout',
+            label: '退出登录',
+            onClick: handleLogout,
+          },
+        ];
+
         return (
-          <span
-            style={{
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              height: 48,
-              padding: '0 16px',
-              margin: 16,
-              borderRadius: 6,
-              transition: 'background-color 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLSpanElement).style.backgroundColor =
-                'rgba(0, 0, 0, 0.04)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLSpanElement).style.backgroundColor =
-                'transparent';
-            }}
-            onMouseDown={(e) => {
-              (e.currentTarget as HTMLSpanElement).style.backgroundColor =
-                'rgba(0, 0, 0, 0.08)';
-            }}
-            onMouseUp={(e) => {
-              (e.currentTarget as HTMLSpanElement).style.backgroundColor =
-                'rgba(0, 0, 0, 0.04)';
-            }}
-            onClick={() => history.push('/dashboard/settings')}
+          <Dropdown
+            menu={{ items: menuItems }}
+            placement="bottomRight"
+            trigger={['hover']}
           >
-            {avatarChildren}
-          </span>
+            <span
+              style={{
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                height: 48,
+                padding: '0 16px',
+                margin: 16,
+                borderRadius: 6,
+                transition: 'background-color 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLSpanElement).style.backgroundColor =
+                  'rgba(0, 0, 0, 0.04)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLSpanElement).style.backgroundColor =
+                  'transparent';
+              }}
+              onMouseDown={(e) => {
+                (e.currentTarget as HTMLSpanElement).style.backgroundColor =
+                  'rgba(0, 0, 0, 0.08)';
+              }}
+              onMouseUp={(e) => {
+                (e.currentTarget as HTMLSpanElement).style.backgroundColor =
+                  'rgba(0, 0, 0, 0.04)';
+              }}
+              onClick={() => history.push('/dashboard/settings')}
+            >
+              {avatarChildren}
+            </span>
+          </Dropdown>
         );
       },
     },
@@ -1447,26 +1521,7 @@ export const layout: RunTimeLayoutConfig = ({
         history.push(loginPath);
       }
     },
-    bgLayoutImgList: [
-      {
-        src: 'https://mdn.alipayobjects.com/yuyan_qk0oxh/afts/img/D2LWSqNny4sAAAAAAAAAAAAAFl94AQBr',
-        left: 85,
-        bottom: 100,
-        height: '303px',
-      },
-      {
-        src: 'https://mdn.alipayobjects.com/yuyan_qk0oxh/afts/img/C2TWRpJpiC0AAAAAAAAAAAAAFl94AQBr',
-        bottom: -68,
-        right: -45,
-        height: '303px',
-      },
-      {
-        src: 'https://mdn.alipayobjects.com/yuyan_qk0oxh/afts/img/F6vSTbj8KpYAAAAAAAAAAAAAFl94AQBr',
-        bottom: 0,
-        left: 0,
-        width: '331px',
-      },
-    ],
+
     menuHeaderRender: undefined,
     childrenRender: (children) => {
       return (
