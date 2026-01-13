@@ -167,19 +167,18 @@ ol {
   // 6. 去掉右边的边框线 (既然都悬浮了，就不需要分割线了)
 }
 .ant-pro-sider-mix .ant-layout-sider-children{
-  background: var(--ant-color-bg-container) !important;
+  background: transparent !important;
   margin-left: 16px;
   margin-top: 16px !important;
    border-radius: 16px !important;
-  padding: 14px 8px 14px 8px !important;
+  padding: 0 !important;
   border: none !important;
 }
 
  .workplace-common-card {
   background: var(--ant-color-bg-container) !important;
   border-radius: 16px !important;
-  padding: 0;
-  border: none !important;
+  padding: 12px 0 12px 0;
  }
 
  .workplace-common-header {
@@ -271,6 +270,73 @@ ol {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.dashboard-sider {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dashboard-sider-common {
+  margin-bottom: 8px;
+}
+
+.dashboard-sider-common .workplace-common-card {
+  background-image: linear-gradient(180deg, #d9e7ff, #fafcff) !important;
+  border: 1px solid #fafcff;
+}
+
+.dashboard-sider-menu {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: visible;
+}
+
+.dashboard-sider-menu::before,
+.dashboard-sider-menu::after {
+  content: '';
+  position: absolute;
+  width: 9px;
+  height: 34px;
+  top: -21px;
+  background-image: url('~@/assets/original.png');
+  background-repeat: no-repeat;
+  background-size: 9px 34px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.dashboard-sider-menu::before {
+  left: 10px;
+}
+
+.dashboard-sider-menu::after {
+  right: 10px;
+}
+
+.dashboard-sider-menu-content {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  overflow: auto;
+  background: var(--ant-color-bg-container) !important;
+  border-radius: 16px !important;
+  padding: 12px 0 12px 0;
+}
+
+.dashboard-sider-menu > .ant-menu,
+.dashboard-sider-menu .ant-menu {
+  height: auto;
+  overflow: visible !important;
+}
+
+.dashboard-sider-menu .ant-pro-base-menu {
+  overflow: visible !important;
+}
+
 // 1. 选中侧边栏(Sider)、它的子容器(Children) 以及 菜单本体(Menu)
 // 只要是侧边栏里的东西，通通不许显示滚动条
 .ant-layout-sider,

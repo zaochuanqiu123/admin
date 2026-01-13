@@ -1423,9 +1423,14 @@ export const layout: RunTimeLayoutConfig = ({
       }`;
 
       return (
-        <div>
-          <WorkplaceCommonMenu storageKey={storageKey} />
-          {defaultDom}
+        <div className="dashboard-sider">
+          <div className="dashboard-sider-common">
+            <WorkplaceCommonMenu storageKey={storageKey} />
+          </div>
+
+          <div className="dashboard-sider-menu">
+            <div className="dashboard-sider-menu-content">{defaultDom}</div>
+          </div>
         </div>
       );
     },
