@@ -124,30 +124,29 @@ ol {
 
 
 /* 1. 子菜单变成“一行两个” */
-.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item {
-  float: left;             /* 左浮动实现横排 */
-  width: 47% !important;   /* 右侧整体往左挪一点，让省略号更好对齐 */
+/* 1. 子菜单变成“一行两个” (仅在展开时生效) */
+.ant-layout-sider:not(.ant-layout-sider-collapsed) .ant-menu-sub.ant-menu-inline .ant-menu-item {
+  float: left;             
+  width: 47% !important;   
   box-sizing: border-box !important;
   margin: 0 !important;
   margin-bottom: 4px !important;
-  
-  /* 10px让子菜单文字完美对齐上一级图标的文字位置 */
   padding-left: 10px !important; 
   padding-right: 0 !important;
-  transition: none !important; /* 关掉动画防止卡顿 */
 }
 
 /* 2. 清除浮动 (解决点击收起时卡住的 Bug) */
-.ant-layout-sider .ant-menu-sub.ant-menu-inline::after {
+.ant-layout-sider:not(.ant-layout-sider-collapsed) .ant-menu-sub.ant-menu-inline::after {
   display: block;
   clear: both;
   height: 0;
   visibility: hidden;
+  content: " "; /* 必须加 content 才能生效 */
 }
 /* 3.父级菜单选中时，强制保持“深灰色” (不让它变蓝) */
-.ant-layout-sider .ant-menu-submenu-selected > .ant-menu-submenu-title {
-  color: var(--ant-color-text) !important; 
-  font-weight: normal !important;
+.ant-layout-sider.ant-layout-sider-collapsed .ant-menu-sub .ant-menu-item {
+  float: none !important;
+  width: 100% !important;
 }
 /* 6. 防止长文字换行导致布局错位 */
 .ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item .ant-menu-title-content {
@@ -190,7 +189,7 @@ ol {
   line-height: 40px;
   padding: 0 34px 0 16px;
   position: relative;
-  cursor: pointer;
+  cursor: default;
  }
 
  .workplace-common-header .ant-menu-item-icon {
@@ -263,14 +262,6 @@ ol {
   white-space: nowrap;
  }
 
-.workplace-common-actions-title {
-  display: inline-block;
-  max-width: 6em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .dashboard-sider {
   height: 100%;
   min-height: 0;
@@ -321,10 +312,23 @@ ol {
   position: relative;
   z-index: 2;
   height: 100%;
-  overflow: auto;
+  
+  /* 允许滚动 */
+  overflow-y: auto; 
+  overflow-x: hidden;
+
   background: var(--ant-color-bg-container) !important;
   border-radius: 16px !important;
   padding: 12px 0 12px 0;
+
+  /* --- 新增：隐藏火狐和IE的滚动条 --- */
+  scrollbar-width: none !important;      /* Firefox */
+  -ms-overflow-style: none !important;   /* IE 10+ */
+}
+.dashboard-sider-menu-content::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .dashboard-sider-menu > .ant-menu,
@@ -337,26 +341,16 @@ ol {
   overflow: visible !important;
 }
 
-// 1. 选中侧边栏(Sider)、它的子容器(Children) 以及 菜单本体(Menu)
-// 只要是侧边栏里的东西，通通不许显示滚动条
-.ant-layout-sider,
-.ant-layout-sider-children,
-.ant-layout-sider .ant-menu,
-.ant-layout-sider-children > div {
-  
-  // 【针对 Chrome, Safari, Edge (Webkit内核)】
-  &::-webkit-scrollbar {
-    display: none !important;
-    width: 0 !important;
-    height: 0 !important;
-    background: transparent !important;
-  }
+.dashboard-sider-menu-content .ant-menu-submenu-selected > .ant-menu-submenu-title,
+.dashboard-sider-menu-content .ant-menu-submenu-active > .ant-menu-submenu-title {
+  color: rgba(0, 0, 0, 0.88) !important;
+}
 
-  // 【针对 Firefox】
-  scrollbar-width: none !important;                            
-
-  // 【针对 IE 10+】
-  -ms-overflow-style: none !important;
+.dashboard-sider-menu-content
+  .ant-menu-submenu-selected
+  > .ant-menu-submenu-title
+  .ant-menu-title-content {
+  color: rgba(0, 0, 0, 0.88) !important;
 }
 
 .ant-layout-sider .ant-menu-submenu-title .ant-menu-title-content {
@@ -496,23 +490,42 @@ body.header-scrolled .ant-pro-layout .ant-pro-layout-header {
 // 彻底移除侧边栏所有动画 (包括 Hover 变色)
 // =================================================================
 
-// 1. 选中侧边栏里的【所有东西】以及它们的【伪元素】
-.ant-layout-sider *,
-.ant-layout-sider *::before,
-.ant-layout-sider *::after {
-  transition: none !important;
-  animation: none !important;
-}
+// // 1. 选中侧边栏里的【所有东西】以及它们的【伪元素】
+// .ant-layout-sider *,
+// .ant-layout-sider *::before,
+// .ant-layout-sider *::after {
+//   transition: none !important;
+//   animation: none !important;
+// }
 
 // 2. 特别针对 Hover 和 Active 状态，强制瞬间变色
-.ant-layout-sider .ant-menu-item:hover,
-.ant-layout-sider .ant-menu-item-active,
-.ant-layout-sider .ant-menu-submenu-title:hover {
-  transition: none !important;
+// .ant-layout-sider .ant-menu-item:hover,
+// .ant-layout-sider .ant-menu-item-active,
+// .ant-layout-sider .ant-menu-submenu-title:hover {
+//   transition: none !important;
+//   background: transparent !important;
+//   background-color: transparent !important;
+// }
+/* 子菜单 hover/选中：不要有任何背景块，只改文字颜色 */
+.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item,
+.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-submenu-title {
+  background: transparent !important;
+}
+
+.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item:hover,
+.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item-active,
+.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item-selected,
+.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-submenu-title:hover {
   background: transparent !important;
   background-color: transparent !important;
 }
 
+/* 去掉左边那条选中高亮条，避免“闪一下”的感觉 */
+.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item::after,
+.ant-layout-sider .ant-menu-sub.ant-menu-inline
+  .ant-menu-submenu-title::after {
+  border-right: none !important;
+}
 .ant-pro-drawer-sider .ant-drawer-content-wrapper {
   background: transparent !important;
   box-shadow: none !important;
@@ -542,6 +555,72 @@ body.header-scrolled .ant-pro-layout .ant-pro-layout-header {
   color: var(--ant-color-text) !important;
 }
 
+.workplace-common-drawer .workplace-common-drawer-top-tabs {
+  height: 44px;
+  border-radius: 999px;
+  background: #E7EDFB;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+.workplace-common-drawer .workplace-common-drawer-top-tabs-arrow.ant-btn {
+  height: 32px;
+  width: 32px;
+  min-width: 32px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.workplace-common-drawer .workplace-common-drawer-top-tabs-scroll {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.workplace-common-drawer .workplace-common-drawer-top-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.workplace-common-drawer .workplace-common-drawer-top-tabs-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.workplace-common-drawer .workplace-common-drawer-top-tabs-list {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  padding: 0 6px;
+}
+
+.workplace-common-drawer .workplace-common-drawer-top-tab {
+  height: 32px;
+  line-height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  color: rgba(0, 0, 0, 0.88);
+  font-size: 14px;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.workplace-common-drawer .workplace-common-drawer-top-tab-active {
+  background: #fff;
+  color: #005BF8;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
 
 .ant-pro-layout .ant-pro-layout-content{
  padding: 0;

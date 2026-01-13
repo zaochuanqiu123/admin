@@ -14,6 +14,7 @@
 import {
   AppstoreOutlined,
   CloseOutlined,
+  LeftOutlined,
   MenuOutlined,
   MoonOutlined,
   PlusCircleOutlined,
@@ -74,6 +75,7 @@ import React, { useEffect } from 'react';
 import { outLogin, currentUser as queryCurrentUser } from '@/api/user';
 import { AvatarName, NoticeBell } from '@/components';
 import defaultSettings from '../config/defaultSettings';
+import routes from '../config/routes';
 import { errorConfig } from './requestErrorConfig';
 import '@ant-design/v5-patch-for-react-19';
 import { clearToken, getToken } from '@/api/storage';
@@ -230,6 +232,165 @@ const MENU_ID_MAP: Record<string, number> = {
   财务: 1464,
   设置: 303,
   应用: 1495,
+};
+
+type TopRouteTabItem = {
+  name: string;
+  path: string;
+  rawPath: string;
+};
+
+function resolveTopRoutePath(route: any): string {
+  if (!route) return '';
+  if (typeof route.redirect === 'string' && route.redirect)
+    return route.redirect;
+  const children = route.routes;
+  if (Array.isArray(children) && children.length > 0) {
+    for (const child of children) {
+      if (typeof child?.redirect === 'string' && child.redirect)
+        return child.redirect;
+      if (typeof child?.path === 'string' && child.path) return child.path;
+      if (Array.isArray(child?.routes) && child.routes.length > 0) {
+        const deep = resolveTopRoutePath(child);
+        if (deep) return deep;
+      }
+    }
+  }
+  return typeof route.path === 'string' ? route.path : '';
+}
+
+const WorkplaceCommonTopRouteTabs: React.FC = () => {
+  const pathname = history.location.pathname;
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
+  const lastPathRef = React.useRef<string>(pathname);
+  const tabRefs = React.useRef<Record<string, HTMLButtonElement | null>>({});
+  const [canScrollLeft, setCanScrollLeft] = React.useState(false);
+  const [canScrollRight, setCanScrollRight] = React.useState(false);
+  const [activeKey, setActiveKey] = React.useState<string>('');
+
+  const topRoutes = React.useMemo(() => {
+    const list = (routes as any[])
+      .filter((r) => r && r.name && r.path)
+      .filter((r) => r.path !== '/' && r.path !== '/*' && r.path !== '/user')
+      .filter((r) => !(r as any)?.hideInMenu)
+      .filter((r) => (r as any)?.layout !== false);
+
+    const mapped: TopRouteTabItem[] = [];
+    for (const r of list) {
+      const rawPath = String(r.path);
+      const targetPath = resolveTopRoutePath(r);
+      if (!targetPath) continue;
+      mapped.push({ name: String(r.name), path: targetPath, rawPath });
+    }
+    return mapped;
+  }, []);
+
+  const updateScrollState = React.useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const maxScrollLeft = el.scrollWidth - el.clientWidth;
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft < maxScrollLeft - 1);
+  }, []);
+
+  React.useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateScrollState();
+
+    const onScroll = () => updateScrollState();
+    el.addEventListener('scroll', onScroll, { passive: true } as any);
+    window.addEventListener('resize', updateScrollState);
+    return () => {
+      el.removeEventListener('scroll', onScroll as any);
+      window.removeEventListener('resize', updateScrollState);
+    };
+  }, [updateScrollState]);
+
+  const scrollByAmount = (delta: number) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: delta, behavior: 'smooth' });
+  };
+
+  const getActiveKeyFromPathname = React.useCallback(() => {
+    const found = topRoutes.find(
+      (r) => isPathMatch(r.rawPath, pathname) || isPathMatch(r.path, pathname),
+    );
+    return found?.rawPath ?? topRoutes[0]?.rawPath ?? '';
+  }, [pathname, topRoutes]);
+
+  React.useEffect(() => {
+    // 首次渲染：用当前路由初始化高亮
+    if (!activeKey) {
+      setActiveKey(getActiveKeyFromPathname());
+    }
+  }, [activeKey, getActiveKeyFromPathname]);
+
+  React.useEffect(() => {
+    // 当外部路由变化时（例如用户通过其它方式切换页面），同步高亮
+    if (lastPathRef.current !== pathname) {
+      lastPathRef.current = pathname;
+      setActiveKey(getActiveKeyFromPathname());
+    }
+  }, [getActiveKeyFromPathname, pathname]);
+
+  React.useEffect(() => {
+    if (!activeKey) return;
+    const el = tabRefs.current[activeKey];
+    if (!el) return;
+    el.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'center',
+    });
+  }, [activeKey]);
+
+  if (!topRoutes || topRoutes.length === 0) return null;
+
+  return (
+    <div className="workplace-common-drawer-top-tabs">
+      <Button
+        type="text"
+        className="workplace-common-drawer-top-tabs-arrow"
+        icon={<LeftOutlined />}
+        disabled={!canScrollLeft}
+        onClick={() => scrollByAmount(-220)}
+      />
+
+      <div className="workplace-common-drawer-top-tabs-scroll" ref={scrollRef}>
+        <div className="workplace-common-drawer-top-tabs-list">
+          {topRoutes.map((r) => {
+            const active = r.rawPath === activeKey;
+            return (
+              <button
+                key={r.rawPath}
+                type="button"
+                className={
+                  'workplace-common-drawer-top-tab' +
+                  (active ? ' workplace-common-drawer-top-tab-active' : '')
+                }
+                ref={(node) => {
+                  tabRefs.current[r.rawPath] = node;
+                }}
+                onClick={() => setActiveKey(r.rawPath)}
+              >
+                {r.name}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <Button
+        type="text"
+        className="workplace-common-drawer-top-tabs-arrow"
+        icon={<RightOutlined />}
+        disabled={!canScrollRight}
+        onClick={() => scrollByAmount(220)}
+      />
+    </div>
+  );
 };
 
 type CommonAction = {
@@ -890,7 +1051,6 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
           <button
             type="button"
             className="ant-menu-submenu-title workplace-common-header"
-            onClick={openDrawer}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -899,7 +1059,7 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
               border: 0,
               padding: 0,
               textAlign: 'left',
-              cursor: 'pointer',
+              cursor: 'default',
             }}
           >
             <span className="ant-menu-item-icon">
@@ -908,7 +1068,10 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
             <span className="ant-menu-title-content">常用</span>
             <MenuOutlined
               className="workplace-common-header-extra"
-              onClick={openDrawer}
+              onClick={(e) => {
+                e.stopPropagation();
+                openDrawer(e as any);
+              }}
             />
           </button>
           <div
@@ -943,6 +1106,7 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
         closable={false}
         placement="right"
         width={650}
+        className="workplace-common-drawer"
         onClose={cancelEdit}
         // 自定义 Header：按钮胶囊样式，恢复默认文字链接
         style={{ background: '#FAFCFF' }}
@@ -1075,6 +1239,10 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                   一级菜单支持拖拽排序
                 </span>
               </Typography.Text>
+            </div>
+
+            <div style={{ padding: '12px 24px 0' }}>
+              <WorkplaceCommonTopRouteTabs />
             </div>
 
             <div
