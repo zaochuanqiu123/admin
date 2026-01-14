@@ -1046,7 +1046,7 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
 
   return (
     <>
-      <div className="workplace-common">
+      <div className="workplace-common pc-admin-workplace-common">
         <div className="workplace-common-card">
           <button
             type="button"

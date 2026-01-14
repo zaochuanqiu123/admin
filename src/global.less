@@ -126,61 +126,55 @@ ol {
 /* 1. 子菜单变成“一行两个” */
 /* 1. 子菜单变成“一行两个” (仅在展开时生效) */
 .ant-layout-sider:not(.ant-layout-sider-collapsed) .ant-menu-sub.ant-menu-inline .ant-menu-item {
-  float: left;             
-  width: 47% !important;   
+  width: 47% !important;
   box-sizing: border-box !important;
   margin: 0 !important;
   margin-bottom: 4px !important;
-  padding-left: 10px !important; 
   padding-right: 0 !important;
+
+  /* 关键修改：调整这个值来对齐图标 */
+  /* 建议尝试 12px ~ 16px，根据你父级图标的实际位置微调 */
+  padding-left: 10px !important; 
+  
+  /* 确保图标和文字垂直居中 */
+  display: inline-block !important;
+  align-items: center !important;
 }
 
 /* 2. 清除浮动 (解决点击收起时卡住的 Bug) */
-.ant-layout-sider:not(.ant-layout-sider-collapsed) .ant-menu-sub.ant-menu-inline::after {
-  display: block;
-  clear: both;
-  height: 0;
-  visibility: hidden;
-  content: " "; /* 必须加 content 才能生效 */
+.pc-admin-sider-real-menu .ant-layout-sider:not(.ant-layout-sider-collapsed) .ant-menu-sub.ant-menu-inline:not(.ant-menu-hidden) {
+  // justify-content: flex-start;
+  /* 新增这一行：清除 ul 默认的 40px 内边距 */
+  // padding: 0 !important; 
+  margin: 0 !important;
 }
 /* 3.父级菜单选中时，强制保持“深灰色” (不让它变蓝) */
-.ant-layout-sider.ant-layout-sider-collapsed .ant-menu-sub .ant-menu-item {
+.pc-admin-sider-real-menu .ant-layout-sider.ant-layout-sider-collapsed .ant-menu-sub .ant-menu-item {
   float: none !important;
   width: 100% !important;
 }
-/* 6. 防止长文字换行导致布局错位 */
-.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item .ant-menu-title-content {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .ant-layout-sider {
   background: none !important;
-  // background: red !important;
-  // 2. 关键：保证内部内容不会溢出圆角 (否则直角的背景色会露出来)
-  // overflow: hidden !important;
-  // 因为侧边栏是固定定位的，加了 margin-top 后，必须减小高度，否则底部会超出屏幕
+
   height: calc(100vh - 88px)!important;
-  // 6. 去掉右边的边框线 (既然都悬浮了，就不需要分割线了)
+
 }
 .ant-pro-sider-mix .ant-layout-sider-children{
   background: transparent !important;
   margin-left: 16px;
   margin-top: 16px !important;
-   border-radius: 16px !important;
+  border-radius: 16px !important;
   padding: 0 !important;
   border: none !important;
 }
 
- .workplace-common-card {
+ .pc-admin-workplace-common .workplace-common-card {
   background: var(--ant-color-bg-container) !important;
   border-radius: 16px !important;
   padding: 12px 0 12px 0;
  }
 
- .workplace-common-header {
+ .pc-admin-workplace-common .workplace-common-header {
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -192,12 +186,12 @@ ol {
   cursor: default;
  }
 
- .workplace-common-header .ant-menu-item-icon {
+ .pc-admin-workplace-common .workplace-common-header .ant-menu-item-icon {
   margin-right: 8px !important;
   margin-left: 16px;
  }
 
- .workplace-common-header-extra {
+ .pc-admin-workplace-common .workplace-common-header-extra {
   opacity: 1;
   color: rgb(54, 55, 61) !important;
   font-size: 14px;
@@ -208,14 +202,16 @@ ol {
   cursor: pointer;
  }
 
- .workplace-common-actions {
+ .pc-admin-workplace-common .workplace-common-actions {
   display: block;
   margin: 0 4px;
   padding: 0 0 0 0;
  }
-
- .workplace-common-actions.ant-menu-sub.ant-menu-inline .ant-menu-item {
-  float: left;
+ .pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline {
+  display: flex;
+  flex-wrap: wrap;
+}
+.pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline .ant-menu-item {
   width: 47% !important;
   box-sizing: border-box !important;
   margin: 0 !important;
@@ -226,34 +222,26 @@ ol {
   font-size: 12px;
   background: transparent !important;
   cursor: pointer;
- }
+}
 
- .workplace-common-actions.ant-menu-sub.ant-menu-inline .ant-menu-item:hover,
- .workplace-common-actions.ant-menu-sub.ant-menu-inline .ant-menu-item-active {
+ .pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline .ant-menu-item:hover,
+ .pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline .ant-menu-item-active {
   background: transparent !important;
  }
 
- .workplace-common-actions.ant-menu-sub.ant-menu-inline
+ .pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline
   .ant-menu-item:not(.ant-menu-item-disabled):hover
   .ant-menu-title-content {
   color: var(--ant-color-primary) !important;
  }
 
- .workplace-common-actions.ant-menu-sub.ant-menu-inline
+ .pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline
   .ant-menu-item:not(.ant-menu-item-disabled).ant-menu-item-selected
   .ant-menu-title-content {
   color: var(--ant-color-primary) !important;
  }
 
- .workplace-common-actions::after {
-  display: block;
-  clear: both;
-  height: 0;
-  visibility: hidden;
-  content: '';
- }
-
- .workplace-common-actions .ant-menu-item .ant-menu-title-content {
+ .pc-admin-workplace-common .workplace-common-actions .ant-menu-item .ant-menu-title-content {
   font-size: 12px !important;
   // max-width: 6.5em;
   overflow: hidden;
@@ -312,12 +300,11 @@ ol {
   position: relative;
   z-index: 2;
   height: 100%;
-  
   /* 允许滚动 */
   overflow-y: auto; 
   overflow-x: hidden;
 
-  background: var(--ant-color-bg-container) !important;
+  background: #FAFCFF !important;
   border-radius: 16px !important;
   padding: 12px 0 12px 0;
 
@@ -439,14 +426,6 @@ body.header-scrolled .ant-pro-layout .ant-pro-layout-header {
 .ant-pro-top-nav-header-menu .ant-menu-item-selected .ant-menu-title-content {
   font-weight: 700 !important;
 }
-/* 3. 同时把内部文字的过渡也关掉 (双保险) */
-.ant-pro-top-nav-header-menu .ant-menu-item .ant-menu-title-content {
-  transition: none !important;
-}
-.ant-pro-top-nav-header-menu .ant-menu-item,
-.ant-pro-top-nav-header-menu .ant-menu-submenu-title {
-  transition: none !important; 
-}
 
 .ant-layout-sider .ant-menu-item-selected,
 .ant-layout-sider .ant-menu-item-active,
@@ -486,25 +465,6 @@ body.header-scrolled .ant-pro-layout .ant-pro-layout-header {
   background: transparent !important;
 }
 
-// =================================================================
-// 彻底移除侧边栏所有动画 (包括 Hover 变色)
-// =================================================================
-
-// // 1. 选中侧边栏里的【所有东西】以及它们的【伪元素】
-// .ant-layout-sider *,
-// .ant-layout-sider *::before,
-// .ant-layout-sider *::after {
-//   transition: none !important;
-//   animation: none !important;
-// }
-
-// 2. 特别针对 Hover 和 Active 状态，强制瞬间变色
-// .ant-layout-sider .ant-menu-item:hover,
-// .ant-layout-sider .ant-menu-item-active,
-// .ant-layout-sider .ant-menu-submenu-title:hover {
-//   transition: none !important;
-//   background: transparent !important;
-//   background-color: transparent !important;
 // }
 /* 子菜单 hover/选中：不要有任何背景块，只改文字颜色 */
 .ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item,
@@ -623,7 +583,33 @@ body.header-scrolled .ant-pro-layout .ant-pro-layout-header {
 }
 
 .ant-pro-layout .ant-pro-layout-content{
- padding: 0;
+  padding: 0;
+}
+
+/* ============================
+   子菜单 sub 页面：内容区卡片化（仅命中 /sub1 /sub2 ... 路由）
+   - 由 app.tsx childrenRender 在 sub 页面外包一层 .pc-admin-subpage-wrap
+   ============================ */
+
+.pc-admin-subpage-wrap {
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.pc-admin-subpage-wrap > * {
+  display: block;
+  min-height: calc(100vh - 60px - 80px);
+  padding: 24px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow:
+    0 10px 30px rgba(17, 38, 146, 0.10),
+    0 2px 10px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 /* 全局页面背景：强制纯色，覆盖掉 ProLayout/AntD 的渐变/背景图 */

@@ -178,8 +178,8 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
     <div
       style={{
         position: 'relative',
-        overflow: 'hidden',
-        height: 'auto',
+        overflow: 'auto',
+        height: 'calc(100vh - 88px)',
         margin: 16,
         borderRadius: 16,
       }}
@@ -209,8 +209,9 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
         title="micro-app"
         style={{
           width: '100%',
-          height: iframeHeight,
+          height: '100%',
           border: 'none',
+          display: 'block',
           visibility: loading ? 'hidden' : 'visible',
         }}
         onLoad={handleIframeLoad}
