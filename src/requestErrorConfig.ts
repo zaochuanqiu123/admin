@@ -2,7 +2,13 @@
 import type { RequestConfig } from '@umijs/max';
 import { history } from '@umijs/max';
 import { message, notification } from 'antd';
-import { clearToken, getToken } from '@/api/storage';
+import {
+  clearLoginUserInfo,
+  clearSelectedOrgCode,
+  clearToken,
+  getSelectedOrgCode,
+  getToken,
+} from '@/api/storage';
 
 const loginPath = '/user/login';
 const devBypassAuth =
@@ -82,6 +88,8 @@ export const errorConfig: RequestConfig = {
           if (devBypassAuth) {
             return;
           }
+          clearLoginUserInfo();
+          clearSelectedOrgCode();
           clearToken();
           const { search, pathname } = window.location;
           const urlParams = new URL(window.location.href).searchParams;
@@ -115,9 +123,11 @@ export const errorConfig: RequestConfig = {
     (config: RequestOptions) => {
       // 拦截请求配置，进行个性化处理。
       const token = getToken();
+      const orgCode = getSelectedOrgCode();
       const headers = {
         ...(config.headers || {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(orgCode ? { 'X-Org-Code': orgCode } : {}),
       };
 
       return { ...config, headers };

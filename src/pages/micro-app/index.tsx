@@ -1,4 +1,3 @@
-import { PageContainer } from '@ant-design/pro-components';
 import { MicroApp, useLocation } from '@umijs/max';
 import { Card, Spin } from 'antd';
 import { useEffect, useState } from 'react';
@@ -35,7 +34,7 @@ const MicroAppContainer: React.FC = () => {
       >
         <MicroApp
           key={mountKey} // 🔥 关键：通过 key 强制重新挂载
-          name="jquery-app"
+          name="micro-app"
           base="/micro-app"
           autoSetLoading
           loader={(loading: boolean) =>

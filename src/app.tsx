@@ -78,12 +78,22 @@ import defaultSettings from '../config/defaultSettings';
 import routes from '../config/routes';
 import { errorConfig } from './requestErrorConfig';
 import '@ant-design/v5-patch-for-react-19';
-import { clearToken, getToken } from '@/api/storage';
+import { getPermContext, getUserLoginContext } from '@/api/context';
+import {
+  clearLoginUserInfo,
+  clearSelectedOrgCode,
+  clearToken,
+  getLoginUserInfo,
+  getSelectedOrgCode,
+  getToken,
+} from '@/api/storage';
 
 const isDev = process.env.NODE_ENV === 'development' || process.env.CI;
 const loginPath = '/user/login';
 const devBypassAuth =
   typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
+
+const TEMP_BUSINESS_CODE = 'DEFAULT';
 
 const apiBase = typeof __API_BASE__ !== 'undefined' ? __API_BASE__ : undefined;
 
@@ -172,34 +182,117 @@ function countVisibleLeaves(items: MenuDataItem[] | undefined): number {
   return total;
 }
 
+function extractPermContextNodes(res: any): any[] {
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  if (Array.isArray((res as any)?.list)) return (res as any).list;
+  if (Array.isArray((res as any)?.menuList)) return (res as any).menuList;
+  if (Array.isArray((res as any)?.menus)) return (res as any).menus;
+  if (Array.isArray((res as any)?.tree)) return (res as any).tree;
+  if (Array.isArray((res as any)?.data)) return (res as any).data;
+  if (Array.isArray((res as any)?.data?.list)) return (res as any).data.list;
+  if (Array.isArray((res as any)?.data?.menuList))
+    return (res as any).data.menuList;
+  if (Array.isArray((res as any)?.data?.menus)) return (res as any).data.menus;
+  if (Array.isArray((res as any)?.data?.tree)) return (res as any).data.tree;
+  return [];
+}
+
+function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
+  const visit = (n: any, idx: number): MenuDataItem => {
+    const name = String(
+      n?.name ??
+        n?.title ??
+        n?.menuName ??
+        n?.text ??
+        n?.label ??
+        `menu-${idx}`,
+    );
+    const path =
+      String(n?.path ?? n?.url ?? n?.router ?? n?.routePath ?? n?.href ?? '') ||
+      undefined;
+    const childrenSrc =
+      (Array.isArray(n?.children) && n.children) ||
+      (Array.isArray(n?.childList) && n.childList) ||
+      (Array.isArray(n?.child) && n.child) ||
+      [];
+    const children = (childrenSrc as any[]).map((c, i) => visit(c, i));
+    const item: MenuDataItem = {
+      name,
+      path,
+      children: children.length > 0 ? children : undefined,
+    };
+    return item;
+  };
+
+  return (nodes || []).map((n, i) => visit(n, i));
+}
+
 export async function getInitialState(): Promise<{
   settings?: Partial<LayoutSettings>;
   currentUser?: API.CurrentUser;
   loading?: boolean;
   fetchUserInfo?: () => Promise<API.CurrentUser | undefined>;
+  currentOrgCode?: string;
+  loginContext?: any;
+  permContextMenu?: MenuDataItem[];
 }> {
+  const fetchPermMenu = async (businessCode?: string) => {
+    try {
+      const res = await getPermContext(businessCode, {
+        skipErrorHandler: true,
+      });
+      const nodes = extractPermContextNodes(res);
+      const menu = mapPermContextToMenuData(nodes);
+      return menu.length > 0 ? menu : undefined;
+    } catch (error) {
+      console.error('getPermContext failed:', error);
+      return undefined;
+    }
+  };
+
   if (devBypassAuth) {
     const currentUser = getDevUser();
+    const permContextMenu = await fetchPermMenu(TEMP_BUSINESS_CODE);
     return {
       fetchUserInfo: async () => currentUser,
       currentUser,
+      permContextMenu,
       settings: defaultSettings as Partial<LayoutSettings>,
     };
   }
 
   const fetchUserInfo = async () => {
     try {
+      const cachedUser = getLoginUserInfo<API.CurrentUser>();
+      if (cachedUser && (cachedUser as any)?.name) {
+        return cachedUser;
+      }
       const msg = await queryCurrentUser({
         skipErrorHandler: true,
       });
       return msg;
     } catch (_error) {
       if (!getToken()) {
+        clearLoginUserInfo();
         clearToken();
         history.push(loginPath);
       }
     }
     return undefined;
+  };
+
+  const fetchLoginContext = async (orgCode: string) => {
+    if (!orgCode) return undefined;
+    try {
+      const ctx = await getUserLoginContext(orgCode, {
+        skipErrorHandler: true,
+      });
+      return ctx;
+    } catch (error) {
+      console.error('getUserLoginContext failed:', error);
+      return undefined;
+    }
   };
 
   const { location } = history;
@@ -208,10 +301,37 @@ export async function getInitialState(): Promise<{
       location.pathname,
     )
   ) {
+    const hasToken = !!getToken();
+    const selectedOrgCode = getSelectedOrgCode() || undefined;
+    if (
+      hasToken &&
+      !selectedOrgCode &&
+      location.pathname !== '/user/character'
+    ) {
+      history.replace('/user/character');
+      return {
+        fetchUserInfo,
+        settings: defaultSettings as Partial<LayoutSettings>,
+      };
+    }
+
     const currentUser = await fetchUserInfo();
+    const loginContext = selectedOrgCode
+      ? await fetchLoginContext(selectedOrgCode)
+      : undefined;
+    const businessCode =
+      ((loginContext as any)?.businessCode as string | undefined) ||
+      ((loginContext as any)?.businessList?.[0]?.businessCode as
+        | string
+        | undefined) ||
+      TEMP_BUSINESS_CODE;
+    const permContextMenu = await fetchPermMenu(businessCode);
     return {
       fetchUserInfo,
       currentUser,
+      currentOrgCode: selectedOrgCode,
+      loginContext,
+      permContextMenu,
       settings: defaultSettings as Partial<LayoutSettings>,
     };
   }
@@ -270,7 +390,7 @@ const WorkplaceCommonTopRouteTabs: React.FC = () => {
 
   const topRoutes = React.useMemo(() => {
     const list = (routes as any[])
-      .filter((r) => r && r.name && r.path)
+      .filter((r) => r?.name && r.path)
       .filter((r) => r.path !== '/' && r.path !== '/*' && r.path !== '/user')
       .filter((r) => !(r as any)?.hideInMenu)
       .filter((r) => (r as any)?.layout !== false);
@@ -1201,7 +1321,10 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                   marginBottom: 12,
                 }}
               >
-                当前已选中 ({draftList.length}/{COMMON_ACTION_MAX}){' '}
+                <span style={{ fontSize: 16, color: '#333', fontWeight: 700 }}>
+                  常用模块
+                </span>
+                （当前已选中 {draftList.length}/{COMMON_ACTION_MAX}）{' '}
                 <span style={{ color: '#999', marginLeft: 8 }}>
                   移动可调整顺序
                 </span>
@@ -1232,13 +1355,15 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
 
             {/* 底部选择区域 */}
             <div style={{ padding: '16px 24px 0' }}>
-              <Typography.Text style={{ fontSize: 13, color: '#333' }}>
+              <Typography.Text
+                style={{ fontSize: 16, color: '#333', fontWeight: 700 }}
+              >
                 选择菜单添加{' '}
-                <span style={{ color: '#999', fontSize: 12, marginLeft: 10 }}>
-                  {' '}
-                  一级菜单支持拖拽排序
-                </span>
               </Typography.Text>
+              <span style={{ color: '#999', fontSize: 12, marginLeft: 10 }}>
+                {' '}
+                一级菜单支持拖拽排序
+              </span>
             </div>
 
             <div style={{ padding: '12px 24px 0' }}>
@@ -1460,6 +1585,12 @@ export const layout: RunTimeLayoutConfig = ({
   setInitialState,
 }) => {
   return {
+    menuDataRender: (menuData) => {
+      return initialState?.permContextMenu &&
+        initialState.permContextMenu.length > 0
+        ? initialState.permContextMenu
+        : menuData;
+    },
     menu: {
       locale: false,
       defaultOpenAll: true,
@@ -1604,7 +1735,7 @@ export const layout: RunTimeLayoutConfig = ({
     },
 
     avatarProps: {
-      src: initialState?.currentUser?.avatar,
+      src: (initialState?.currentUser?.avatar || undefined) as any,
       title: <AvatarName />,
       render: (_, avatarChildren) => {
         // 退出登录处理函数
@@ -1617,11 +1748,15 @@ export const layout: RunTimeLayoutConfig = ({
             console.error('退出登录 API 调用失败:', error);
           } finally {
             // 清除本地 token
+            clearLoginUserInfo();
+            clearSelectedOrgCode();
             clearToken();
             // 清除用户信息
             setInitialState((s) => ({
               ...s,
               currentUser: undefined,
+              currentOrgCode: undefined,
+              loginContext: undefined,
             }));
             // 跳转到登录页
             history.push(loginPath);
@@ -1692,6 +1827,16 @@ export const layout: RunTimeLayoutConfig = ({
         location.pathname !== loginPath
       ) {
         history.push(loginPath);
+      }
+
+      const orgCode = getSelectedOrgCode();
+      if (
+        hasToken &&
+        !orgCode &&
+        location.pathname !== '/user/character' &&
+        location.pathname !== loginPath
+      ) {
+        history.push('/user/character');
       }
     },
 

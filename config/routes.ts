@@ -22,6 +22,12 @@ const routes = [
         component: './user/login',
       },
       {
+        path: '/user/character',
+        layout: false,
+        name: 'character',
+        component: './user/character',
+      },
+      {
         path: '/user',
         redirect: '/user/login',
       },
@@ -58,7 +64,7 @@ const routes = [
         hideInMenu: true,
       },
       {
-        name: 'analysis',
+        name: '数据概览',
         icon: 'smile',
         path: '/dashboard/analysis',
         routes: [
@@ -69,7 +75,7 @@ const routes = [
           {
             name: '子菜单一',
             path: '/dashboard/analysis/sub1',
-            component: './dashboard/analysis/sub1',
+            redirect: '/micro-app/list',
           },
           {
             name: '子菜单二',
@@ -90,7 +96,7 @@ const routes = [
         hideInMenu: true,
       },
       {
-        name: 'monitor',
+        name: '商品数据',
         icon: 'smile',
         path: '/dashboard/monitor',
         routes: [
@@ -111,7 +117,7 @@ const routes = [
         ],
       },
       {
-        name: 'workplace',
+        name: '指标筛选',
         icon: 'smile',
         path: '/dashboard/workplace',
         routes: [
@@ -509,12 +515,14 @@ const routes = [
     name: '应用',
     component: './iframe-view', // 指向刚才写的 iframe 组件
   },
-  //qiankun子应用
-  //   name: 'micro-app',
-  //   icon: 'appstore',
-  //   path: '/micro-app/*',
-  //   component: './micro-app',
-  // },
+
+  // qiankun子应用
+  {
+    name: 'micro-app',
+    icon: 'appstore',
+    path: '/micro-app/*',
+    component: './micro-app',
+  },
 ];
 
 type RouteItem = {

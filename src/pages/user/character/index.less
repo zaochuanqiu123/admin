@@ -1,0 +1,278 @@
+.characterPage {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  background: #f5f7fb;
+}
+
+.bgCarousel {
+  position: absolute;
+  inset: 0;
+}
+
+.bgSlide {
+  height: 100vh;
+}
+
+.bgImage {
+  width: 100%;
+  height: 100vh;
+  object-fit: cover;
+}
+
+.overlay {
+  position: relative;
+  z-index: 1;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.cardWrap {
+  position: relative;
+  z-index: 1;
+  width: 900px;
+  max-width: calc(100vw - 32px);
+}
+
+.characterSelectCard {
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    0 0 0 1px rgba(255, 255, 255, 0.75),
+    0 24px 90px rgba(0, 0, 0, 0.22);
+
+  :global(.ant-card-head),
+  :global(.ant-card-body) {
+    background: transparent;
+  }
+
+  :global(.ant-card-head) {
+    border-bottom-color: rgba(0, 0, 0, 0.06);
+    padding: 0 32px;
+  }
+
+  :global(.ant-card-head-title) {
+    font-size: 18px;
+    font-weight: 700;
+    color: rgba(0, 0, 0, 0.85);
+    padding: 24px 0;
+  }
+  
+  :global(.ant-card-body) {
+    padding: 32px;
+  }
+}
+.ant-card-head-title{
+  font-size: 35px;
+  text-align: center;
+}
+.glassMask {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(16px);
+}
+
+.steps {
+  margin-bottom: 32px;
+}
+
+/* 搜索区域优化 */
+.searchRow {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 24px;
+  
+  :global(.ant-form-item) {
+    margin-bottom: 0;
+  }
+}
+
+.searchInput {
+  width: 100%;
+}
+
+.selectInput {
+  width: 160px;
+}
+
+.listHint {
+  margin: 16px 0 12px;
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 14px;
+}
+
+/* 列表容器，增加滚动条防止太长撑破 */
+.storeListContainer {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 4px; /* 防止box-shadow被切 */
+  margin: 0 -4px;
+  
+  /* 自定义滚动条样式 */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.1);
+    border-radius: 3px;
+  }
+}
+
+.storeListContainer :global(.ant-list-item) {
+  justify-content: center;
+}
+
+// /* 单个门店卡片 - 核心重构 */
+.storeItem {
+  position: relative; /* 锚点 */
+  overflow: hidden;   /* 关键：切掉飞出去的角标 */
+  display: flex;      /* 启用Flex布局 */
+  align-items: center;
+  justify-content: space-between;
+  width: 820px;
+  max-width: 100%;
+  
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 20px 24px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+    border-color: rgba(22, 119, 255, 0.3);
+  }
+}
+
+.storeItemDisabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.storeItemDisabled:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.storeItemActive {
+  background: #f0f5ff; /* 浅蓝色背景 */
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
+}
+
+/* 左侧内容区 */
+.itemContent {
+  flex: 1; /* 占据剩余空间 */
+  padding-left: 12px; /* 给角标留点视觉空间 */
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 标题行 */
+.storeTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.storeTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.storeDisabled {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.04);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.storeDesc {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+}
+
+/* 右侧按钮区 */
+.itemAction {
+  margin-left: 24px;
+  flex-shrink: 0;
+}
+
+/* 角标优化 */
+.tagCorner {
+  position: absolute;
+  top: 12px;
+  left: -32px; /* 调整位置 */
+  width: 100px;
+  padding: 4px 0;
+  
+  transform: rotate(-45deg);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  z-index: 2;
+  pointer-events: none; /* 防止遮挡点击 */
+}
+
+.tagPrimary {
+  background: linear-gradient(135deg, #1677ff, #69b1ff);
+}
+
+.tagCyan {
+  background: linear-gradient(135deg, #13c2c2, #5cdbd3);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(0,0,0,0.06);
+}
+
+@media (max-width: 768px) {
+  .cardWrap {
+    width: 100%;
+  }
+
+  .searchRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .searchInput,
+  .selectInput {
+    width: 100%;
+  }
+  
+  .storeItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+  }
+  
+  .itemAction {
+    margin-left: 0;
+    width: 100%;
+    text-align: right;
+  }
+}

@@ -1,100 +1,45 @@
 import {
-  AlipayCircleOutlined,
+  AntDesignOutlined,
   LockOutlined,
-  MobileOutlined,
-  TaobaoCircleOutlined,
+  PhoneOutlined,
+  ReloadOutlined,
   UserOutlined,
-  WeiboCircleOutlined,
+  WechatOutlined,
 } from '@ant-design/icons';
+import { Helmet, history, SelectLang, useIntl, useModel } from '@umijs/max';
 import {
-  LoginForm,
-  ProFormCaptcha,
-  ProFormCheckbox,
-  ProFormText,
-} from '@ant-design/pro-components';
-import {
-  FormattedMessage,
-  Helmet,
-  history,
-  SelectLang,
-  useIntl,
-  useModel,
-} from '@umijs/max';
-import { Alert, App, Tabs } from 'antd';
-import { createStyles } from 'antd-style';
-import React, { useState } from 'react';
-import { flushSync } from 'react-dom';
+  Alert,
+  App,
+  Button,
+  Carousel,
+  Checkbox,
+  Form,
+  Input,
+  Tabs,
+} from 'antd';
+import React, { useMemo, useRef, useState } from 'react';
 import { login } from '@/api/auth';
-import { setToken } from '@/api/storage';
+import {
+  clearSelectedOrgCode,
+  setLoginOrgList,
+  setLoginUserInfo,
+  setToken,
+} from '@/api/storage';
 import { getFakeCaptcha } from '@/api/user';
+import Banner1 from '@/assets/Banner1.jpg';
+import Banner2 from '@/assets/Banner2.jpg';
+import Banner3 from '@/assets/Banner3.jpg';
+import Banner4 from '@/assets/Banner4.jpg';
 import { Footer } from '@/components';
 import Settings from '../../../../config/defaultSettings';
+import './index.less';
 
 const devBypassAuth =
   typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
 
-const useStyles = createStyles(({ token }) => {
-  return {
-    action: {
-      marginLeft: '8px',
-      color: 'rgba(0, 0, 0, 0.2)',
-      fontSize: '24px',
-      verticalAlign: 'middle',
-      cursor: 'pointer',
-      transition: 'color 0.3s',
-      '&:hover': {
-        color: token.colorPrimaryActive,
-      },
-    },
-    lang: {
-      width: 42,
-      height: 42,
-      lineHeight: '42px',
-      position: 'fixed',
-      right: 16,
-      borderRadius: token.borderRadius,
-      ':hover': {
-        backgroundColor: token.colorBgTextHover,
-      },
-    },
-    container: {
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100vh',
-      overflow: 'auto',
-      backgroundImage:
-        "url('https://mdn.alipayobjects.com/yuyan_qk0oxh/afts/img/V-_oS6r-i7wAAAAAAAAAAAAAFl94AQBr')",
-      backgroundSize: '100% 100%',
-    },
-  };
-});
-
-const ActionIcons = () => {
-  const { styles } = useStyles();
-
-  return (
-    <>
-      <AlipayCircleOutlined
-        key="AlipayCircleOutlined"
-        className={styles.action}
-      />
-      <TaobaoCircleOutlined
-        key="TaobaoCircleOutlined"
-        className={styles.action}
-      />
-      <WeiboCircleOutlined
-        key="WeiboCircleOutlined"
-        className={styles.action}
-      />
-    </>
-  );
-};
-
 const Lang = () => {
-  const { styles } = useStyles();
-
   return (
-    <div className={styles.lang} data-lang style={{ display: 'none' }}>
+    <div data-lang style={{ display: 'none' }}>
       {/* 国际化按钮已隐藏 */}
       {SelectLang && <SelectLang />}
     </div>
@@ -119,39 +64,33 @@ const LoginMessage: React.FC<{
 const Login: React.FC = () => {
   const [userLoginState, setUserLoginState] = useState<API.LoginResult>({});
   const [type, setType] = useState<string>('account');
-  const { initialState, setInitialState } = useModel('@@initialState');
-  const { styles } = useStyles();
+  const [loginErrorText, setLoginErrorText] = useState<string | undefined>();
   const { message } = App.useApp();
   const intl = useIntl();
-
-  const fetchUserInfo = async () => {
-    const userInfo = await initialState?.fetchUserInfo?.();
-    if (userInfo) {
-      flushSync(() => {
-        setInitialState((s) => ({
-          ...s,
-          currentUser: userInfo,
-        }));
-      });
-    }
-  };
+  const { setInitialState } = useModel('@@initialState');
+  const [form] = Form.useForm<API.LoginParams>();
+  const carouselRef = useRef<any>(null);
+  const [activeSlide, setActiveSlide] = useState<number>(0);
 
   const handleSubmit = async (values: API.LoginParams) => {
     try {
+      setLoginErrorText(undefined);
       if (devBypassAuth) {
         // ... bypass 逻辑，这里没动
         return;
       }
       // 登录
       const res = await login({
-        username: values.username,
-        password: values.password,
-      });
+        loginName: type === 'mobile' ? values.mobile : values.username,
+        password: type === 'mobile' ? values.captcha : values.password,
+        loginType: 'PC',
+      } as any);
 
       // --- 以下是我的主要修改 ---
 
-      // 1. 改动：优先从 res.tokenValue 或 res.data.tokenValue 取 token
+      // 1. 改动：优先从 res.token 取 token（真实接口），并兼容 tokenValue
       const token =
+        (res as any)?.token ??
         (res as any)?.tokenValue ??
         (res as any)?.data?.tokenValue ??
         (res as any)?.token ??
@@ -168,6 +107,60 @@ const Login: React.FC = () => {
 
       // 4. 改动：setToken 存本地，这行没变，但意义明确了
       setToken(token);
+      clearSelectedOrgCode();
+
+      const orgList =
+        (res as any)?.org ??
+        (res as any)?.orgList ??
+        (res as any)?.data?.org ??
+        (res as any)?.data?.orgList;
+      if (Array.isArray(orgList)) {
+        setLoginOrgList(orgList);
+      }
+
+      const str = (v: any) => {
+        if (typeof v === 'string') return v;
+        if (typeof v === 'number') return String(v);
+        return '';
+      };
+      const userInfo =
+        (res as any)?.user ||
+        (res as any)?.userInfo ||
+        (res as any)?.data?.user ||
+        (res as any)?.data?.userInfo ||
+        (res as any)?.data?.currentUser ||
+        (res as any)?.currentUser;
+
+      const name =
+        str(userInfo?.name) ||
+        str(userInfo?.userName) ||
+        str(userInfo?.nickName) ||
+        str((res as any)?.name) ||
+        str((res as any)?.userName) ||
+        str(values.username) ||
+        str(values.mobile);
+
+      const avatar =
+        str(userInfo?.avatar) ||
+        str(userInfo?.headImg) ||
+        str(userInfo?.avatarUrl) ||
+        str(userInfo?.photo) ||
+        str((res as any)?.avatar) ||
+        str((res as any)?.headImg);
+
+      setLoginUserInfo({ name, avatar });
+
+      setInitialState((s: any) => ({
+        ...(s || {}),
+        currentUser: {
+          ...((s as any)?.currentUser || {}),
+          name,
+          avatar,
+        },
+      }));
+
+      setUserLoginState({ status: 'ok', type });
+      setLoginErrorText(undefined);
 
       const defaultLoginSuccessMessage = intl.formatMessage({
         id: 'pages.login.success',
@@ -177,21 +170,34 @@ const Login: React.FC = () => {
 
       // 5. 改动：把 await fetchUserInfo() 删掉了，直接跳转
       const urlParams = new URL(window.location.href).searchParams;
-      const redirect = urlParams.get('redirect');
-      // 用 history.replace 做单页跳转（不整页刷新）
-      history.replace(redirect || '/');
+      void urlParams.get('redirect');
+      // 登录成功后统一进入“用户身份/门店选择”页
+      history.replace('/user/character');
       return;
     } catch (error) {
       // ... 错误处理逻辑，这里没动
+      setUserLoginState({ status: 'error', type });
       const defaultLoginFailureMessage = intl.formatMessage({
         id: 'pages.login.failure',
         defaultMessage: '登录失败，请重试！',
       });
       console.log(error);
-      message.error(defaultLoginFailureMessage);
+
+      const bizMessage =
+        (error as any)?.info?.errorMessage ??
+        (error as any)?.response?.data?.msg ??
+        (error as any)?.response?.data?.message ??
+        (error as any)?.response?.data?.errorMessage ??
+        (error as any)?.message;
+
+      const defaultInlineMessage =
+        type === 'mobile' ? '验证码错误' : '账户或密码错误';
+      const finalMessage =
+        bizMessage || defaultInlineMessage || defaultLoginFailureMessage;
+      setLoginErrorText(finalMessage);
     }
   };
-  const { status, type: loginType } = userLoginState;
+  const { status } = userLoginState;
 
   const appTitle = typeof Settings.title === 'string' ? Settings.title : '';
   const pageTitle = `${intl.formatMessage({
@@ -199,231 +205,254 @@ const Login: React.FC = () => {
     defaultMessage: '登录页',
   })}${appTitle ? ` - ${appTitle}` : ''}`;
 
+  const bannerImages = useMemo(() => {
+    return [Banner1, Banner2, Banner3, Banner4];
+  }, []);
+
+  const cardTitle = appTitle ? `欢迎登录${appTitle}` : '欢迎登录随付达';
+
   return (
-    <div className={styles.container}>
+    <div className="loginPage">
       <Helmet>
         <title>{pageTitle}</title>
       </Helmet>
-      <Lang />
-      <div
-        style={{
-          flex: '1',
-          padding: '32px 0',
-        }}
-      >
-        <LoginForm
-          contentStyle={{
-            minWidth: 280,
-            maxWidth: '75vw',
-          }}
-          logo={<img alt="logo" src="/logo.svg" />}
-          title="Ant Design"
-          subTitle={intl.formatMessage({
-            id: 'pages.layouts.userLayout.title',
-          })}
-          initialValues={{
-            autoLogin: true,
-          }}
-          actions={[
-            <FormattedMessage
-              key="loginWith"
-              id="pages.login.loginWith"
-              defaultMessage="其他登录方式"
-            />,
-            <ActionIcons key="icons" />,
-          ]}
-          onFinish={async (values) => {
-            await handleSubmit(values as API.LoginParams);
+      <div className="bgCarousel">
+        <Carousel
+          ref={carouselRef}
+          autoplay
+          autoplaySpeed={3000}
+          effect="fade"
+          dots={false}
+          beforeChange={(_, next) => {
+            setActiveSlide(next);
           }}
         >
-          <Tabs
-            activeKey={type}
-            onChange={setType}
-            centered
-            items={[
-              {
-                key: 'account',
-                label: intl.formatMessage({
-                  id: 'pages.login.accountLogin.tab',
-                  defaultMessage: '账户密码登录',
-                }),
-              },
-              {
-                key: 'mobile',
-                label: intl.formatMessage({
-                  id: 'pages.login.phoneLogin.tab',
-                  defaultMessage: '手机号登录',
-                }),
-              },
-            ]}
-          />
-
-          {status === 'error' && loginType === 'account' && (
-            <LoginMessage
-              content={intl.formatMessage({
-                id: 'pages.login.accountLogin.errorMessage',
-                defaultMessage: '账户或密码错误(admin/ant.design)',
-              })}
-            />
-          )}
-          {type === 'account' && (
-            <>
-              <ProFormText
-                name="username"
-                fieldProps={{
-                  size: 'large',
-                  prefix: <UserOutlined />,
-                }}
-                placeholder={intl.formatMessage({
-                  id: 'pages.login.username.placeholder',
-                  defaultMessage: '用户名: admin or user',
-                })}
-                rules={[
-                  {
-                    required: true,
-                    message: (
-                      <FormattedMessage
-                        id="pages.login.username.required"
-                        defaultMessage="请输入用户名!"
-                      />
-                    ),
-                  },
-                ]}
-              />
-              <ProFormText.Password
-                name="password"
-                fieldProps={{
-                  size: 'large',
-                  prefix: <LockOutlined />,
-                }}
-                placeholder={intl.formatMessage({
-                  id: 'pages.login.password.placeholder',
-                  defaultMessage: '密码: ant.design',
-                })}
-                rules={[
-                  {
-                    required: true,
-                    message: (
-                      <FormattedMessage
-                        id="pages.login.password.required"
-                        defaultMessage="请输入密码！"
-                      />
-                    ),
-                  },
-                ]}
-              />
-            </>
-          )}
-
-          {status === 'error' && loginType === 'mobile' && (
-            <LoginMessage content="验证码错误" />
-          )}
-          {type === 'mobile' && (
-            <>
-              <ProFormText
-                fieldProps={{
-                  size: 'large',
-                  prefix: <MobileOutlined />,
-                }}
-                name="mobile"
-                placeholder={intl.formatMessage({
-                  id: 'pages.login.phoneNumber.placeholder',
-                  defaultMessage: '手机号',
-                })}
-                rules={[
-                  {
-                    required: true,
-                    message: (
-                      <FormattedMessage
-                        id="pages.login.phoneNumber.required"
-                        defaultMessage="请输入手机号！"
-                      />
-                    ),
-                  },
-                  {
-                    pattern: /^1\d{10}$/,
-                    message: (
-                      <FormattedMessage
-                        id="pages.login.phoneNumber.invalid"
-                        defaultMessage="手机号格式错误！"
-                      />
-                    ),
-                  },
-                ]}
-              />
-              <ProFormCaptcha
-                fieldProps={{
-                  size: 'large',
-                  prefix: <LockOutlined />,
-                }}
-                captchaProps={{
-                  size: 'large',
-                }}
-                placeholder={intl.formatMessage({
-                  id: 'pages.login.captcha.placeholder',
-                  defaultMessage: '请输入验证码',
-                })}
-                captchaTextRender={(timing, count) => {
-                  if (timing) {
-                    return `${count} ${intl.formatMessage({
-                      id: 'pages.getCaptchaSecondText',
-                      defaultMessage: '获取验证码',
-                    })}`;
-                  }
-                  return intl.formatMessage({
-                    id: 'pages.login.phoneLogin.getVerificationCode',
-                    defaultMessage: '获取验证码',
-                  });
-                }}
-                name="captcha"
-                rules={[
-                  {
-                    required: true,
-                    message: (
-                      <FormattedMessage
-                        id="pages.login.captcha.required"
-                        defaultMessage="请输入验证码！"
-                      />
-                    ),
-                  },
-                ]}
-                onGetCaptcha={async (phone) => {
-                  const result = await getFakeCaptcha({
-                    phone,
-                  });
-                  if (!result) {
-                    return;
-                  }
-                  message.success('获取验证码成功！验证码为：1234');
-                }}
-              />
-            </>
-          )}
-          <div
-            style={{
-              marginBottom: 24,
-            }}
-          >
-            <ProFormCheckbox noStyle name="autoLogin">
-              <FormattedMessage
-                id="pages.login.rememberMe"
-                defaultMessage="自动登录"
-              />
-            </ProFormCheckbox>
-            <a
-              style={{
-                float: 'right',
-              }}
-            >
-              <FormattedMessage
-                id="pages.login.forgotPassword"
-                defaultMessage="忘记密码"
-              />
-            </a>
-          </div>
-        </LoginForm>
+          {bannerImages.map((src) => {
+            return (
+              <div className="bgSlide" key={src}>
+                <img src={src} alt="" className="bgImage" />
+              </div>
+            );
+          })}
+        </Carousel>
       </div>
-      <Footer />
+      <div className="overlay">
+        <Lang />
+        <div className="header">
+          <div className="brand">
+            <AntDesignOutlined />
+            <span>Ant Design</span>
+          </div>
+          <div className="service">
+            <PhoneOutlined />
+            <span>400-010-3000</span>
+          </div>
+        </div>
+
+        <div className="content">
+          <div className="loginPanel">
+            <div className="loginCard">
+              <div className="cardLeft">
+                <div className="qrTitle">扫码登录</div>
+                <div className="qrTips">
+                  <span className="qrTipsText">请使用微信打开扫一扫登录</span>
+                </div>
+                <div className="qrCode">
+                  <WechatOutlined />
+                  <div className="qrPlaceholder">二维码</div>
+                </div>
+                <button
+                  className="qrRefresh"
+                  type="button"
+                  onClick={() => {
+                    message.success('已刷新');
+                  }}
+                >
+                  <span>刷新</span>
+                  <ReloadOutlined />
+                </button>
+              </div>
+              <div className="cardDivider" />
+              <div className="cardRight">
+                <div className="cardTitle">{cardTitle}</div>
+                <div className="cardSubTitle">
+                  体验「组合型」的智慧与「一站式」的高效
+                </div>
+
+                <Tabs
+                  className="tabs"
+                  activeKey={type}
+                  onChange={(key) => {
+                    setType(key);
+                    setUserLoginState({});
+                    setLoginErrorText(undefined);
+                    form.resetFields();
+                    form.setFieldsValue({ autoLogin: true });
+                  }}
+                  items={[
+                    {
+                      key: 'account',
+                      label: '账户密码登录',
+                    },
+                    {
+                      key: 'mobile',
+                      label: '手机号登录',
+                    },
+                  ]}
+                />
+
+                {status === 'error' && (
+                  <LoginMessage
+                    content={
+                      loginErrorText ||
+                      (type === 'mobile' ? '验证码错误' : '账户或密码错误')
+                    }
+                  />
+                )}
+
+                <Form
+                  className="form"
+                  form={form}
+                  initialValues={{ autoLogin: true }}
+                  onFinish={async (values) => {
+                    await handleSubmit(values as API.LoginParams);
+                  }}
+                >
+                  {type === 'account' && (
+                    <>
+                      <Form.Item
+                        name="username"
+                        rules={[
+                          {
+                            required: true,
+                            message: '请输入用户名',
+                          },
+                        ]}
+                      >
+                        <Input
+                          className="input"
+                          prefix={<UserOutlined />}
+                          placeholder="请输入登录账号"
+                          allowClear
+                        />
+                      </Form.Item>
+                      <Form.Item
+                        name="password"
+                        rules={[
+                          {
+                            required: true,
+                            message: '请输入密码',
+                          },
+                        ]}
+                      >
+                        <Input.Password
+                          className="input"
+                          prefix={<LockOutlined />}
+                          placeholder="请输入登录密码"
+                        />
+                      </Form.Item>
+                    </>
+                  )}
+
+                  {type === 'mobile' && (
+                    <>
+                      <Form.Item
+                        name="mobile"
+                        rules={[
+                          {
+                            required: true,
+                            message: '请输入手机号',
+                          },
+                          {
+                            pattern: /^1\d{10}$/,
+                            message: '手机号格式错误',
+                          },
+                        ]}
+                      >
+                        <Input
+                          className="input"
+                          prefix={<UserOutlined />}
+                          placeholder="手机号"
+                          allowClear
+                        />
+                      </Form.Item>
+                      <Form.Item
+                        name="captcha"
+                        rules={[
+                          {
+                            required: true,
+                            message: '请输入验证码',
+                          },
+                        ]}
+                      >
+                        <Input
+                          className="input"
+                          prefix={<LockOutlined />}
+                          placeholder="验证码"
+                          addonAfter={
+                            <a
+                              onClick={async () => {
+                                const mobile = form.getFieldValue('mobile');
+                                const result = await getFakeCaptcha({
+                                  phone: mobile,
+                                });
+                                if (!result) {
+                                  return;
+                                }
+                                message.success(
+                                  '获取验证码成功！验证码为：1234',
+                                );
+                              }}
+                            >
+                              获取验证码
+                            </a>
+                          }
+                        />
+                      </Form.Item>
+                    </>
+                  )}
+
+                  <div className="extraRow">
+                    <Form.Item name="autoLogin" valuePropName="checked" noStyle>
+                      <Checkbox>自动登录</Checkbox>
+                    </Form.Item>
+                    <a className="forgot">忘记密码？</a>
+                  </div>
+
+                  <Form.Item style={{ marginBottom: 0 }}>
+                    <Button
+                      className="submitBtn"
+                      type="primary"
+                      htmlType="submit"
+                    >
+                      登录
+                    </Button>
+                  </Form.Item>
+                </Form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="carouselDots">
+          {bannerImages.map((src, idx) => {
+            const active = idx === activeSlide;
+            return (
+              <button
+                key={src}
+                className={active ? 'dot dotActive' : 'dot'}
+                type="button"
+                onClick={() => {
+                  carouselRef.current?.goTo?.(idx);
+                }}
+                aria-label={`slide-${idx + 1}`}
+              />
+            );
+          })}
+        </div>
+
+        <Footer />
+      </div>
     </div>
   );
 };

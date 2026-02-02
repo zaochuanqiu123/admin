@@ -210,6 +210,7 @@ ol {
  .pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline {
   display: flex;
   flex-wrap: wrap;
+  background: transparent !important;
 }
 .pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline .ant-menu-item {
   width: 47% !important;
@@ -353,7 +354,7 @@ ol {
 }
 
 .ant-pro-top-nav-header-menu {
- margin-left: 58px;
+ margin-left: 100px;
 }
 
 /* =============================================================
@@ -466,6 +467,11 @@ body.header-scrolled .ant-pro-layout .ant-pro-layout-header {
 }
 
 // }
+/* 子菜单容器背景色（仅影响菜单区域，不影响常用区域） */
+.dashboard-sider-menu .ant-menu-sub.ant-menu-inline {
+  background: #FAFCFF !important;
+}
+
 /* 子菜单 hover/选中：不要有任何背景块，只改文字颜色 */
 .ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item,
 .ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-submenu-title {
@@ -626,7 +632,7 @@ body.header-scrolled .ant-pro-layout .ant-pro-layout-header {
 
 .ant-card{
   border: none;
-  background-color: transparent !important;
+  background: transparent;
 }
 .ant-pro-base-menu-vertical-item-title-collapsed{
   min-width: 0px !important;

@@ -5,7 +5,7 @@ import {
   PlusOutlined,
 } from '@ant-design/icons';
 import { GridContent } from '@ant-design/pro-components';
-import { useRequest } from '@umijs/max';
+import { useModel, useRequest } from '@umijs/max';
 import {
   Avatar,
   Card,
@@ -142,11 +142,20 @@ const TagList: React.FC<{
 const Center: React.FC = () => {
   const { styles } = useStyles();
   const [tabKey, setTabKey] = useState<tabKeyType>('articles');
+  const { initialState } = useModel('@@initialState');
+  const cachedUser = initialState?.currentUser as
+    | Partial<CurrentUser>
+    | undefined;
 
   //  获取用户信息
   const { data: currentUser, loading } = useRequest(() => {
     return queryCurrent();
   });
+
+  const displayName = currentUser?.name || cachedUser?.name;
+  const displayAvatar = currentUser?.avatar || cachedUser?.avatar;
+  const effectiveUser =
+    (currentUser as Partial<CurrentUser> | undefined) || cachedUser;
 
   //  渲染用户信息
   const renderUserInfo = ({
@@ -225,35 +234,43 @@ const Center: React.FC = () => {
             }}
             loading={loading}
           >
-            {!loading && currentUser && (
+            {!loading && effectiveUser && (
               <>
                 <div className={styles.avatarHolder}>
-                  <img alt="" src={currentUser.avatar} />
-                  <div className={styles.name}>{currentUser.name}</div>
+                  {displayAvatar ? (
+                    <Avatar size={104} src={displayAvatar} />
+                  ) : null}
+                  {displayName ? (
+                    <div className={styles.name}>{displayName}</div>
+                  ) : null}
                   <div>{currentUser?.signature}</div>
                 </div>
-                {renderUserInfo(currentUser)}
-                <Divider dashed />
-                <TagList tags={currentUser.tags || []} />
-                <Divider
-                  style={{
-                    marginTop: 16,
-                  }}
-                  dashed
-                />
-                <div className={styles.team}>
-                  <div className={styles.teamTitle}>团队</div>
-                  <Row gutter={36}>
-                    {currentUser.notice?.map((item) => (
-                      <Col key={item.id} lg={24} xl={12}>
-                        <a href={item.href}>
-                          <Avatar size="small" src={item.logo} />
-                          {item.member}
-                        </a>
-                      </Col>
-                    ))}
-                  </Row>
-                </div>
+                {currentUser && (
+                  <>
+                    {renderUserInfo(currentUser)}
+                    <Divider dashed />
+                    <TagList tags={currentUser.tags || []} />
+                    <Divider
+                      style={{
+                        marginTop: 16,
+                      }}
+                      dashed
+                    />
+                    <div className={styles.team}>
+                      <div className={styles.teamTitle}>团队</div>
+                      <Row gutter={36}>
+                        {currentUser.notice?.map((item) => (
+                          <Col key={item.id} lg={24} xl={12}>
+                            <a href={item.href}>
+                              <Avatar size="small" src={item.logo} />
+                              {item.member}
+                            </a>
+                          </Col>
+                        ))}
+                      </Row>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </Card>

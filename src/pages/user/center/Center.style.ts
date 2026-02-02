@@ -5,7 +5,11 @@ const useStyles = createStyles(({ token }) => {
     avatarHolder: {
       marginBottom: '24px',
       textAlign: 'center',
-      '& > img': { width: '104px', height: '104px', marginBottom: '20px' },
+      '& > img, & .ant-avatar': {
+        width: '104px',
+        height: '104px',
+        marginBottom: '20px',
+      },
     },
     name: {
       marginBottom: '4px',

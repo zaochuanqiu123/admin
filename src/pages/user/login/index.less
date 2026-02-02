@@ -1,0 +1,335 @@
+.loginPage {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  background: #f5f7fb;
+}
+
+.bgCarousel {
+  position: absolute;
+  inset: 0;
+}
+
+.bgSlide {
+  height: 100vh;
+}
+
+.bgImage {
+  width: 100%;
+  height: 100vh;
+  object-fit: cover;
+}
+
+@media (max-width: 1024px) {
+  .bgImage {
+    object-fit: contain;
+    background: #f5f7fb;
+  }
+}
+
+.overlay {
+  position: relative;
+  z-index: 1;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 48px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #1f2a37;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.service {
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.content {
+  flex: 1;
+  position: relative;
+}
+
+.loginPanel {
+  position: absolute;
+  right: 10%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: auto;
+  max-width: calc(100vw - 32px);
+}
+
+.loginCard {
+  width: 726px;
+  height: 483px;
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  border-radius: 14px;
+  padding: 28px 28px 22px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: stretch;
+  gap: 24px;
+}
+
+.cardLeft {
+  flex: 0 0 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-16px);
+}
+
+.cardDivider {
+  width: 1px;
+  background: rgba(0, 0, 0, 0.06);
+  margin: 8px 0;
+}
+
+.cardRight {
+  flex: 1;
+  min-width: 0;
+}
+
+.qrTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.85);
+  margin-bottom: 22px;
+}
+
+.qrCode {
+  width: 180px;
+  height: 180px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.65);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.qrCode .anticon {
+  font-size: 44px;
+  color: rgba(0, 0, 0, 0.25);
+}
+
+.qrPlaceholder {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.35);
+}
+
+.qrTips {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.45);
+  margin-bottom: 20px;
+}
+
+.qrTipsText {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.qrRefresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  line-height: 14px;
+  font-size: 14px;
+}
+
+.qrRefresh .anticon {
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  transform: translateY(1px);
+}
+
+.qrRefresh .anticon svg {
+  display: block;
+}
+
+.qrRefresh:hover {
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.cardTitle {
+  font-size: 25px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.85);
+  margin-bottom: 6px;
+}
+
+.cardSubTitle {
+  font-size: 16px;
+  color: rgba(0, 0, 0, 0.45);
+  margin-bottom: 18px;
+}
+
+.tabs .ant-tabs-nav {
+  margin: 0 0 18px;
+}
+
+.tabs .ant-tabs-tab {
+  padding: 8px 0;
+  font-weight: 500;
+}
+
+.tabs .ant-tabs-ink-bar {
+  height: 3px;
+  border-radius: 3px;
+}
+
+.form .ant-form-item {
+  margin-bottom: 14px;
+}
+
+.input {
+  height: 42px;
+  border-radius: 8px;
+}
+
+.input.ant-input-affix-wrapper,
+.input.ant-input {
+  height: 42px;
+}
+
+.input.ant-input-affix-wrapper {
+  padding: 0 12px;
+}
+
+.input.ant-input-affix-wrapper .ant-input {
+  height: 40px;
+}
+
+.input.ant-input-affix-wrapper .ant-input-prefix {
+  color: rgba(0, 0, 0, 0.35);
+  margin-right: 8px;
+}
+
+.input.ant-input-affix-wrapper .ant-input-suffix {
+  color: rgba(0, 0, 0, 0.35);
+}
+
+.input.ant-input-affix-wrapper:hover {
+  border-color: rgba(22, 119, 255, 0.45);
+}
+
+.input.ant-input-affix-wrapper-focused {
+  border-color: rgba(22, 119, 255, 0.65);
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
+}
+
+.extraRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 10px 0 18px;
+}
+
+.forgot {
+  font-size: 12px;
+}
+
+.submitBtn {
+  width: 100%;
+  height: 42px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.carouselDots {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding-bottom: 10px;
+}
+
+.dot {
+  width: 26px;
+  height: 4px;
+  border-radius: 4px;
+  border: 0;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+
+.dotActive {
+  background: #1677ff;
+}
+
+.loginPage .ant-pro-global-footer {
+  padding: 0 0 6px;
+}
+
+.loginPage .ant-pro-global-footer-links {
+  display: none;
+}
+
+.footer {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0, 0, 0, 0.35);
+  font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 0 16px;
+  }
+
+  .loginPanel {
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+
+  .loginCard {
+    width: auto;
+    height: auto;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .cardLeft {
+    flex: none;
+  }
+
+  .cardDivider {
+    display: none;
+  }
+}

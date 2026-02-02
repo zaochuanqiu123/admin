@@ -228,11 +228,11 @@ export default defineConfig({
       apps: [
         {
           // 🔥注意：这个 name 必须和你 routes.ts 里的 microApp: 'jquery-app' 保持一致
-          name: 'jquery-app',
+          name: 'micro-app',
 
           // 🔥🔥【修改】这里不填 https://... 而是填上面的代理路径
           // 浏览器请求 /api-old-app/... -> Umi 转发给 test.suifuda.com/...
-          entry: '/api-old-app/Retail/Login/index.html',
+          entry: '//192.168.0.104:8002',
         },
       ],
       sandbox: {

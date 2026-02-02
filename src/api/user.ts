@@ -31,30 +31,6 @@ export async function outLogin(options?: { [key: string]: any }) {
   });
 }
 
-export async function login(
-  body: API.LoginParams,
-  options?: { [key: string]: any },
-) {
-  /**
-   * 登录。
-   * - 登录页会在成功后把 token 写入 localStorage（见 setToken()）。
-   * - 由于不同后端实现差异较大，这里保留“完整响应”的返回：
-   *   - 模板结构：{ status: 'ok', ... }
-   *   - 你自己的后端建议直接返回：{ token: 'xxx', ... } 或 { data: { token: 'xxx' }, ... }
-   */
-  return apiRequest<API.LoginResult & { token?: string; data?: any }>(
-    '/api/login/account',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: body,
-      ...(options || {}),
-    },
-  );
-}
-
 export async function getFakeCaptcha(
   params: {
     phone?: string;

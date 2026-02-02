@@ -45,6 +45,9 @@ declare namespace API {
     status?: string;
     type?: string;
     currentAuthority?: string;
+    token?: string;
+    tokenValue?: string;
+    data?: any;
   };
 
   type PageParams = {
@@ -85,6 +88,8 @@ declare namespace API {
     type?: string;
     mobile?: string;
     captcha?: string;
+    loginName?: string;
+    loginType?: string;
   };
 
   type NoticeIconList = {

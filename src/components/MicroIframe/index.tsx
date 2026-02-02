@@ -66,7 +66,7 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
 }) => {
   const location = useLocation();
   const [loading, setLoading] = useState(true);
-  const [iframeHeight, setIframeHeight] = useState<number>(
+  const [_iframeHeight, setIframeHeight] = useState<number>(
     Math.max(window.innerHeight, minHeight),
   );
 
@@ -140,7 +140,6 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
         ) {
           history.push(nextUrl);
         }
-
         return;
       }
 
