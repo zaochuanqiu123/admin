@@ -20,9 +20,10 @@
   object-fit: cover;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1600px) {
   .bgImage {
     object-fit: contain;
+    object-position: left center;
     background: #f5f7fb;
   }
 }
@@ -67,7 +68,7 @@
 
 .loginPanel {
   position: absolute;
-  right: 10%;
+  right: 6%;
   top: 50%;
   transform: translateY(-50%);
   width: auto;
@@ -196,7 +197,7 @@
 }
 
 .tabs .ant-tabs-nav {
-  margin: 0 0 18px;
+  margin: 0 0 32px;
 }
 
 .tabs .ant-tabs-tab {
@@ -210,7 +211,7 @@
 }
 
 .form .ant-form-item {
-  margin-bottom: 14px;
+  margin-bottom: 32px;
 }
 
 .input {
@@ -305,31 +306,4 @@
   justify-content: center;
   color: rgba(0, 0, 0, 0.35);
   font-size: 12px;
-}
-
-@media (max-width: 768px) {
-  .header {
-    padding: 0 16px;
-  }
-
-  .loginPanel {
-    right: 16px;
-    left: 16px;
-    width: auto;
-  }
-
-  .loginCard {
-    width: auto;
-    height: auto;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .cardLeft {
-    flex: none;
-  }
-
-  .cardDivider {
-    display: none;
-  }
 }

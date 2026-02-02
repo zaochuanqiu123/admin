@@ -1,24 +1,11 @@
 import { history, useModel } from '@umijs/max';
-import {
-  Button,
-  Card,
-  Carousel,
-  Form,
-  Input,
-  List,
-  message,
-  Select,
-  Space,
-} from 'antd';
+import { Button, Card, Form, Input, List, message, Select, Space } from 'antd';
 
 import type { FC } from 'react';
 import React, { useMemo, useState } from 'react';
 import { getUserLoginContext } from '@/api/context';
 import { getLoginOrgList, setSelectedOrgCode } from '@/api/storage';
-import Banner1 from '@/assets/Banner1.jpg';
-import Banner2 from '@/assets/Banner2.jpg';
-import Banner3 from '@/assets/Banner3.jpg';
-import Banner4 from '@/assets/Banner4.jpg';
+import CharacterTv from '@/assets/character.png';
 import './index.less';
 type StoreType = 'all' | 'merchant' | 'store';
 
@@ -103,7 +90,14 @@ function normalizeOrgToStoreItem(org: any, index: number): StoreItem {
   const nickName = toStringSafe(org?.nickName) || undefined;
 
   const levelCode = toStringSafe(org?.levelCode).toUpperCase();
-  const isMerchant = levelCode === 'MER';
+  // 用户反馈接口返回了 orgLevelName，优先使用它来判断和展示
+  const orgLevelName = toStringSafe(org?.orgLevelName);
+
+  // 判断是否为商户：levelCode为MER 或 orgLevelName包含'商户'/'公司'
+  const isMerchant =
+    levelCode === 'MER' ||
+    orgLevelName.includes('商户') ||
+    orgLevelName.includes('公司');
 
   const type: Exclude<StoreType, 'all'> = isMerchant ? 'merchant' : 'store';
 
@@ -115,7 +109,8 @@ function normalizeOrgToStoreItem(org: any, index: number): StoreItem {
     orgCode,
     type,
     badge: {
-      text: isMerchant ? '商户' : '门店',
+      // 如果有 orgLevelName 直接显示（如 "直营门店"、"加盟商户"），否则兜底显示
+      text: orgLevelName || (isMerchant ? '商户' : '门店'),
       tone: isMerchant ? 'primary' : 'cyan',
     },
   };
@@ -128,10 +123,6 @@ const Character: FC = () => {
   const storeType =
     (Form.useWatch('storeType', form) as StoreType | undefined) || 'all';
   const [selectedStoreId, setSelectedStoreId] = useState<string | undefined>();
-
-  const bannerImages = useMemo(() => {
-    return [Banner1, Banner2, Banner3, Banner4];
-  }, []);
 
   const storeData = useMemo<StoreItem[]>(() => {
     const orgList = getLoginOrgList<any[]>() ?? [];
@@ -185,22 +176,14 @@ const Character: FC = () => {
 
   return (
     <div className="characterPage">
-      <div className="bgCarousel">
-        <Carousel autoplay autoplaySpeed={3000} effect="fade" dots={false}>
-          {bannerImages.map((src) => {
-            return (
-              <div className="bgSlide" key={src}>
-                <img className="bgImage" src={src} alt="" />
-              </div>
-            );
-          })}
-        </Carousel>
+      <div className="bgContainer">
+        <img className="bgImage" src={CharacterTv} alt="" />
       </div>
 
       <div className="overlay">
         <div className="glassMask" />
         <div className="cardWrap">
-          <Card className="characterSelectCard" title="选择登录身份">
+          <Card className="characterSelectCard" title="请选择登录身份">
             <Form
               form={form}
               layout="inline"

@@ -17,7 +17,7 @@ import {
   Input,
   Tabs,
 } from 'antd';
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { login } from '@/api/auth';
 import {
   clearSelectedOrgCode,
@@ -71,6 +71,22 @@ const Login: React.FC = () => {
   const [form] = Form.useForm<API.LoginParams>();
   const carouselRef = useRef<any>(null);
   const [activeSlide, setActiveSlide] = useState<number>(0);
+
+  // --- 缩放逻辑 ---
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    const calcScale = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      // 调整为 1600x900 基准
+      const s = Math.min(w / 1600, h / 900, 1);
+      // 用户要求卡片别太小，所以限制最小缩放为 0.9
+      setScale(Math.max(s, 0.9));
+    };
+    calcScale();
+    window.addEventListener('resize', calcScale);
+    return () => window.removeEventListener('resize', calcScale);
+  }, []);
 
   const handleSubmit = async (values: API.LoginParams) => {
     try {
@@ -250,7 +266,13 @@ const Login: React.FC = () => {
         </div>
 
         <div className="content">
-          <div className="loginPanel">
+          <div
+            className="loginPanel"
+            style={{
+              transform: `translateY(-50%) scale(${scale})`,
+              transformOrigin: 'right center',
+            }}
+          >
             <div className="loginCard">
               <div className="cardLeft">
                 <div className="qrTitle">扫码登录</div>
