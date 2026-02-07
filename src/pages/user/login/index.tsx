@@ -25,7 +25,6 @@ import {
   setLoginUserInfo,
   setToken,
 } from '@/api/storage';
-import { getFakeCaptcha } from '@/api/user';
 import Banner1 from '@/assets/Banner1.jpg';
 import Banner2 from '@/assets/Banner2.jpg';
 import Banner3 from '@/assets/Banner3.jpg';
@@ -413,14 +412,7 @@ const Login: React.FC = () => {
                           placeholder="验证码"
                           addonAfter={
                             <a
-                              onClick={async () => {
-                                const mobile = form.getFieldValue('mobile');
-                                const result = await getFakeCaptcha({
-                                  phone: mobile,
-                                });
-                                if (!result) {
-                                  return;
-                                }
+                              onClick={() => {
                                 message.success(
                                   '获取验证码成功！验证码为：1234',
                                 );

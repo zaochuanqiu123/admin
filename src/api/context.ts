@@ -21,3 +21,14 @@ export async function getPermContext(
     ...(options || {}),
   });
 }
+
+export async function getRoleVOList(
+  orgCode: string,
+  options?: { [key: string]: any },
+) {
+  return apiData<any>('/api/system/role/getRoleVOList', {
+    method: 'GET',
+    params: { orgCode },
+    ...(options || {}),
+  });
+}

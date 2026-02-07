@@ -1,19 +1,7 @@
-/**
- * 应用运行时入口（Umi Max Runtime）
- *
- * 这个文件主要负责：
- * - 初始化全局运行时状态（getInitialState）：拉取当前用户、处理登录态
- * - 配置 ProLayout（layout）：菜单渲染、顶部操作区、头像下拉等
- * - 实现“工作台-常用入口”侧边栏模块：包含本地缓存、编辑抽屉、拖拽排序
- * - 统一 request 配置（baseURL + errorConfig）
- */
-
-/**
- * UI 图标依赖：主要用于侧边栏常用入口、拖拽列表、主题切换等
- */
 import {
   AppstoreOutlined,
   CloseOutlined,
+  DownOutlined,
   LeftOutlined,
   MenuOutlined,
   MoonOutlined,
@@ -21,25 +9,13 @@ import {
   RightOutlined,
   SunOutlined,
 } from '@ant-design/icons';
-/**
- * ProLayout / ProComponents：
- * - LayoutSettings：运行时布局配置类型（主题、布局、菜单等）
- * - MenuDataItem：菜单项结构（用于自定义菜单渲染与筛选）
- * - SettingDrawer：仅在开发环境下启用的可视化配置面板
- */
+
 import type {
   Settings as LayoutSettings,
   MenuDataItem,
 } from '@ant-design/pro-components';
 import { SettingDrawer } from '@ant-design/pro-components';
 
-/**
- * dnd-kit：用于实现“常用入口”编辑抽屉中的拖拽排序
- * - UniqueIdentifier：拖拽项的 id 类型
- * - DndContext/SortableContext：拖拽上下文与可排序容器
- * - useSortable/useDroppable：拖拽项/投放区 hooks
- * - arrayMove：排序后的数组重排
- */
 import type { UniqueIdentifier } from '@dnd-kit/core';
 import {
   closestCenter,
@@ -72,40 +48,41 @@ import {
   Typography,
 } from 'antd';
 import React, { useEffect } from 'react';
-import { outLogin, currentUser as queryCurrentUser } from '@/api/user';
 import { AvatarName, NoticeBell } from '@/components';
 import defaultSettings from '../config/defaultSettings';
 import routes from '../config/routes';
 import { errorConfig } from './requestErrorConfig';
 import '@ant-design/v5-patch-for-react-19';
-import { getPermContext, getUserLoginContext } from '@/api/context';
+import { getPermContext } from '@/api/context';
 import {
+  clearBusinessList,
+  clearCurrentBusinessCode,
+  clearLoginOrgList,
   clearLoginUserInfo,
   clearSelectedOrgCode,
   clearToken,
+  getBusinessList,
+  getCurrentBusinessCode,
   getLoginUserInfo,
   getSelectedOrgCode,
   getToken,
+  setCurrentBusinessCode,
 } from '@/api/storage';
+import logoDark from '@/assets/logo-dark.png';
+import {
+  extractPermContextNodes,
+  getValidBusinessCode,
+  mapPermContextToMenuData,
+  TEMP_BUSINESS_CODE,
+} from '@/utils/menu';
 
 const isDev = process.env.NODE_ENV === 'development' || process.env.CI;
 const loginPath = '/user/login';
 const devBypassAuth =
   typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
 
-const TEMP_BUSINESS_CODE = 'DEFAULT';
-
 const apiBase = typeof __API_BASE__ !== 'undefined' ? __API_BASE__ : undefined;
 
-/**
- * HeaderScrollWatcher
- *
- * 用途：监听 window 滚动位置，给 body 动态加/减 `header-scrolled` class。
- * - 典型场景：顶部 Header 在滚动后需要阴影/背景变化（由 CSS 负责具体样式）
- * - 实现要点：
- *   - 使用 passive listener 提升滚动性能
- *   - 初次挂载立即执行一次 handler，确保刷新后状态正确
- */
 const HeaderScrollWatcher: React.FC = () => {
   useEffect(() => {
     const handler = () => {
@@ -149,7 +126,7 @@ function isPathMatch(basePath: string, pathname: string) {
   return pathname === base || pathname.startsWith(`${base}/`);
 }
 
-function findTopLevelMenuItem(
+function _findTopLevelMenuItem(
   menuData: MenuDataItem[] | undefined,
   pathname: string,
 ) {
@@ -167,65 +144,19 @@ function findTopLevelMenuItem(
   return best;
 }
 
-function countVisibleLeaves(items: MenuDataItem[] | undefined): number {
+function _countVisibleLeaves(items: MenuDataItem[] | undefined): number {
   if (!items || items.length === 0) return 0;
   let total = 0;
   for (const item of items) {
     if ((item as any)?.hideInMenu) continue;
     const children = item?.children?.filter((c) => !(c as any)?.hideInMenu);
     if (children && children.length > 0) {
-      total += countVisibleLeaves(children);
+      total += _countVisibleLeaves(children);
       continue;
     }
     if (item?.path) total += 1;
   }
   return total;
-}
-
-function extractPermContextNodes(res: any): any[] {
-  if (!res) return [];
-  if (Array.isArray(res)) return res;
-  if (Array.isArray((res as any)?.list)) return (res as any).list;
-  if (Array.isArray((res as any)?.menuList)) return (res as any).menuList;
-  if (Array.isArray((res as any)?.menus)) return (res as any).menus;
-  if (Array.isArray((res as any)?.tree)) return (res as any).tree;
-  if (Array.isArray((res as any)?.data)) return (res as any).data;
-  if (Array.isArray((res as any)?.data?.list)) return (res as any).data.list;
-  if (Array.isArray((res as any)?.data?.menuList))
-    return (res as any).data.menuList;
-  if (Array.isArray((res as any)?.data?.menus)) return (res as any).data.menus;
-  if (Array.isArray((res as any)?.data?.tree)) return (res as any).data.tree;
-  return [];
-}
-
-function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
-  const visit = (n: any, idx: number): MenuDataItem => {
-    const name = String(
-      n?.name ??
-        n?.title ??
-        n?.menuName ??
-        n?.text ??
-        n?.label ??
-        `menu-${idx}`,
-    );
-    const path =
-      String(n?.path ?? n?.url ?? n?.router ?? n?.routePath ?? n?.href ?? '') ||
-      undefined;
-    const childrenSrc =
-      (Array.isArray(n?.children) && n.children) ||
-      (Array.isArray(n?.childList) && n.childList) ||
-      (Array.isArray(n?.child) && n.child) ||
-      [];
-    const children = (childrenSrc as any[]).map((c, i) => visit(c, i));
-    const item: MenuDataItem = {
-      name,
-      path,
-      children: children.length > 0 ? children : undefined,
-    };
-    return item;
-  };
-
-  return (nodes || []).map((n, i) => visit(n, i));
 }
 
 export async function getInitialState(): Promise<{
@@ -234,8 +165,9 @@ export async function getInitialState(): Promise<{
   loading?: boolean;
   fetchUserInfo?: () => Promise<API.CurrentUser | undefined>;
   currentOrgCode?: string;
-  loginContext?: any;
   permContextMenu?: MenuDataItem[];
+  businessList?: any[];
+  currentBusinessCode?: string;
 }> {
   const fetchPermMenu = async (businessCode?: string) => {
     try {
@@ -263,36 +195,11 @@ export async function getInitialState(): Promise<{
   }
 
   const fetchUserInfo = async () => {
-    try {
-      const cachedUser = getLoginUserInfo<API.CurrentUser>();
-      if (cachedUser && (cachedUser as any)?.name) {
-        return cachedUser;
-      }
-      const msg = await queryCurrentUser({
-        skipErrorHandler: true,
-      });
-      return msg;
-    } catch (_error) {
-      if (!getToken()) {
-        clearLoginUserInfo();
-        clearToken();
-        history.push(loginPath);
-      }
+    const cachedUser = getLoginUserInfo<API.CurrentUser>();
+    if (cachedUser && (cachedUser as any)?.name) {
+      return cachedUser;
     }
     return undefined;
-  };
-
-  const fetchLoginContext = async (orgCode: string) => {
-    if (!orgCode) return undefined;
-    try {
-      const ctx = await getUserLoginContext(orgCode, {
-        skipErrorHandler: true,
-      });
-      return ctx;
-    } catch (error) {
-      console.error('getUserLoginContext failed:', error);
-      return undefined;
-    }
   };
 
   const { location } = history;
@@ -303,12 +210,12 @@ export async function getInitialState(): Promise<{
   ) {
     const hasToken = !!getToken();
     const selectedOrgCode = getSelectedOrgCode() || undefined;
-    if (
-      hasToken &&
-      !selectedOrgCode &&
-      location.pathname !== '/user/character'
-    ) {
-      history.replace('/user/character');
+    if (hasToken && !selectedOrgCode) {
+      // 如果有 token 但没有选择身份，无论是否在 character 页面都提前返回
+      // 不调用 getPermContext，等用户选择身份后再调用
+      if (location.pathname !== '/user/character') {
+        history.replace('/user/character');
+      }
       return {
         fetchUserInfo,
         settings: defaultSettings as Partial<LayoutSettings>,
@@ -316,21 +223,31 @@ export async function getInitialState(): Promise<{
     }
 
     const currentUser = await fetchUserInfo();
-    const loginContext = selectedOrgCode
-      ? await fetchLoginContext(selectedOrgCode)
-      : undefined;
-    const businessCode =
-      ((loginContext as any)?.businessCode as string | undefined) ||
-      ((loginContext as any)?.businessList?.[0]?.businessCode as
-        | string
-        | undefined) ||
-      TEMP_BUSINESS_CODE;
-    const permContextMenu = await fetchPermMenu(businessCode);
+
+    // 从 localStorage 读取业态数据
+    const businessList = getBusinessList<any[]>() || [];
+    let currentBusinessCode = getCurrentBusinessCode();
+
+    // 验证并获取有效的业态代码
+    currentBusinessCode = getValidBusinessCode(
+      currentBusinessCode,
+      businessList,
+    );
+
+    // 如果业态代码发生变化，更新到 localStorage
+    if (currentBusinessCode !== getCurrentBusinessCode()) {
+      setCurrentBusinessCode(currentBusinessCode);
+    }
+
+    // 使用 currentBusinessCode 调用 getPermContext
+    const permContextMenu = await fetchPermMenu(currentBusinessCode);
+
     return {
       fetchUserInfo,
       currentUser,
       currentOrgCode: selectedOrgCode,
-      loginContext,
+      businessList,
+      currentBusinessCode,
       permContextMenu,
       settings: defaultSettings as Partial<LayoutSettings>,
     };
@@ -353,6 +270,32 @@ const MENU_ID_MAP: Record<string, number> = {
   设置: 303,
   应用: 1495,
 };
+
+const IFRAME_PATHS = [
+  '/admin',
+  '/dashboard/index',
+  '/dashboard',
+  '/account',
+  '/form',
+  '/list',
+  '/profile',
+  '/exception',
+  '/result',
+  '/set',
+  '/finance',
+];
+
+function getAllowedTopPaths(permContextMenu: MenuDataItem[] | undefined) {
+  const set = new Set<string>();
+  set.add('/dashboard');
+  if (Array.isArray(permContextMenu)) {
+    for (const item of permContextMenu) {
+      const p = (item as any)?.path;
+      if (typeof p === 'string' && p) set.add(p);
+    }
+  }
+  return set;
+}
 
 type TopRouteTabItem = {
   name: string;
@@ -388,6 +331,10 @@ const WorkplaceCommonTopRouteTabs: React.FC = () => {
   const [canScrollRight, setCanScrollRight] = React.useState(false);
   const [activeKey, setActiveKey] = React.useState<string>('');
 
+  const allowedTopPaths = getAllowedTopPaths(
+    ((window as any)?.g_initialState as any)?.permContextMenu,
+  );
+
   const topRoutes = React.useMemo(() => {
     const list = (routes as any[])
       .filter((r) => r?.name && r.path)
@@ -402,8 +349,9 @@ const WorkplaceCommonTopRouteTabs: React.FC = () => {
       if (!targetPath) continue;
       mapped.push({ name: String(r.name), path: targetPath, rawPath });
     }
-    return mapped;
-  }, []);
+    const filtered = mapped.filter((r) => allowedTopPaths.has(r.rawPath));
+    return filtered;
+  }, [allowedTopPaths]);
 
   const updateScrollState = React.useCallback(() => {
     const el = scrollRef.current;
@@ -1584,12 +1532,35 @@ export const layout: RunTimeLayoutConfig = ({
   initialState,
   setInitialState,
 }) => {
+  if (typeof window !== 'undefined') {
+    (window as any).g_initialState = initialState;
+  }
   return {
     menuDataRender: (menuData) => {
-      return initialState?.permContextMenu &&
+      const dashboardFromRoutes = (menuData || []).find(
+        (item) => item?.path === '/dashboard',
+      );
+
+      // 如果有接口返回的菜单：严格只展示「工作台 + 权限菜单」，不混入 routes 的默认菜单
+      if (
+        initialState?.permContextMenu &&
         initialState.permContextMenu.length > 0
-        ? initialState.permContextMenu
-        : menuData;
+      ) {
+        const dashboardMenu: MenuDataItem = {
+          name: '工作台',
+          path: '/dashboard',
+          children: dashboardFromRoutes?.children,
+        } as any;
+        return [dashboardMenu, ...initialState.permContextMenu];
+      }
+
+      // 无权限菜单数据时：仅展示工作台（隐藏顶部全量 tabs）
+      const dashboardMenu: MenuDataItem = {
+        name: '工作台',
+        path: '/dashboard',
+        children: dashboardFromRoutes?.children,
+      } as any;
+      return [dashboardMenu];
     },
     menu: {
       locale: false,
@@ -1597,27 +1568,14 @@ export const layout: RunTimeLayoutConfig = ({
       autoClose: false,
     },
     menuItemRender: (item, dom) => {
-      // 定义 iframe 路由白名单
-      const IFRAME_PATHS = [
-        '/admin',
-        '/dashboard/index',
-        '/dashboard',
-        '/account',
-        '/form',
-        '/list',
-        '/profile',
-        '/exception',
-        '/result',
-        '/set',
-        '/finance',
-      ];
-
       return (
         <div
           style={{ cursor: 'pointer', width: '100%', height: '100%' }}
           onClickCapture={() => {
-            const currentId = MENU_ID_MAP[item.name || ''] || 0;
-            console.log(`🔥 点击菜单: [${item.name}], 匹配 ID: ${currentId}`);
+            // 使用 targetId（从接口的 pathUrl 获取），如果没有则回退到 MENU_ID_MAP
+            const currentId =
+              (item as any)?.targetId || MENU_ID_MAP[item.name || ''] || 0;
+            console.log(`🔥 点击菜单: [${item.name}], targetId: ${currentId}`);
             const isIframePage = item.path && IFRAME_PATHS.includes(item.path);
 
             if (isIframePage) {
@@ -1638,6 +1596,126 @@ export const layout: RunTimeLayoutConfig = ({
       );
     },
     collapsedButtonRender: false,
+    headerTitleRender: (_logo, _title, _) => {
+      // 获取业态列表和当前选中的业态
+      const businessList = initialState?.businessList || [];
+      const currentBusinessCode = initialState?.currentBusinessCode;
+
+      // 找到当前选中的业态
+      const currentBusiness =
+        businessList.find((b: any) => b.businessCode === currentBusinessCode) ||
+        businessList[0];
+
+      // 切换业态的处理函数
+      const handleBusinessChange = async (businessCode: string) => {
+        // 如果选择的是当前业态，不做任何操作
+        if (businessCode === currentBusinessCode) {
+          return;
+        }
+
+        try {
+          // 使用新的 businessCode 调用 getPermContext
+          const permRes = await getPermContext(businessCode, {
+            skipErrorHandler: true,
+          });
+          const permNodes = extractPermContextNodes(permRes);
+          const permContextMenu = mapPermContextToMenuData(permNodes);
+
+          // 保存到 localStorage
+          setCurrentBusinessCode(businessCode);
+
+          // 更新 initialState
+          setInitialState((s: any) => {
+            const next = {
+              ...s,
+              currentBusinessCode: businessCode,
+              permContextMenu:
+                permContextMenu.length > 0 ? permContextMenu : undefined,
+            };
+            if (typeof window !== 'undefined') {
+              (window as any).g_initialState = next;
+            }
+            return next;
+          });
+
+          // 检查当前页面是否还有权限
+          const currentPath = history.location.pathname;
+          const allowedPaths = getAllowedTopPaths(
+            permContextMenu.length > 0 ? permContextMenu : undefined,
+          );
+          const moduleRoot = `/${String(currentPath || '').split('/')[1] || ''}`;
+          const isIframeModule = IFRAME_PATHS.some((p) => moduleRoot === p);
+
+          if (isIframeModule && !allowedPaths.has(moduleRoot)) {
+            // 如果当前页面在新业态下没有权限，跳转到工作台
+            history.replace('/dashboard');
+            message.success('切换业态成功，已跳转到工作台');
+          } else {
+            message.success('切换业态成功');
+          }
+        } catch (error) {
+          console.error('getPermContext failed:', error);
+          message.error('切换业态失败，请稍后重试');
+        }
+      };
+
+      // 构建下拉菜单项
+      const menuItems = businessList.map((business: any) => ({
+        key: business.businessCode,
+        label: business.businessName,
+      }));
+
+      return (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: 208,
+            boxSizing: 'border-box',
+          }}
+        >
+          <img
+            src={logoDark}
+            alt="logo"
+            style={{ height: 48, display: 'block' }}
+          />
+          {businessList.length > 0 && (
+            <Dropdown
+              menu={{
+                items: menuItems,
+                selectedKeys: [currentBusinessCode || ''],
+                onClick: ({ key }) => handleBusinessChange(key),
+              }}
+              trigger={['click']}
+              placement="bottomLeft"
+              overlayStyle={{
+                minWidth: 200,
+              }}
+            >
+              <Button
+                type="text"
+                size="small"
+                style={{
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  padding: '4px 8px',
+                  fontSize: 16,
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              >
+                {currentBusiness?.businessName || '请选择业态'}
+                <DownOutlined style={{ marginLeft: 4, fontSize: 10 }} />
+              </Button>
+            </Dropdown>
+          )}
+        </div>
+      );
+    },
     actionsRender: () => {
       const checked = (initialState?.settings as any)?.navTheme === 'realDark';
 
@@ -1688,19 +1766,13 @@ export const layout: RunTimeLayoutConfig = ({
       ];
     },
     menuRender: (
-      menuProps: {
+      _menuProps: {
         menuData?: MenuDataItem[];
         location?: { pathname?: string };
       },
       defaultDom,
     ) => {
-      const pathname =
-        menuProps?.location?.pathname ?? history.location.pathname;
-      const top = findTopLevelMenuItem(menuProps?.menuData, pathname);
-
-      if (!top) return defaultDom;
-      const leafCount = countVisibleLeaves(top.children) || (top.path ? 1 : 0);
-      return leafCount <= 1 ? null : defaultDom;
+      return defaultDom;
     },
 
     menuContentRender: (
@@ -1738,30 +1810,59 @@ export const layout: RunTimeLayoutConfig = ({
       src: (initialState?.currentUser?.avatar || undefined) as any,
       title: <AvatarName />,
       render: (_, avatarChildren) => {
+        const clearWorkplaceCache = () => {
+          try {
+            const keys: string[] = [];
+            for (let i = 0; i < localStorage.length; i += 1) {
+              const k = localStorage.key(i);
+              if (!k) continue;
+              if (k.startsWith('workplace_common_actions_')) keys.push(k);
+              if (
+                k.includes('workplace_common_actions_') &&
+                k.endsWith('__groupOrder')
+              )
+                keys.push(k);
+            }
+            keys.forEach((k) => {
+              try {
+                localStorage.removeItem(k);
+              } catch {
+                // ignore
+              }
+            });
+          } catch {
+            // ignore
+          }
+        };
+
         // 退出登录处理函数
         const handleLogout = async () => {
-          try {
-            // 调用退出登录 API
-            await outLogin();
-          } catch (error) {
-            // 即使 API 调用失败，也继续执行退出流程
-            console.error('退出登录 API 调用失败:', error);
-          } finally {
-            // 清除本地 token
-            clearLoginUserInfo();
-            clearSelectedOrgCode();
-            clearToken();
-            // 清除用户信息
-            setInitialState((s) => ({
-              ...s,
+          // 清除本地 token
+          clearLoginUserInfo();
+          clearLoginOrgList();
+          clearSelectedOrgCode();
+          clearBusinessList();
+          clearCurrentBusinessCode();
+          clearToken();
+          clearWorkplaceCache();
+          // 清除用户信息
+          setInitialState((s) => {
+            const next = {
+              ...(s || {}),
               currentUser: undefined,
               currentOrgCode: undefined,
-              loginContext: undefined,
-            }));
-            // 跳转到登录页
-            history.push(loginPath);
-            message.success('已退出登录');
-          }
+              permContextMenu: undefined,
+              businessList: undefined,
+              currentBusinessCode: undefined,
+            };
+            if (typeof window !== 'undefined') {
+              (window as any).g_initialState = next;
+            }
+            return next;
+          });
+          // 跳转到登录页
+          history.push(loginPath);
+          message.success('已退出登录');
         };
 
         // 下拉菜单配置
@@ -1837,6 +1938,18 @@ export const layout: RunTimeLayoutConfig = ({
         location.pathname !== loginPath
       ) {
         history.push('/user/character');
+      }
+
+      const allowedTopPaths = getAllowedTopPaths(initialState?.permContextMenu);
+      const pathname = location.pathname;
+      const isDashboard =
+        pathname === '/dashboard' || pathname.startsWith('/dashboard/');
+      if (isDashboard) return;
+
+      const moduleRoot = `/${String(pathname || '').split('/')[1] || ''}`;
+      const isIframeModule = IFRAME_PATHS.some((p) => moduleRoot === p);
+      if (isIframeModule && !allowedTopPaths.has(moduleRoot)) {
+        history.replace('/dashboard');
       }
     },
 

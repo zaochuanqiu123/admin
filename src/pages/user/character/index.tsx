@@ -1,12 +1,131 @@
+import type { MenuDataItem } from '@ant-design/pro-components';
 import { history, useModel } from '@umijs/max';
-import { Button, Card, Form, Input, List, message, Select, Space } from 'antd';
-
+import {
+  Button,
+  Card,
+  Form,
+  Input,
+  List,
+  message,
+  Select,
+  Space,
+  Spin,
+} from 'antd';
 import type { FC } from 'react';
-import React, { useMemo, useState } from 'react';
-import { getUserLoginContext } from '@/api/context';
-import { getLoginOrgList, setSelectedOrgCode } from '@/api/storage';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  getPermContext,
+  getRoleVOList,
+  getUserLoginContext,
+} from '@/api/context';
+import {
+  getLoginOrgList,
+  setBusinessList,
+  setCurrentBusinessCode,
+  setSelectedOrgCode,
+} from '@/api/storage';
 import CharacterTv from '@/assets/character.png';
 import './index.less';
+
+const TEMP_BUSINESS_CODE = 'DEFAULT';
+
+// 从 getPermContext 响应中提取菜单节点
+function extractPermContextNodes(res: any): any[] {
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  if (Array.isArray((res as any)?.menuTree)) return (res as any).menuTree;
+  if (Array.isArray((res as any)?.data?.menuTree))
+    return (res as any).data.menuTree;
+  if (Array.isArray((res as any)?.list)) return (res as any).list;
+  if (Array.isArray((res as any)?.menuList)) return (res as any).menuList;
+  if (Array.isArray((res as any)?.menus)) return (res as any).menus;
+  if (Array.isArray((res as any)?.tree)) return (res as any).tree;
+  if (Array.isArray((res as any)?.data)) return (res as any).data;
+  if (Array.isArray((res as any)?.data?.list)) return (res as any).data.list;
+  if (Array.isArray((res as any)?.data?.menuList))
+    return (res as any).data.menuList;
+  if (Array.isArray((res as any)?.data?.menus)) return (res as any).data.menus;
+  if (Array.isArray((res as any)?.data?.tree)) return (res as any).data.tree;
+  return [];
+}
+
+// 将权限上下文节点映射为菜单数据
+function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
+  const MENU_NAME_TO_PATH_MAP: Partial<Record<string, string>> = {
+    门店: '/form',
+    商品: '/list',
+    进销存: '/profile',
+    订单: '/result',
+    会员: '/exception',
+    数据: '/account',
+    财务: '/finance',
+    设置: '/set',
+    应用: '/admin',
+  };
+
+  const visit = (
+    n: any,
+    idx: number,
+  ): (MenuDataItem & { targetId?: string; sort?: number }) | null => {
+    if (n?.permType === 3) return null;
+
+    const name = String(
+      n?.permName ??
+        n?.name ??
+        n?.title ??
+        n?.menuName ??
+        n?.text ??
+        n?.label ??
+        `menu-${idx}`,
+    );
+
+    let path = MENU_NAME_TO_PATH_MAP[name];
+    if (!path) {
+      path =
+        String(
+          n?.path ?? n?.url ?? n?.router ?? n?.routePath ?? n?.href ?? '',
+        ) || undefined;
+    }
+
+    const childrenSrc =
+      (Array.isArray(n?.children) && n.children) ||
+      (Array.isArray(n?.childList) && n.childList) ||
+      (Array.isArray(n?.child) && n.child) ||
+      [];
+
+    const children = (childrenSrc as any[])
+      .map((c, i) => visit(c, i))
+      .filter(
+        (c): c is MenuDataItem & { targetId?: string; sort?: number } =>
+          c !== null,
+      );
+
+    if (children.length > 0) {
+      children.sort((a, b) => ((a as any).sort ?? 0) - ((b as any).sort ?? 0));
+    }
+
+    const item: MenuDataItem & { targetId?: string; sort?: number } = {
+      name,
+      path,
+      children: children.length > 0 ? children : undefined,
+      targetId: n?.pathUrl ?? n?.id,
+      sort: n?.sort ?? 0,
+    };
+    return item;
+  };
+
+  const result = (nodes || [])
+    .map((n, i) => visit(n, i))
+    .filter(
+      (n): n is MenuDataItem & { targetId?: string; sort?: number } =>
+        n !== null && n.name !== '工作台',
+    );
+
+  result.sort((a, b) => ((a as any).sort ?? 0) - ((b as any).sort ?? 0));
+
+  return result;
+}
+
 type StoreType = 'all' | 'merchant' | 'store';
 
 type StoreItem = {
@@ -117,26 +236,67 @@ function normalizeOrgToStoreItem(org: any, index: number): StoreItem {
 }
 
 const Character: FC = () => {
+  console.log('=== Character component rendering ===');
   const { setInitialState } = useModel('@@initialState');
   const [form] = Form.useForm();
   const keyword = Form.useWatch('keyword', form) as string | undefined;
   const storeType =
     (Form.useWatch('storeType', form) as StoreType | undefined) || 'all';
   const [selectedStoreId, setSelectedStoreId] = useState<string | undefined>();
+  const [roleMap, setRoleMap] = useState<Record<string, any[]>>({});
+  const [loadingRoles, setLoadingRoles] = useState<Record<string, boolean>>({});
 
   const storeData = useMemo<StoreItem[]>(() => {
+    console.log('=== useMemo computing storeData ===');
     const orgList = getLoginOrgList<any[]>() ?? [];
+    console.log('orgList from localStorage:', orgList);
     const rawList = Array.isArray(orgList) ? orgList : [];
     const flattened = flattenOrgList(rawList);
+    console.log('flattened orgList:', flattened);
     const normalized = flattened.map((o, idx) =>
       normalizeOrgToStoreItem(o, idx),
     );
+    console.log('normalized storeData:', normalized);
     const uniq = new Map<string, StoreItem>();
     normalized.forEach((x) => {
       if (!uniq.has(x.id)) uniq.set(x.id, x);
     });
-    return Array.from(uniq.values());
+    const result = Array.from(uniq.values());
+    console.log('final storeData:', result);
+    return result;
   }, []);
+
+  useEffect(() => {
+    console.log('useEffect triggered, storeData length:', storeData.length);
+    const fetchRoles = async () => {
+      for (const item of storeData) {
+        console.log('Processing item:', item.id, 'orgCode:', item.orgCode);
+        if (item.orgCode) {
+          setLoadingRoles((prev) => ({ ...prev, [item.id]: true }));
+          try {
+            const res = await getRoleVOList(item.orgCode, {
+              skipErrorHandler: true,
+            });
+            console.log('getRoleVOList response for', item.orgCode, ':', res);
+            const roles = Array.isArray(res) ? res : [];
+            setRoleMap((prev) => ({ ...prev, [item.id]: roles }));
+          } catch (error) {
+            console.error('getRoleVOList failed:', error);
+          } finally {
+            setLoadingRoles((prev) => ({ ...prev, [item.id]: false }));
+          }
+        } else {
+          console.log('Item has no orgCode:', item.id);
+        }
+      }
+    };
+    if (storeData.length > 0) {
+      console.log('Calling fetchRoles...');
+      fetchRoles();
+    } else {
+      console.log('storeData is empty, not calling fetchRoles');
+    }
+  }, [storeData]);
 
   const filteredStores = useMemo(() => {
     const kw = keyword?.trim() || '';
@@ -153,17 +313,41 @@ const Character: FC = () => {
     if (orgCode) {
       setSelectedOrgCode(orgCode);
       try {
+        // 1. 先调用 getUserLoginContext 获取登录上下文
         const loginContext = await getUserLoginContext(orgCode, {
           skipErrorHandler: true,
         });
+
+        // 2. 从 loginContext 中提取 businessList 和默认 businessCode
+        const businessList = loginContext?.businessList || [];
+        const defaultBusiness = businessList[0];
+        const businessCode =
+          defaultBusiness?.businessCode || TEMP_BUSINESS_CODE;
+
+        // 保存到 localStorage
+        setBusinessList(businessList);
+        setCurrentBusinessCode(businessCode);
+
+        // 3. 使用 businessCode 调用 getPermContext 获取权限菜单
+        const permRes = await getPermContext(businessCode, {
+          skipErrorHandler: true,
+        });
+        const permNodes = extractPermContextNodes(permRes);
+        const permContextMenu = mapPermContextToMenuData(permNodes);
+
+        // 4. 更新 initialState，包括登录上下文、业态列表、当前业态和权限菜单
         setInitialState((s: any) => ({
           ...(s || {}),
           currentOrgCode: orgCode,
           loginContext,
+          businessList, // 保存业态列表
+          currentBusinessCode: businessCode, // 保存当前选中的业态
+          permContextMenu:
+            permContextMenu.length > 0 ? permContextMenu : undefined,
         }));
       } catch (error) {
-        console.error('getUserLoginContext failed:', error);
-        message.error('获取用户登录上下文失败，请稍后重试');
+        console.error('getUserLoginContext or getPermContext failed:', error);
+        message.error('获取用户信息失败，请稍后重试');
         setInitialState((s: any) => ({
           ...(s || {}),
           currentOrgCode: orgCode,
@@ -239,9 +423,13 @@ const Character: FC = () => {
                       <button
                         type="button"
                         className={cls}
-                        onClick={() => void handleSelectStore(item)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') void handleSelectStore(item);
+                        style={{
+                          width: '100%',
+                          border: 'none',
+                          background: 'transparent',
+                          padding: 0,
+                          cursor: 'pointer',
+                          textAlign: 'left',
                         }}
                       >
                         {item.badge && (
@@ -264,6 +452,22 @@ const Character: FC = () => {
                             <div className="storeDesc">{item.desc}</div>
                           ) : item.nickName ? (
                             <div className="storeDesc">{item.nickName}</div>
+                          ) : null}
+                          {loadingRoles[item.id] ? (
+                            <div className="storeDesc">
+                              <Spin size="small" />
+                            </div>
+                          ) : roleMap[item.id]?.length ? (
+                            <div className="storeDesc roleList">
+                              {roleMap[item.id].map((role, idx) => (
+                                <span
+                                  key={`${item.id}-${role.roleName || role.name || idx}`}
+                                  className="roleTag"
+                                >
+                                  {role.roleName || role.name || '-'}
+                                </span>
+                              ))}
+                            </div>
                           ) : null}
                         </div>
 
