@@ -427,9 +427,13 @@ const Character: FC = () => {
                           width: '100%',
                           border: 'none',
                           background: 'transparent',
-                          padding: 0,
                           cursor: 'pointer',
                           textAlign: 'left',
+                          font: 'inherit',
+                          color: 'inherit',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
                         }}
                       >
                         {item.badge && (
