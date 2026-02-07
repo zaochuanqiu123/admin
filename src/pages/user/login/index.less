@@ -18,14 +18,7 @@
   width: 100%;
   height: 100vh;
   object-fit: cover;
-}
-
-@media (max-width: 1600px) {
-  .bgImage {
-    object-fit: contain;
-    object-position: left center;
-    background: #f5f7fb;
-  }
+  object-position: left center;
 }
 
 .overlay {
@@ -77,17 +70,76 @@
 
 .loginCard {
   width: 726px;
-  height: 483px;
+  min-height: 483px;
   background: rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(10px);
   border-radius: 14px;
   padding: 28px 28px 22px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   align-items: stretch;
   gap: 24px;
+}
+
+/* 响应式适配 */
+@media (max-width: 1600px) {
+  .loginPanel {
+    right: 3%;
+  }
+}
+
+@media (max-width: 1200px) {
+  .loginPanel {
+    right: 50%;
+    transform: translate(50%, -50%);
+  }
+
+  .bgImage {
+    object-position: center;
+  }
+
+  .overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.15);
+    z-index: 0;
+  }
+
+  .header,
+  .content,
+  .footer {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .loginCard {
+    width: 100%;
+    max-width: 500px;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .cardLeft {
+    flex: 0 0 auto;
+    transform: translateY(0);
+  }
+
+  .qrCode {
+    width: 140px;
+    height: 140px;
+  }
+
+  .cardDivider {
+    width: 100%;
+    height: 1px;
+    margin: 0;
+  }
 }
 
 .cardLeft {
