@@ -29,6 +29,7 @@ import Banner1 from '@/assets/Banner1.jpg';
 import Banner2 from '@/assets/Banner2.jpg';
 import Banner3 from '@/assets/Banner3.jpg';
 import Banner4 from '@/assets/Banner4.jpg';
+import LogoDark from '@/assets/logo-dark.png';
 import { Footer } from '@/components';
 import Settings from '../../../../config/defaultSettings';
 import './index.less';
@@ -241,8 +242,7 @@ const Login: React.FC = () => {
         <Lang />
         <div className="header">
           <div className="brand">
-            <AntDesignOutlined />
-            <span>Ant Design</span>
+            <img src={LogoDark} alt="" className="brandLogo" />
           </div>
           <div className="service">
             <PhoneOutlined />

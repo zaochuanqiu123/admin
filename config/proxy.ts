@@ -15,7 +15,7 @@ export default {
     // 本地开发：通过 /api/ 代理到后端真实服务，避免浏览器跨域问题
     // 例如：POST /api/auth/login/doLogin -> http://192.168.1.118:9001/auth/login/doLogin
     '/api/': {
-      target: 'http://192.168.1.118:9001',
+      target: 'http://192.168.1.238:9001',
       changeOrigin: true,
       // 后端当前不包含 /api 前缀，因此需要去掉前端约定的 /api 前缀
       pathRewrite: { '^/api': '' },
