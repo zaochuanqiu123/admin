@@ -61,7 +61,7 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
   heightPayloadKey = 'scrollHeight',
   minHeight = 300,
   heightOffset = 20,
-  withCard = true,
+  withCard = false,
   loadingText = '系统加载中...',
 }) => {
   const location = useLocation();
@@ -178,8 +178,7 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
       style={{
         position: 'relative',
         overflow: 'auto',
-        height: 'calc(100vh - 88px)',
-        margin: 16,
+        height: 'calc(100vh - 44px)',
         borderRadius: 16,
       }}
     >

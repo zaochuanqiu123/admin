@@ -70,17 +70,17 @@ const routes = [
         routes: [
           {
             path: '/dashboard/analysis',
+            redirect: '/dashboard/analysis/index',
+          },
+          {
+            name: '概览首页',
+            path: '/dashboard/analysis/index',
             component: './dashboard/analysis/index',
           },
           {
             name: '子菜单一',
             path: '/dashboard/analysis/sub1',
             redirect: '/micro-app/list',
-          },
-          {
-            name: '子菜单二',
-            path: '/dashboard/analysis/sub2',
-            component: './dashboard/analysis/sub2',
           },
           {
             name: '子菜单二',
@@ -102,7 +102,12 @@ const routes = [
         routes: [
           {
             path: '/dashboard/monitor',
-            redirect: '/dashboard/monitor/sub1',
+            redirect: '/dashboard/monitor/index',
+          },
+          {
+            name: '监控首页',
+            path: '/dashboard/monitor/index',
+            component: './dashboard/monitor/index',
           },
           {
             name: '子菜单一',
@@ -121,10 +126,6 @@ const routes = [
         icon: 'smile',
         path: '/dashboard/workplace',
         routes: [
-          {
-            path: '/dashboard/workplace',
-            redirect: '/dashboard/workplace/sub1',
-          },
           {
             name: '子菜单一',
             path: '/dashboard/workplace/sub1',
