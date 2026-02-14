@@ -39,7 +39,7 @@ import logoDark from '@/assets/logo-dark.png';
 import HeaderScrollWatcher from '@/components/Layout/HeaderScrollWatcher';
 import WorkplaceCommonMenu from '@/components/Workplace/WorkplaceCommonMenu';
 import { IFRAME_PATHS } from '@/config/iframe.config';
-import { MENU_ID_MAP } from '@/config/menu.config';
+import { buildIframeRouteWithParams, isIframeRoutePath } from '@/utils/iframe';
 import {
   extractPermContextNodes,
   getValidBusinessCode,
@@ -134,7 +134,7 @@ export async function getInitialState(): Promise<{
 
     // 从 localStorage 读取业态数据
     const businessList = getBusinessList<any[]>() || [];
-    let currentBusinessCode = getCurrentBusinessCode();
+    let currentBusinessCode = getCurrentBusinessCode() || undefined;
 
     // 验证并获取有效的业态代码
     currentBusinessCode = getValidBusinessCode(
@@ -190,7 +190,13 @@ export const layout: RunTimeLayoutConfig = ({
           path: '/dashboard',
           children: dashboardFromRoutes?.children,
         } as any;
-        return [dashboardMenu, ...initialState.permContextMenu];
+        const visiblePermContextMenu = initialState.permContextMenu.filter(
+          (item) => {
+            const path = String(item?.path || '');
+            return path !== '/dashboard' && path !== '/dashboard/index';
+          },
+        );
+        return [dashboardMenu, ...visiblePermContextMenu];
       }
 
       // 无权限菜单数据时：仅展示工作台（隐藏顶部全量 tabs）
@@ -211,23 +217,20 @@ export const layout: RunTimeLayoutConfig = ({
         <div
           style={{ cursor: 'pointer', width: '100%', height: '100%' }}
           onClickCapture={() => {
-            // 使用 targetId（从接口的 pathUrl 获取），如果没有则回退到 MENU_ID_MAP
-            const currentId =
-              (item as any)?.targetId || MENU_ID_MAP[item.name || ''] || 0;
-            console.log(`🔥 点击菜单: [${item.name}], targetId: ${currentId}`);
-            const isIframePage = item.path && IFRAME_PATHS.includes(item.path);
+            const path = item.path ? String(item.path) : '';
+            if (!path) return;
 
-            if (isIframePage) {
-              let finalPath = item.path;
-              if (finalPath === '/dashboard') {
-                finalPath = '/dashboard/index';
-              }
-              if (finalPath) {
-                history.push(`${finalPath}?targetId=${currentId}`);
-              }
-            } else {
-              history.push(`${item.path}`);
+            if (isIframeRoutePath(path)) {
+              const nextUrl = buildIframeRouteWithParams(
+                path,
+                initialState?.permContextMenu,
+                (item as any)?.targetId,
+              );
+              history.push(nextUrl);
+              return;
             }
+
+            history.push(path);
           }}
         >
           {dom}
@@ -287,7 +290,9 @@ export const layout: RunTimeLayoutConfig = ({
 
           if (isIframeModule && !allowedPaths.has(moduleRoot)) {
             // 如果当前页面在新业态下没有权限，跳转到工作台
-            history.replace('/dashboard');
+            history.replace(
+              buildIframeRouteWithParams('/dashboard/index', permContextMenu),
+            );
             message.success('切换业态成功，已跳转到工作台');
           } else {
             message.success('切换业态成功');
@@ -588,7 +593,12 @@ export const layout: RunTimeLayoutConfig = ({
       const moduleRoot = `/${String(pathname || '').split('/')[1] || ''}`;
       const isIframeModule = IFRAME_PATHS.some((p) => moduleRoot === p);
       if (isIframeModule && !allowedTopPaths.has(moduleRoot)) {
-        history.replace('/dashboard');
+        history.replace(
+          buildIframeRouteWithParams(
+            '/dashboard/index',
+            initialState?.permContextMenu,
+          ),
+        );
       }
     },
 

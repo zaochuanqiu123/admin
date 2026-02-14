@@ -39,15 +39,24 @@
     format("woff2");
 }
 
+@layout-min-width: 1280px;
+@layout-max-width: 1920px;
+@layout-frame-width: clamp(@layout-min-width, 100vw, @layout-max-width);
+
 html,
 body,
 #root {
   height: 100%;
   margin: 0;
   padding: 0;
+  min-width: @layout-min-width;
   font-family:
     AlibabaSans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
     sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+#root {
+  width: 100%;
 }
 
 .colorWeak {
@@ -58,7 +67,34 @@ body,
   min-height: 100vh;
 }
 .ant-pro-sider.ant-layout-sider.ant-pro-sider-fixed {
-  left: unset;
+  left: max(calc((100vw - @layout-max-width) / 2), 0px) !important;
+}
+
+.ant-pro-layout {
+  min-width: @layout-min-width;
+}
+
+.ant-pro-layout > .ant-layout {
+  width: @layout-frame-width;
+  min-width: @layout-min-width;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ant-pro-layout .ant-pro-layout-header {
+  width: 100% !important;
+  min-width: @layout-min-width;
+}
+
+.ant-pro-layout .ant-pro-top-nav-header-main {
+  width: @layout-frame-width;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ant-pro-layout .ant-pro-layout-container {
+  width: 100%;
+  min-width: 0;
 }
 
 canvas {
@@ -305,7 +341,7 @@ ol {
   overflow-y: auto;
   overflow-x: hidden;
 
-  background: #FAFCFF !important;
+  background: #ffffff !important;
   border-radius: 16px !important;
   padding: 12px 0 12px 0;
 
@@ -469,7 +505,7 @@ body.header-scrolled .ant-pro-layout .ant-pro-layout-header {
 // }
 /* 子菜单容器背景色（仅影响菜单区域，不影响常用区域） */
 .dashboard-sider-menu .ant-menu-sub.ant-menu-inline {
-  background: #FAFCFF !important;
+  background: #FFFFFF !important;
 }
 
 /* 子菜单 hover/选中：不要有任何背景块，只改文字颜色 */
@@ -590,7 +626,6 @@ body.header-scrolled .ant-pro-layout .ant-pro-layout-header {
 
 .ant-pro-layout .ant-pro-layout-content{
   padding: 16px;
-  margin-left: 0;
   box-sizing: border-box;
   min-height: calc(100vh - 64px);
 }

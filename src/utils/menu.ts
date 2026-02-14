@@ -1,36 +1,82 @@
-/**
- * 菜单工具函数
- * 用于处理权限菜单的转换和映射
- */
-
 import type { MenuDataItem } from '@ant-design/pro-components';
+import { resolveTopRoutePath } from '@/utils/route.utils';
+import routes from '../../config/routes';
 
-// 临时业态代码（当没有有效业态时使用）
 export const TEMP_BUSINESS_CODE = 'DEFAULT';
 
-// 菜单名称到路由路径的映射（工作台除外，工作台固定不变）
-export const MENU_NAME_TO_PATH_MAP: Record<string, string> = {
-  门店: '/form',
-  商品: '/list',
-  进销存: '/profile',
-  订单: '/result',
-  会员: '/exception',
-  数据: '/account',
-  财务: '/finance',
-  设置: '/set',
-  应用: '/admin',
-};
+function buildRouteNamePathMap(routeList: any[]): Record<string, string> {
+  const map: Record<string, string> = {};
 
-/**
- * 从 getPermContext 响应中提取菜单节点
- * 兼容多种可能的响应结构
- */
+  const walk = (items: any[]) => {
+    for (const item of items || []) {
+      const routeName =
+        typeof item?.name === 'string' ? item.name.trim() : undefined;
+      const fallbackPath =
+        typeof item?.path === 'string' ? String(item.path) : undefined;
+      const resolvedPath = resolveTopRoutePath(item);
+      const routePath = String(resolvedPath || fallbackPath || '');
+
+      if (routeName && routePath.startsWith('/')) {
+        map[routeName] = routePath;
+      }
+
+      if (Array.isArray(item?.routes) && item.routes.length > 0) {
+        walk(item.routes);
+      }
+    }
+  };
+
+  walk(routeList || []);
+  return map;
+}
+
+const ROUTE_NAME_TO_PATH_MAP = buildRouteNamePathMap(routes as any[]);
+
+function pickTargetId(node: any): string | undefined {
+  const raw =
+    node?.pathUrl ?? node?.targetId ?? node?.targetID ?? node?.target_id;
+  if (raw === undefined || raw === null) return undefined;
+  const value = String(raw).trim();
+  return value || undefined;
+}
+
+function pickPath(node: any, menuName: string): string | undefined {
+  const backendPath = String(
+    node?.path ??
+      node?.url ??
+      node?.router ??
+      node?.routePath ??
+      node?.href ??
+      '',
+  ).trim();
+  if (backendPath.startsWith('/')) {
+    return backendPath;
+  }
+
+  const routePath = ROUTE_NAME_TO_PATH_MAP[menuName];
+  if (routePath && routePath.startsWith('/')) {
+    return routePath;
+  }
+
+  return undefined;
+}
+
+function getNodeName(node: any, index: number): string {
+  const rawName =
+    node?.permName ??
+    node?.name ??
+    node?.title ??
+    node?.menuName ??
+    node?.text ??
+    node?.label;
+  const value = String(rawName ?? '').trim();
+  return value || `menu-${index}`;
+}
+
 export function extractPermContextNodes(res: any): any[] {
   if (!res) return [];
   if (Array.isArray(res)) return res;
-  // 优先检查 menuTree（兼容 apiData 解包后的结构：res 就是 data 本体）
   if (Array.isArray((res as any)?.menuTree)) return (res as any).menuTree;
-  // 兼容未解包结构：res.data.menuTree
   if (Array.isArray((res as any)?.data?.menuTree))
     return (res as any).data.menuTree;
   if (Array.isArray((res as any)?.list)) return (res as any).list;
@@ -46,92 +92,55 @@ export function extractPermContextNodes(res: any): any[] {
   return [];
 }
 
-/**
- * 将权限上下文节点映射为 ProLayout 菜单数据
- * @param nodes 权限节点数组
- * @returns 菜单数据数组
- */
 export function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
   const visit = (
-    n: any,
-    idx: number,
+    node: any,
+    index: number,
   ): (MenuDataItem & { targetId?: string; sort?: number }) | null => {
-    // 过滤按钮类型（permType === 3）
-    if (n?.permType === 3) {
+    if (node?.permType === 3) {
       return null;
     }
 
-    const name = String(
-      n?.permName ?? // 优先使用 permName
-        n?.name ??
-        n?.title ??
-        n?.menuName ??
-        n?.text ??
-        n?.label ??
-        `menu-${idx}`,
-    );
+    const name = getNodeName(node, index);
+    const path = pickPath(node, name);
 
-    // 根据菜单名称映射到固定的路由路径
-    let path = MENU_NAME_TO_PATH_MAP[name];
-
-    // 如果映射表中没有，尝试从其他字段获取
-    if (!path) {
-      path =
-        String(
-          n?.path ?? n?.url ?? n?.router ?? n?.routePath ?? n?.href ?? '',
-        ) || undefined;
-    }
-
-    const childrenSrc =
-      (Array.isArray(n?.children) && n.children) ||
-      (Array.isArray(n?.childList) && n.childList) ||
-      (Array.isArray(n?.child) && n.child) ||
+    const childrenSource =
+      (Array.isArray(node?.children) && node.children) ||
+      (Array.isArray(node?.childList) && node.childList) ||
+      (Array.isArray(node?.child) && node.child) ||
       [];
 
-    // 递归处理子节点，过滤掉 null 值
-    const children = (childrenSrc as any[])
-      .map((c, i) => visit(c, i))
+    const children = (childrenSource as any[])
+      .map((child, childIndex) => visit(child, childIndex))
       .filter(
-        (c): c is MenuDataItem & { targetId?: string; sort?: number } =>
-          c !== null,
+        (item): item is MenuDataItem & { targetId?: string; sort?: number } =>
+          item !== null,
       );
 
-    // 按 sort 字段排序子节点
     if (children.length > 0) {
       children.sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
     }
 
-    const item = {
+    return {
       name,
       path,
       children: children.length > 0 ? children : undefined,
-      targetId: n?.pathUrl ?? n?.id, // 保留 pathUrl 作为 targetId
-      sort: n?.sort ?? 0,
+      targetId: pickTargetId(node),
+      sort: node?.sort ?? 0,
     } as MenuDataItem & { targetId?: string; sort?: number };
-
-    return item;
   };
 
-  // 处理根节点，过滤掉 null 值和工作台菜单
   const result = (nodes || [])
-    .map((n, i) => visit(n, i))
-    .filter((n): n is MenuDataItem & { targetId?: string; sort?: number } => {
-      // 过滤掉 null 和工作台菜单（工作台固定不变）
-      return n !== null && n.name !== '工作台';
-    });
+    .map((node, index) => visit(node, index))
+    .filter(
+      (item): item is MenuDataItem & { targetId?: string; sort?: number } =>
+        item !== null,
+    );
 
-  // 按 sort 字段排序根节点
   result.sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
-
   return result;
 }
 
-/**
- * 验证业态代码是否在业态列表中
- * @param businessCode 业态代码
- * @param businessList 业态列表
- * @returns 是否有效
- */
 export function validateBusinessCode(
   businessCode: string | undefined,
   businessList: any[] | undefined,
@@ -139,30 +148,91 @@ export function validateBusinessCode(
   if (!businessCode || !businessList || businessList.length === 0) {
     return false;
   }
-  return businessList.some((b: any) => b.businessCode === businessCode);
+  return businessList.some((item: any) => item.businessCode === businessCode);
 }
 
-/**
- * 获取有效的业态代码
- * 如果当前业态代码无效，返回列表中的第一个业态代码
- * @param currentBusinessCode 当前业态代码
- * @param businessList 业态列表
- * @returns 有效的业态代码
- */
 export function getValidBusinessCode(
   currentBusinessCode: string | undefined,
   businessList: any[] | undefined,
 ): string {
-  // 如果业态列表为空，返回临时代码
   if (!businessList || businessList.length === 0) {
     return TEMP_BUSINESS_CODE;
   }
 
-  // 如果当前业态代码有效，返回它
   if (validateBusinessCode(currentBusinessCode, businessList)) {
     return currentBusinessCode as string;
   }
 
-  // 否则返回列表中的第一个业态代码
   return businessList[0]?.businessCode || TEMP_BUSINESS_CODE;
+}
+
+function normalizePath(path: string | undefined): string {
+  if (!path) return '';
+  const noQuery = path.split('?')[0]?.split('#')[0] || '';
+  if (!noQuery) return '';
+  if (noQuery === '/') return '/';
+  const normalized = noQuery.endsWith('/') ? noQuery.slice(0, -1) : noQuery;
+  return normalized || '/';
+}
+
+function flattenMenuData(
+  items: MenuDataItem[] | undefined,
+): (MenuDataItem & { targetId?: string })[] {
+  if (!items || items.length === 0) return [];
+  const result: (MenuDataItem & { targetId?: string })[] = [];
+
+  const walk = (nodes: MenuDataItem[]) => {
+    for (const node of nodes) {
+      result.push(node as MenuDataItem & { targetId?: string });
+      if (Array.isArray(node?.children) && node.children.length > 0) {
+        walk(node.children);
+      }
+    }
+  };
+
+  walk(items);
+  return result;
+}
+
+export function findTargetIdByPath(
+  menuData: MenuDataItem[] | undefined,
+  path: string | undefined,
+): string | undefined {
+  const normalizedPath = normalizePath(path);
+  if (!normalizedPath) return undefined;
+
+  const flatMenus = flattenMenuData(menuData);
+  const exact = flatMenus.find((item) => {
+    const itemPath = normalizePath(item?.path as string | undefined);
+    return itemPath === normalizedPath && item?.targetId;
+  });
+  if (exact?.targetId) return String(exact.targetId);
+
+  const moduleRoot = `/${normalizedPath.split('/').filter(Boolean)[0] || ''}`;
+  if (!moduleRoot || moduleRoot === '/') return undefined;
+
+  const rootMatch = flatMenus.find((item) => {
+    const itemPath = normalizePath(item?.path as string | undefined);
+    return itemPath === moduleRoot && item?.targetId;
+  });
+  if (rootMatch?.targetId) return String(rootMatch.targetId);
+
+  return undefined;
+}
+
+export function findPathByTargetId(
+  menuData: MenuDataItem[] | undefined,
+  targetId: string | number | undefined,
+): string | undefined {
+  if (targetId === undefined || targetId === null) return undefined;
+  const target = String(targetId);
+
+  const flatMenus = flattenMenuData(menuData);
+  const match = flatMenus.find((item) => {
+    if (!item?.targetId || !item?.path) return false;
+    return String(item.targetId) === target;
+  });
+
+  const matchPath = match?.path ? String(match.path) : '';
+  return matchPath.startsWith('/') ? matchPath : undefined;
 }

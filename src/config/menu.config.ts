@@ -2,22 +2,6 @@ import { AppstoreOutlined } from '@ant-design/icons';
 import React from 'react';
 
 /**
- * 菜单 ID 映射表
- */
-export const MENU_ID_MAP: Record<string, number> = {
-  工作台: 163,
-  门店: 1457,
-  商品: 1459,
-  进销存: 206,
-  订单: 1432,
-  会员: 215,
-  数据: 1917,
-  财务: 1464,
-  设置: 303,
-  应用: 1495,
-};
-
-/**
  * 常用操作类型定义
  */
 export type CommonAction = {

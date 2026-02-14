@@ -36,13 +36,13 @@ export default defineConfig({
   /**
    * @name moment 的国际化配置
    * @description 如果对国际化没有要求，打开之后能减少js的包大小
-   * @doc https://umijs.org/docs/api/config#ignoremomentlocale
+   * @doc https://umijs.org/docs/api/config#ignoremomentlocsale
    */
   ignoreMomentLocale: true,
 
   /**
    * @name 代理配置
-   * @description 🔥🔥【修改】合并了原始 proxy 配置和微前端资源代理
+   * @description 【修改】合并了原始 proxy 配置和微前端资源代理
    */
   proxy: {
     // 1. 保留你原有的 proxy 配置 (如果 proxy.ts 里有其他接口配置)
@@ -53,85 +53,85 @@ export default defineConfig({
     // =============================================================
 
     // 1. 子应用入口代理
-    '/api-old-app': {
-      target: 'https://test.suifuda.com',
-      changeOrigin: true,
-      pathRewrite: { '^/api-old-app': '' },
-    },
+    //   '/api-old-app': {
+    //     target: 'http://192.168.1.201:8081',
+    //     changeOrigin: true,
+    //     pathRewrite: { '^/api-old-app': '' },
+    //   },
 
-    // 2. 静态资源全家桶代理 (把老项目可能用到的目录全都指过去)
-    // 这样老项目请求 /Public/img/logo.png 就会被转发到 test.suifuda.com/Public/img/logo.png
-    ...[
-      '/Public',
-      '/Retail',
-      '/index.php',
-      '/Admin',
-      '/Terminalapi',
-      '/Uploads',
-      '/Vip',
-      '/AggregationCode',
-      '/AIScale',
-      '/PointsMall',
-      '/Currency',
-      '/CashierRegister',
-      '/Website',
-      '/Ad',
-      '/DyGroupBuying',
-      '/Rich',
-      '/XinYiPayment',
-      '/SubLedger',
-      '/LabelPrint',
-      '/SelfCashRegister',
-      '/Marketing',
-      '/PointsCheck',
-      '/BigWheel',
-      '/Cashier',
-      '/Report',
-      '/AssistantApplet',
-      '/DyShoppingMall',
-      // 新增路径
-      '/Sellapi',
-      '/Pay',
-      '/WxApi',
-      '/Super',
-      '/Agent',
-      '/Main',
-      '/CashierApi',
-      '/SmallProgramApi',
-      '/NotifyApi',
-      '/Distribution',
-      '/Make',
-      '/ShopCoupon',
-      '/PayCoupon',
-      '/Blessing',
-      '/RegularDiscount',
-      '/MallPreview',
-      '/AliShoppingMall',
-      '/OpenInterface',
-      '/IndependentCollection',
-      '/DiyStore',
-      '/Token',
-      '/GoodsPackage',
-      '/Communication',
-      '/OpenApi',
-      '/Table',
-      '/StepReductions',
-      '/QHSupplyChain',
-      '/ShoppingCard',
-      '/SpecialOffer',
-      '/DivideAccounts',
-      '/DataScreen',
-      '/Invoice',
-    ].reduce(
-      (acc, path) => {
-        acc[path] = { target: 'https://test.suifuda.com', changeOrigin: true };
-        return acc;
-      },
-      {} as Record<string, { target: string; changeOrigin: boolean }>,
-    ),
+    //   // 2. 静态资源全家桶代理 (把老项目可能用到的目录全都指过去)
+    //   // 这样老项目请求 /Public/img/logo.png 就会被转发到 test.suifuda.com/Public/img/logo.png
+    //   ...[
+    //     '/Public',
+    //     '/Retail',
+    //     '/index.php',
+    //     '/Admin',
+    //     '/Terminalapi',
+    //     '/Uploads',
+    //     '/Vip',
+    //     '/AggregationCode',
+    //     '/AIScale',
+    //     '/PointsMall',
+    //     '/Currency',
+    //     '/CashierRegister',
+    //     '/Website',
+    //     '/Ad',
+    //     '/DyGroupBuying',
+    //     '/Rich',
+    //     '/XinYiPayment',
+    //     '/SubLedger',
+    //     '/LabelPrint',
+    //     '/SelfCashRegister',
+    //     '/Marketing',
+    //     '/PointsCheck',
+    //     '/BigWheel',
+    //     '/Cashier',
+    //     '/Report',
+    //     '/AssistantApplet',
+    //     '/DyShoppingMall',
+    //     // 新增路径
+    //     '/Sellapi',
+    //     '/Pay',
+    //     '/WxApi',
+    //     '/Super',
+    //     '/Agent',
+    //     '/Main',
+    //     '/CashierApi',
+    //     '/SmallProgramApi',
+    //     '/NotifyApi',
+    //     '/Distribution',
+    //     '/Make',
+    //     '/ShopCoupon',
+    //     '/PayCoupon',
+    //     '/Blessing',
+    //     '/RegularDiscount',
+    //     '/MallPreview',
+    //     '/AliShoppingMall',
+    //     '/OpenInterface',
+    //     '/IndependentCollection',
+    //     '/DiyStore',
+    //     '/Token',
+    //     '/GoodsPackage',
+    //     '/Communication',
+    //     '/OpenApi',
+    //     '/Table',
+    //     '/StepReductions',
+    //     '/QHSupplyChain',
+    //     '/ShoppingCard',
+    //     '/SpecialOffer',
+    //     '/DivideAccounts',
+    //     '/DataScreen',
+    //     '/Invoice',
+    //   ].reduce(
+    //     (acc, path) => {
+    //       acc[path] = { target: 'http://192.168.1.201:8081', changeOrigin: true };
+    //       return acc;
+    //     },
+    //     {} as Record<string, { target: string; changeOrigin: boolean }>,
+    //   ),
 
-    // // 如果老项目有 /api 开头的请求，也代理过去
-    // '/api': { target: 'https://api.map.baidu.com', changeOrigin: true },
+    //   // // 如果老项目有 /api 开头的请求，也代理过去
+    //   // '/api': { target: 'https://api.map.baidu.com', changeOrigin: true },
   },
 
   /**

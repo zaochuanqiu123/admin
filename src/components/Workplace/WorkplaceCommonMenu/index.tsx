@@ -19,7 +19,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { history } from '@umijs/max';
+import { history, useModel } from '@umijs/max';
 import { Button, Drawer, message, Space, Typography } from 'antd';
 import React, { useEffect } from 'react';
 import {
@@ -36,6 +36,7 @@ import {
   writeCommonActionsToStorage,
   writeGroupOrderToStorage,
 } from '@/utils/commonActions.storage';
+import { buildIframeRouteWithParams, isIframeRoutePath } from '@/utils/iframe';
 import WorkplaceCommonTopRouteTabs from '../WorkplaceCommonTopRouteTabs';
 import CandidateRow from './CandidateRow';
 import CommonChip from './CommonChip';
@@ -45,6 +46,7 @@ import SubGroupRow from './SubGroupRow';
 const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
   storageKey,
 }) => {
+  const { initialState } = useModel('@@initialState');
   const [open, setOpen] = React.useState(false);
   const [savedList, setSavedList] = React.useState<CommonAction[]>(
     DEFAULT_COMMON_ACTIONS,
@@ -212,6 +214,17 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
     activeGroup?.children?.find((x) => x.id === activeSubGroupId) ??
     activeGroup?.children?.[0];
 
+  const navigateToAction = React.useCallback(
+    (path: string) => {
+      if (!path) return;
+      const nextPath = isIframeRoutePath(path)
+        ? buildIframeRouteWithParams(path, initialState?.permContextMenu)
+        : path;
+      history.push(nextPath);
+    },
+    [initialState?.permContextMenu],
+  );
+
   return (
     <>
       <div className="workplace-common pc-admin-workplace-common">
@@ -255,11 +268,11 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    history.push(a.path);
+                    navigateToAction(a.path);
                   }
                 }}
                 onClick={() => {
-                  history.push(a.path);
+                  navigateToAction(a.path);
                 }}
               >
                 <span className="ant-menu-title-content">{a.title}</span>
