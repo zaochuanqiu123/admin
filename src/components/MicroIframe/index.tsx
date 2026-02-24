@@ -47,6 +47,9 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
 }) => {
   const location = useLocation();
   const { initialState } = useModel('@@initialState');
+  const isDarkMode = (initialState?.settings as any)?.navTheme === 'realDark';
+  const loadingMaskBg = isDarkMode ? '#141414' : '#E7EDFB';
+  const loadingTextColor = isDarkMode ? 'rgba(255, 255, 255, 0.85)' : '#1890ff';
   const [loading, setLoading] = useState(true);
   const [_iframeHeight, setIframeHeight] = useState<number>(
     Math.max(window.innerHeight, minHeight),
@@ -191,6 +194,7 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
         overflow: 'auto',
         height: 'calc(100vh - 44px)',
         borderRadius: 16,
+        background: loadingMaskBg,
       }}
     >
       {loading && (
@@ -202,12 +206,14 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
-            background: '#E7EDFB',
+            background: loadingMaskBg,
             zIndex: 10,
           }}
         >
           <Spin size="large" />
-          <div style={{ marginTop: 10, color: '#1890ff' }}>{loadingText}</div>
+          <div style={{ marginTop: 10, color: loadingTextColor }}>
+            {loadingText}
+          </div>
         </div>
       )}
 
@@ -222,6 +228,7 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
           border: 'none',
           display: 'block',
           visibility: loading ? 'hidden' : 'visible',
+          background: loadingMaskBg,
         }}
         onLoad={handleIframeLoad}
         onError={(e) => {

@@ -14,14 +14,14 @@
   height: 100vh;
 }
 
-.bgImage {
+.loginBgImage {
   width: 100%;
   height: 100vh;
   object-fit: cover;
   object-position: left center;
 }
 
-.overlay {
+.loginOverlay {
   position: relative;
   z-index: 1;
   height: 100vh;
@@ -104,11 +104,11 @@
     transform: translate(50%, -50%);
   }
 
-  .bgImage {
+  .loginBgImage {
     object-position: center;
   }
 
-  .overlay::before {
+  .loginOverlay::before {
     content: '';
     position: absolute;
     inset: 0;

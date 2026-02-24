@@ -9,13 +9,17 @@ import type { CommonAction } from '@/config/menu.config';
 function CandidateRow({
   item,
   disabled,
+  isDarkMode = false,
   onAdd,
 }: {
   item: CommonAction;
   disabled: boolean;
+  isDarkMode?: boolean;
   onAdd: () => void;
 }) {
   const [hovering, setHovering] = React.useState(false);
+  const defaultTextColor = isDarkMode ? 'rgba(255, 255, 255, 0.88)' : '#333';
+  const disabledTextColor = isDarkMode ? 'rgba(255, 255, 255, 0.35)' : '#ccc';
 
   const style: React.CSSProperties = {
     display: 'flex',
@@ -26,7 +30,12 @@ function CandidateRow({
     cursor: 'default',
     userSelect: 'none',
     fontSize: 14,
-    color: hovering && !disabled ? '#005BF8' : disabled ? '#ccc' : '#333',
+    color:
+      hovering && !disabled
+        ? '#005BF8'
+        : disabled
+          ? disabledTextColor
+          : defaultTextColor,
   };
   return (
     <div
@@ -56,7 +65,7 @@ function CandidateRow({
           style={{
             fontSize: 12,
             color: disabled
-              ? '#ccc'
+              ? disabledTextColor
               : hovering
                 ? '#005BF8'
                 : 'var(--ant-color-primary)',

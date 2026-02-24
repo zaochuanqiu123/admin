@@ -13,15 +13,21 @@ function GroupRow({
   active,
   icon,
   title,
+  isDarkMode = false,
   onClick,
 }: {
   id: string;
   active: boolean;
   icon: React.ReactNode;
   title: string;
+  isDarkMode?: boolean;
   onClick: () => void;
 }) {
   const [hovering, setHovering] = React.useState(false);
+  const defaultTextColor = isDarkMode ? 'rgba(255, 255, 255, 0.88)' : '#333';
+  const defaultSecondaryColor = isDarkMode
+    ? 'rgba(255, 255, 255, 0.55)'
+    : '#999';
   const sortableId = `group:${id}` as UniqueIdentifier;
   const {
     attributes,
@@ -46,7 +52,7 @@ function GroupRow({
     cursor: 'pointer',
     userSelect: 'none',
     fontSize: 14,
-    color: active || hovering ? '#005BF8' : '#333',
+    color: active || hovering ? '#005BF8' : defaultTextColor,
     background: 'transparent',
   };
 
@@ -91,7 +97,7 @@ function GroupRow({
       </div>
       <RightOutlined
         style={{
-          color: active || hovering ? '#005BF8' : '#999',
+          color: active || hovering ? '#005BF8' : defaultSecondaryColor,
           fontSize: 12,
           marginLeft: 8,
         }}

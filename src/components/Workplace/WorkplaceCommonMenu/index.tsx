@@ -67,6 +67,19 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
   const [activeSubGroupId, setActiveSubGroupId] = React.useState<string>(
     COMMON_GROUPS[0]?.children?.[0]?.id ?? '',
   );
+  const isDarkMode = (initialState?.settings as any)?.navTheme === 'realDark';
+  const drawerSurfaceBg = isDarkMode ? '#1a1a1a' : '#FAFCFF';
+  const drawerPanelBg = isDarkMode ? '#1f1f1f' : '#ffffff';
+  const drawerPanelMutedBg = isDarkMode ? '#1a1a1a' : '#FAFCFF';
+  const drawerBorderColor = isDarkMode ? '#303030' : '#f0f0f0';
+  const drawerTextPrimary = isDarkMode ? 'rgba(255, 255, 255, 0.88)' : '#333';
+  const drawerTextSecondary = isDarkMode ? 'rgba(255, 255, 255, 0.65)' : '#999';
+  const drawerTextTertiary = isDarkMode ? 'rgba(255, 255, 255, 0.72)' : '#666';
+  const drawerOverlayBg = isDarkMode ? '#262626' : '#F4F6F8';
+  const drawerOverlayIconBg = isDarkMode ? '#595959' : '#C0C4CC';
+  const drawerOverlayShadow = isDarkMode
+    ? '0 4px 16px rgba(0,0,0,0.45)'
+    : '0 4px 16px rgba(0,0,0,0.12)';
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -287,14 +300,18 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
         closable={false}
         placement="right"
         width={650}
-        className="workplace-common-drawer"
+        className={
+          isDarkMode
+            ? 'workplace-common-drawer workplace-common-drawer-dark'
+            : 'workplace-common-drawer'
+        }
         onClose={cancelEdit}
-        style={{ background: '#FAFCFF' }}
+        style={{ background: drawerSurfaceBg }}
         styles={{
           header: {
             padding: '16px 24px',
-            borderBottom: '1px solid #f0f0f0',
-            background: '#FAFCFF',
+            borderBottom: `1px solid ${drawerBorderColor}`,
+            background: drawerSurfaceBg,
           },
           body: {
             display: 'flex',
@@ -302,7 +319,7 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
             height: '100%',
             overflow: 'hidden',
             padding: 0,
-            background: '#FAFCFF',
+            background: drawerSurfaceBg,
           },
         }}
         title={
@@ -313,7 +330,15 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
               alignItems: 'center',
             }}
           >
-            <span style={{ fontSize: 16, fontWeight: 600 }}>编辑快捷导航</span>
+            <span
+              style={{
+                fontSize: 16,
+                fontWeight: 600,
+                color: drawerTextPrimary,
+              }}
+            >
+              编辑快捷导航
+            </span>
             <Space size={12}>
               <Button
                 type="link"
@@ -332,6 +357,13 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                   padding: '0 15px',
                   height: 32,
                   lineHeight: '32px',
+                  ...(isDarkMode
+                    ? {
+                        color: drawerTextPrimary,
+                        borderColor: '#434343',
+                        background: drawerPanelBg,
+                      }
+                    : {}),
                 }}
               >
                 取消
@@ -376,16 +408,22 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
               <Typography.Text
                 style={{
                   fontSize: 13,
-                  color: '#666',
+                  color: drawerTextTertiary,
                   display: 'block',
                   marginBottom: 12,
                 }}
               >
-                <span style={{ fontSize: 16, color: '#333', fontWeight: 700 }}>
+                <span
+                  style={{
+                    fontSize: 16,
+                    color: drawerTextPrimary,
+                    fontWeight: 700,
+                  }}
+                >
                   常用模块
                 </span>
                 （当前已选中 {draftList.length}/{COMMON_ACTION_MAX}）{' '}
-                <span style={{ color: '#999', marginLeft: 8 }}>
+                <span style={{ color: drawerTextSecondary, marginLeft: 8 }}>
                   移动可调整顺序
                 </span>
               </Typography.Text>
@@ -406,6 +444,7 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                     <CommonChip
                       key={item.id}
                       item={item}
+                      isDarkMode={isDarkMode}
                       onRemove={removeFromDraft}
                     />
                   ))}
@@ -416,11 +455,21 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
             {/* 底部选择区域 */}
             <div style={{ padding: '16px 24px 0' }}>
               <Typography.Text
-                style={{ fontSize: 16, color: '#333', fontWeight: 700 }}
+                style={{
+                  fontSize: 16,
+                  color: drawerTextPrimary,
+                  fontWeight: 700,
+                }}
               >
                 选择菜单添加{' '}
               </Typography.Text>
-              <span style={{ color: '#999', fontSize: 12, marginLeft: 10 }}>
+              <span
+                style={{
+                  color: drawerTextSecondary,
+                  fontSize: 12,
+                  marginLeft: 10,
+                }}
+              >
                 {' '}
                 一级菜单支持拖拽排序
               </span>
@@ -444,7 +493,7 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                 <div
                   style={{
                     width: 170,
-                    background: '#FAFCFF',
+                    background: drawerPanelMutedBg,
                     overflowY: 'auto',
                     padding: 0,
                     margin: 0,
@@ -460,6 +509,7 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                       <GroupRow
                         key={g.id}
                         id={g.id}
+                        isDarkMode={isDarkMode}
                         active={g.id === activeGroupId}
                         onClick={() => setActiveGroupId(g.id)}
                         icon={g.icon}
@@ -473,7 +523,7 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                 <div
                   style={{
                     width: 202,
-                    background: '#fff',
+                    background: drawerPanelBg,
                     borderRadius: 16,
                     overflowY: 'auto',
                     padding: 0,
@@ -484,6 +534,7 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                     <SubGroupRow
                       key={sub.id}
                       title={sub.title}
+                      isDarkMode={isDarkMode}
                       active={sub.id === activeSubGroupId}
                       onClick={() => setActiveSubGroupId(sub.id)}
                     />
@@ -492,7 +543,7 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                     activeGroup.children.length === 0) && (
                     <div
                       style={{
-                        color: '#999',
+                        color: drawerTextSecondary,
                         textAlign: 'center',
                         marginTop: 40,
                       }}
@@ -508,7 +559,7 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                     width: 210,
                     overflowY: 'auto',
                     padding: '12px 24px 12px 32px',
-                    background: '#fff',
+                    background: drawerPanelBg,
                     borderRadius: 16,
                   }}
                 >
@@ -527,6 +578,7 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                         <CandidateRow
                           key={item.id}
                           item={item}
+                          isDarkMode={isDarkMode}
                           disabled={disabled}
                           onAdd={() => addToDraft(item)}
                         />
@@ -538,7 +590,7 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                     activeSubGroup.children.length === 0) && (
                     <div
                       style={{
-                        color: '#999',
+                        color: drawerTextSecondary,
                         textAlign: 'center',
                         marginTop: 40,
                       }}
@@ -565,12 +617,13 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                       <div
                         style={{
                           padding: '12px 24px',
-                          background: '#fff',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                          background: drawerPanelBg,
+                          boxShadow: drawerOverlayShadow,
                           borderRadius: 4,
                           display: 'flex',
                           alignItems: 'center',
                           gap: 10,
+                          color: drawerTextPrimary,
                         }}
                       >
                         {it.icon}
@@ -585,7 +638,7 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                   return (
                     <div
                       style={{
-                        background: '#F4F6F8',
+                        background: drawerOverlayBg,
                         borderRadius: 16,
                         padding: '4px 12px',
                         display: 'inline-flex',
@@ -594,12 +647,12 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                         userSelect: 'none',
                         cursor: 'grabbing',
                         fontSize: 13,
-                        color: '#333',
+                        color: drawerTextPrimary,
                         boxSizing: 'border-box',
                         height: 28,
                         lineHeight: '20px',
                         minWidth: 0,
-                        boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                        boxShadow: drawerOverlayShadow,
                       }}
                     >
                       <span
@@ -621,7 +674,7 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                           width: 14,
                           height: 14,
                           borderRadius: '50%',
-                          background: '#C0C4CC',
+                          background: drawerOverlayIconBg,
                           color: '#fff',
                           fontSize: 8,
                         }}

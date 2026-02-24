@@ -67,6 +67,19 @@ function getDevUser(): API.CurrentUser {
   };
 }
 
+function syncBlackModeClass(navTheme?: string) {
+  if (typeof document === 'undefined') return;
+  document.body.classList.toggle('theme-black-mode', navTheme === 'realDark');
+}
+
+function markThemeSwitching() {
+  if (typeof document === 'undefined') return;
+  document.body.classList.add('theme-switching');
+  window.setTimeout(() => {
+    document.body.classList.remove('theme-switching');
+  }, 220);
+}
+
 export async function getInitialState(): Promise<{
   settings?: Partial<LayoutSettings>;
   currentUser?: API.CurrentUser;
@@ -171,6 +184,8 @@ export const layout: RunTimeLayoutConfig = ({
   initialState,
   setInitialState,
 }) => {
+  syncBlackModeClass((initialState?.settings as any)?.navTheme);
+
   if (typeof window !== 'undefined') {
     (window as any).g_initialState = initialState;
   }
@@ -396,11 +411,13 @@ export const layout: RunTimeLayoutConfig = ({
               </span>
             }
             onChange={(nextChecked) => {
+              const nextNavTheme = nextChecked ? 'realDark' : 'light';
+              markThemeSwitching();
               setInitialState((preInitialState) => ({
                 ...preInitialState,
                 settings: {
                   ...(preInitialState?.settings || {}),
-                  navTheme: nextChecked ? 'realDark' : 'light',
+                  navTheme: nextNavTheme,
                 } as Partial<LayoutSettings>,
               }));
             }}
@@ -614,6 +631,7 @@ export const layout: RunTimeLayoutConfig = ({
               enableDarkTheme
               settings={initialState?.settings}
               onSettingChange={(settings) => {
+                markThemeSwitching();
                 setInitialState((preInitialState) => ({
                   ...preInitialState,
                   settings,

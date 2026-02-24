@@ -11,11 +11,16 @@ import type { CommonAction } from '@/config/menu.config';
  */
 function CommonChip({
   item,
+  isDarkMode = false,
   onRemove,
 }: {
   item: CommonAction;
+  isDarkMode?: boolean;
   onRemove: (id: string) => void;
 }) {
+  const chipBg = isDarkMode ? '#262626' : '#F4F6F8';
+  const chipTextColor = isDarkMode ? 'rgba(255, 255, 255, 0.88)' : '#333';
+  const chipCloseBg = isDarkMode ? '#595959' : '#C0C4CC';
   const {
     attributes,
     listeners,
@@ -30,7 +35,7 @@ function CommonChip({
     transform: CSS.Transform.toString(transform),
     transition: isSorting ? 'none' : transition,
     opacity: isDragging ? 0.5 : 1,
-    background: '#F4F6F8',
+    background: chipBg,
     borderRadius: 16,
     padding: '4px 12px',
     display: 'inline-flex',
@@ -39,7 +44,7 @@ function CommonChip({
     userSelect: 'none',
     cursor: isDragging ? 'grabbing' : 'grab',
     fontSize: 13,
-    color: '#333',
+    color: chipTextColor,
     boxSizing: 'border-box',
     height: 28,
     lineHeight: '20px',
@@ -83,7 +88,7 @@ function CommonChip({
           width: 14,
           height: 14,
           borderRadius: '50%',
-          background: '#C0C4CC',
+          background: chipCloseBg,
           color: '#fff',
           cursor: 'pointer',
           fontSize: 8,

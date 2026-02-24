@@ -232,13 +232,13 @@ const Login: React.FC = () => {
           {bannerImages.map((src) => {
             return (
               <div className="bgSlide" key={src}>
-                <img src={src} alt="" className="bgImage" />
+                <img src={src} alt="" className="loginBgImage" />
               </div>
             );
           })}
         </Carousel>
       </div>
-      <div className="overlay">
+      <div className="loginOverlay">
         <Lang />
         <div className="header">
           <div className="brand">

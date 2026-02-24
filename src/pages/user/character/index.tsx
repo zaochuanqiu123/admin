@@ -272,10 +272,10 @@ const Character: FC = () => {
   return (
     <div className="characterPage">
       <div className="bgContainer">
-        <img className="bgImage" src={CharacterTv} alt="" />
+        <img className="characterBgImage" src={CharacterTv} alt="" />
       </div>
 
-      <div className="overlay">
+      <div className="characterOverlay">
         <div className="glassMask" />
         <div className="cardWrap">
           <Card className="characterSelectCard" title="请选择登录身份">
