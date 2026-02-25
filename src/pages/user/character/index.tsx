@@ -1,4 +1,4 @@
-import { history, useModel } from '@umijs/max';
+﻿import { history, useModel } from '@umijs/max';
 import {
   Button,
   Card,
@@ -24,12 +24,20 @@ import {
   setSelectedOrgCode,
 } from '@/api/storage';
 import CharacterTv from '@/assets/character.png';
+import { IFRAME_PATHS } from '@/config/iframe.config';
+import {
+  clearPostLoginRedirect,
+  getPostLoginRedirect,
+  getRedirectFromSearch,
+  normalizeRedirectPath,
+} from '@/utils/auth-expired';
 import { buildIframeRouteWithParams } from '@/utils/iframe';
 import {
   extractPermContextNodes,
   mapPermContextToMenuData,
   TEMP_BUSINESS_CODE,
 } from '@/utils/menu';
+import { getAllowedTopPaths } from '@/utils/route.utils';
 import './index.less';
 
 type StoreType = 'all' | 'merchant' | 'store';
@@ -217,6 +225,8 @@ const Character: FC = () => {
     setSelectedStoreId(item.id);
     const orgCode = item.orgCode;
     let nextPath = '/dashboard/index';
+    const requestedRedirect =
+      getRedirectFromSearch() || getPostLoginRedirect() || undefined;
     if (orgCode) {
       setSelectedOrgCode(orgCode);
       try {
@@ -241,10 +251,35 @@ const Character: FC = () => {
         });
         const permNodes = extractPermContextNodes(permRes);
         const permContextMenu = mapPermContextToMenuData(permNodes);
-        nextPath = buildIframeRouteWithParams(
+        const defaultPath = buildIframeRouteWithParams(
           '/dashboard/index',
           permContextMenu.length > 0 ? permContextMenu : undefined,
         );
+        nextPath = defaultPath;
+
+        const redirectPath = normalizeRedirectPath(requestedRedirect);
+        if (redirectPath) {
+          const targetPathname = String(redirectPath)
+            .split('?')[0]
+            .split('#')[0];
+          const moduleRoot = `/${targetPathname.split('/')[1] || ''}`;
+          const isDashboard =
+            targetPathname === '/dashboard' ||
+            targetPathname.startsWith('/dashboard/');
+          const allowedTopPaths = getAllowedTopPaths(
+            permContextMenu.length > 0 ? permContextMenu : undefined,
+          );
+          const isIframeModule = IFRAME_PATHS.some((p) => moduleRoot === p);
+          if (
+            isDashboard ||
+            !isIframeModule ||
+            allowedTopPaths.has(moduleRoot)
+          ) {
+            nextPath = redirectPath;
+          } else {
+            message.warning('原页面无权限，已跳转到工作台');
+          }
+        }
 
         // 4. 更新 initialState，包括登录上下文、业态列表、当前业态和权限菜单
         setInitialState((s: any) => ({
@@ -257,6 +292,9 @@ const Character: FC = () => {
             permContextMenu.length > 0 ? permContextMenu : undefined,
         }));
       } catch (error) {
+        if ((error as any)?.info?.authHandled) {
+          return;
+        }
         console.error('getUserLoginContext or getPermContext failed:', error);
         message.error('获取用户信息失败，请稍后重试');
         setInitialState((s: any) => ({
@@ -264,8 +302,10 @@ const Character: FC = () => {
           currentOrgCode: orgCode,
           loginContext: undefined,
         }));
+        return;
       }
     }
+    clearPostLoginRedirect();
     history.replace(nextPath);
   };
 

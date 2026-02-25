@@ -1,4 +1,4 @@
-import { DownOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons';
+﻿import { DownOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons';
 
 import type {
   Settings as LayoutSettings,
@@ -20,6 +20,7 @@ import { AvatarName, NoticeBell } from '@/components';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
 import '@ant-design/v5-patch-for-react-19';
+import { logout as requestLogout } from '@/api/auth';
 import { getPermContext } from '@/api/context';
 import {
   clearBusinessList,
@@ -39,6 +40,11 @@ import logoDark from '@/assets/logo-dark.png';
 import HeaderScrollWatcher from '@/components/Layout/HeaderScrollWatcher';
 import WorkplaceCommonMenu from '@/components/Workplace/WorkplaceCommonMenu';
 import { IFRAME_PATHS } from '@/config/iframe.config';
+import {
+  clearPostLoginRedirect,
+  redirectToLogin,
+  setPostLoginRedirect,
+} from '@/utils/auth-expired';
 import { buildIframeRouteWithParams, isIframeRoutePath } from '@/utils/iframe';
 import {
   extractPermContextNodes,
@@ -52,6 +58,7 @@ const isDev = process.env.NODE_ENV === 'development' || process.env.CI;
 const loginPath = '/user/login';
 const devBypassAuth =
   typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
+let logoutInFlight: Promise<void> | null = null;
 
 const apiBase = typeof __API_BASE__ !== 'undefined' ? __API_BASE__ : undefined;
 
@@ -92,9 +99,7 @@ export async function getInitialState(): Promise<{
 }> {
   const fetchPermMenu = async (businessCode?: string) => {
     try {
-      const res = await getPermContext(businessCode, {
-        skipErrorHandler: true,
-      });
+      const res = await getPermContext(businessCode);
       const nodes = extractPermContextNodes(res);
       const menu = mapPermContextToMenuData(nodes);
       return menu.length > 0 ? menu : undefined;
@@ -135,7 +140,12 @@ export async function getInitialState(): Promise<{
       // 如果有 token 但没有选择身份，无论是否在 character 页面都提前返回
       // 不调用 getPermContext，等用户选择身份后再调用
       if (location.pathname !== '/user/character') {
-        history.replace('/user/character');
+        const redirect = `${location.pathname}${location.search || ''}`;
+        setPostLoginRedirect(redirect);
+        history.replace({
+          pathname: '/user/character',
+          search: new URLSearchParams({ redirect }).toString(),
+        });
       }
       return {
         fetchUserInfo,
@@ -272,9 +282,7 @@ export const layout: RunTimeLayoutConfig = ({
 
         try {
           // 使用新的 businessCode 调用 getPermContext
-          const permRes = await getPermContext(businessCode, {
-            skipErrorHandler: true,
-          });
+          const permRes = await getPermContext(businessCode);
           const permNodes = extractPermContextNodes(permRes);
           const permContextMenu = mapPermContextToMenuData(permNodes);
 
@@ -498,32 +506,66 @@ export const layout: RunTimeLayoutConfig = ({
 
         // 退出登录处理函数
         const handleLogout = async () => {
-          // 清除本地 token
-          clearLoginUserInfo();
-          clearLoginOrgList();
-          clearSelectedOrgCode();
-          clearBusinessList();
-          clearCurrentBusinessCode();
-          clearToken();
-          clearWorkplaceCache();
-          // 清除用户信息
-          setInitialState((s) => {
-            const next = {
-              ...(s || {}),
-              currentUser: undefined,
-              currentOrgCode: undefined,
-              permContextMenu: undefined,
-              businessList: undefined,
-              currentBusinessCode: undefined,
-            };
-            if (typeof window !== 'undefined') {
-              (window as any).g_initialState = next;
+          if (logoutInFlight) {
+            await logoutInFlight;
+            return;
+          }
+
+          const doLogout = async () => {
+            const hasToken = !!getToken();
+            let logoutApiFailed = false;
+
+            try {
+              if (hasToken) {
+                await requestLogout({
+                  skipErrorHandler: true,
+                });
+              }
+            } catch (error) {
+              logoutApiFailed = true;
+              console.error('requestLogout failed:', error);
+            } finally {
+              clearLoginUserInfo();
+              clearLoginOrgList();
+              clearSelectedOrgCode();
+              clearBusinessList();
+              clearCurrentBusinessCode();
+              clearToken();
+              clearPostLoginRedirect();
+              clearWorkplaceCache();
+
+              setInitialState((s) => {
+                const next = {
+                  ...(s || {}),
+                  currentUser: undefined,
+                  currentOrgCode: undefined,
+                  permContextMenu: undefined,
+                  businessList: undefined,
+                  currentBusinessCode: undefined,
+                };
+                if (typeof window !== 'undefined') {
+                  (window as any).g_initialState = next;
+                }
+                return next;
+              });
+
+              if (history.location.pathname !== loginPath) {
+                history.replace(loginPath);
+              }
+              if (logoutApiFailed) {
+                message.warning('退出接口调用失败，已清理本地登录态');
+              } else {
+                message.success('已退出登录');
+              }
             }
-            return next;
-          });
-          // 跳转到登录页
-          history.push(loginPath);
-          message.success('已退出登录');
+          };
+
+          logoutInFlight = doLogout();
+          try {
+            await logoutInFlight;
+          } finally {
+            logoutInFlight = null;
+          }
         };
 
         // 下拉菜单配置
@@ -588,7 +630,9 @@ export const layout: RunTimeLayoutConfig = ({
         !hasToken &&
         location.pathname !== loginPath
       ) {
-        history.push(loginPath);
+        const redirect = `${location.pathname}${location.search || ''}`;
+        redirectToLogin(redirect);
+        return;
       }
 
       const orgCode = getSelectedOrgCode();
@@ -598,7 +642,13 @@ export const layout: RunTimeLayoutConfig = ({
         location.pathname !== '/user/character' &&
         location.pathname !== loginPath
       ) {
-        history.push('/user/character');
+        const redirect = `${location.pathname}${location.search || ''}`;
+        setPostLoginRedirect(redirect);
+        history.push({
+          pathname: '/user/character',
+          search: new URLSearchParams({ redirect }).toString(),
+        });
+        return;
       }
 
       const allowedTopPaths = getAllowedTopPaths(initialState?.permContextMenu);

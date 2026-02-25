@@ -1,16 +1,13 @@
 ﻿import type { RequestOptions } from '@@/plugin-request/request';
 import type { RequestConfig } from '@umijs/max';
-import { history } from '@umijs/max';
 import { message, notification } from 'antd';
+import { getSelectedOrgCode, getToken } from '@/api/storage';
 import {
-  clearLoginUserInfo,
-  clearSelectedOrgCode,
-  clearToken,
-  getSelectedOrgCode,
-  getToken,
-} from '@/api/storage';
+  clearAuthStorage,
+  handleAuthExpiredByCode,
+  redirectToLogin,
+} from '@/utils/auth-expired';
 
-const loginPath = '/user/login';
 const devBypassAuth =
   typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
 
@@ -26,9 +23,10 @@ enum ErrorShowType {
 interface ResponseStructure {
   success: boolean;
   data: any;
-  errorCode?: number;
+  errorCode?: number | string;
   errorMessage?: string;
   showType?: ErrorShowType;
+  authHandled?: boolean;
 }
 
 /**
@@ -57,7 +55,13 @@ export const errorConfig: RequestConfig = {
       if (error.name === 'BizError') {
         const errorInfo: ResponseStructure | undefined = error.info;
         if (errorInfo) {
-          const { errorMessage, errorCode } = errorInfo;
+          const { errorMessage, errorCode, authHandled } = errorInfo;
+          if (authHandled) {
+            return;
+          }
+          if (handleAuthExpiredByCode(errorCode, errorMessage)) {
+            return;
+          }
           switch (errorInfo.showType) {
             case ErrorShowType.SILENT:
               // do nothing
@@ -88,21 +92,8 @@ export const errorConfig: RequestConfig = {
           if (devBypassAuth) {
             return;
           }
-          clearLoginUserInfo();
-          clearSelectedOrgCode();
-          clearToken();
-          const { search, pathname } = window.location;
-          const urlParams = new URL(window.location.href).searchParams;
-          const redirect = urlParams.get('redirect');
-          if (pathname !== loginPath && !redirect) {
-            const searchParams = new URLSearchParams({
-              redirect: pathname + search,
-            });
-            history.replace({
-              pathname: loginPath,
-              search: searchParams.toString(),
-            });
-          }
+          clearAuthStorage();
+          redirectToLogin();
           return;
         }
         message.error(`Response status:${error.response.status}`);

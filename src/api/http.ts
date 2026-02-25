@@ -1,4 +1,5 @@
 import { request } from '@umijs/max';
+import { handleAuthExpiredByCode } from '@/utils/auth-expired';
 
 type AnyRecord = Record<string, any>;
 
@@ -33,6 +34,7 @@ type ApiErrorInfo = {
   errorMessage?: string;
   showType?: number;
   data?: unknown;
+  authHandled?: boolean;
 };
 
 /**
@@ -76,31 +78,34 @@ export async function apiRequest<TResponse = any>(
   if (isRecord(res)) {
     if (isCodeResponse(res)) {
       if (!isSuccessCode(res.code)) {
-        throw createBizError(
-          String(res.msg ?? res.message ?? 'Request failed'),
-          {
-            errorCode: res.code,
-            errorMessage: String(res.msg ?? res.message ?? 'Request failed'),
-            data: res.data,
-          },
-        );
+        const errorMessage = String(res.msg ?? res.message ?? 'Request failed');
+        const authHandled = handleAuthExpiredByCode(res.code, errorMessage);
+        throw createBizError(errorMessage, {
+          errorCode: res.code,
+          errorMessage,
+          data: res.data,
+          authHandled,
+        });
       }
       return res;
     }
 
     if (isSuccessResponse(res)) {
       if (res.success === false) {
-        throw createBizError(
-          String(res.errorMessage ?? res.message ?? 'Request failed'),
-          {
-            errorCode: res.errorCode,
-            errorMessage: String(
-              res.errorMessage ?? res.message ?? 'Request failed',
-            ),
-            showType: res.showType,
-            data: res.data,
-          },
+        const errorMessage = String(
+          res.errorMessage ?? res.message ?? 'Request failed',
         );
+        const authHandled = handleAuthExpiredByCode(
+          res.errorCode,
+          errorMessage,
+        );
+        throw createBizError(errorMessage, {
+          errorCode: res.errorCode,
+          errorMessage,
+          showType: res.showType,
+          data: res.data,
+          authHandled,
+        });
       }
     }
   }

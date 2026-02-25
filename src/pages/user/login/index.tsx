@@ -1,5 +1,4 @@
-import {
-  AntDesignOutlined,
+﻿import {
   LockOutlined,
   PhoneOutlined,
   ReloadOutlined,
@@ -17,7 +16,7 @@ import {
   Input,
   Tabs,
 } from 'antd';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { login } from '@/api/auth';
 import {
   clearSelectedOrgCode,
@@ -31,6 +30,12 @@ import Banner3 from '@/assets/Banner3.jpg';
 import Banner4 from '@/assets/Banner4.jpg';
 import LogoDark from '@/assets/logo-dark.png';
 import { Footer } from '@/components';
+import {
+  clearPostLoginRedirect,
+  getPostLoginRedirect,
+  getRedirectFromSearch,
+  setPostLoginRedirect,
+} from '@/utils/auth-expired';
 import Settings from '../../../../config/defaultSettings';
 import './index.less';
 
@@ -170,11 +175,19 @@ const Login: React.FC = () => {
       });
       message.success(defaultLoginSuccessMessage);
 
-      // 5. 改动：把 await fetchUserInfo() 删掉了，直接跳转
-      const urlParams = new URL(window.location.href).searchParams;
-      void urlParams.get('redirect');
-      // 登录成功后统一进入“用户身份/门店选择”页
-      history.replace('/user/character');
+      const redirect =
+        getRedirectFromSearch() || getPostLoginRedirect() || undefined;
+
+      if (redirect) {
+        setPostLoginRedirect(redirect);
+        history.replace({
+          pathname: '/user/character',
+          search: new URLSearchParams({ redirect }).toString(),
+        });
+      } else {
+        clearPostLoginRedirect();
+        history.replace('/user/character');
+      }
       return;
     } catch (error) {
       // ... 错误处理逻辑，这里没动

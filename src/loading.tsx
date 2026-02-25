@@ -19,6 +19,8 @@
  * 示例（启用后的代码）：
  * <Skeleton active paragraph={{ rows: 8 }} />
  */
+import { Skeleton } from 'antd';
+
 const Loading: React.FC = () => (
   <div
     style={{
@@ -33,7 +35,7 @@ const Loading: React.FC = () => (
       【已关闭】骨架屏加载动画
       后期改造为原生 React 页面后，取消下面的注释即可启用：
     */}
-    {/* <Skeleton active paragraph={{ rows: 8 }} /> */}
+    <Skeleton active paragraph={{ rows: 8 }} />
   </div>
 );
 

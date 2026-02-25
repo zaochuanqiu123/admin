@@ -67,7 +67,8 @@ body,
   min-height: 100vh;
 }
 .ant-pro-sider.ant-layout-sider.ant-pro-sider-fixed {
-  left: max(calc((100vw - @layout-max-width) / 2), 0px) !important;
+  // Use viewport client width baseline to avoid 100vw scrollbar offset on ultra-wide screens.
+  left: max(calc((100% - @layout-max-width) / 2), 0px) !important;
 }
 
 .ant-pro-layout {
@@ -625,7 +626,8 @@ body.header-scrolled .ant-pro-layout .ant-pro-layout-header {
 }
 
 .ant-pro-layout .ant-pro-layout-content{
-  padding: 16px;
+  margin: 0 !important;
+  padding: 16px !important;
   box-sizing: border-box;
   min-height: calc(100vh - 64px);
 }
