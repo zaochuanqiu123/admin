@@ -267,5 +267,6 @@ export default defineConfig({
     'process.env.CI': process.env.CI,
     __DEV_BYPASS_AUTH__: process.env.UMI_APP_BYPASS_AUTH === 'true',
     __API_BASE__: process.env.REACT_APP_API_BASE,
+    __TENCENT_MAP_KEY__: process.env.REACT_APP_TENCENT_MAP_KEY,
   },
 });

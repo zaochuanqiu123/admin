@@ -18,6 +18,7 @@ declare const REACT_APP_ENV: 'test' | 'dev' | 'pre' | false;
 
 declare const __DEV_BYPASS_AUTH__: boolean;
 declare const __API_BASE__: string | undefined;
+declare const __TENCENT_MAP_KEY__: string | undefined;
 
 declare namespace API {
   type CurrentUser = {

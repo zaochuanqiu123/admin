@@ -21,22 +21,29 @@
  */
 import { Skeleton } from 'antd';
 
-const Loading: React.FC = () => (
-  <div
-    style={{
-      width: '100%',
-      minHeight: 'calc(100vh - 60px)', // 减去 header 高度，占满全屏
-      background: '#E7EDFB', // 使用主题背景色，与全局背景一致
-      padding: '24px 40px',
-      boxSizing: 'border-box',
-    }}
-  >
-    {/*
-      【已关闭】骨架屏加载动画
-      后期改造为原生 React 页面后，取消下面的注释即可启用：
-    */}
-    <Skeleton active paragraph={{ rows: 8 }} />
-  </div>
-);
+const Loading: React.FC = () => {
+  const isDarkMode =
+    typeof document !== 'undefined' &&
+    document.body.classList.contains('theme-black-mode');
+
+  return (
+    <div
+      className="route-loading"
+      style={{
+        width: '100%',
+        minHeight: 'calc(100vh - 60px)', // 减去 header 高度，占满全屏
+        background: isDarkMode ? '#141414' : '#E7EDFB',
+        padding: '24px 40px',
+        boxSizing: 'border-box',
+      }}
+    >
+      {/*
+        【已关闭】骨架屏加载动画
+        后期改造为原生 React 页面后，取消下面的注释即可启用：
+      */}
+      <Skeleton active paragraph={{ rows: 8 }} />
+    </div>
+  );
+};
 
 export default Loading;

@@ -7,7 +7,6 @@ export const IFRAME_PATHS = [
   '/dashboard/index',
   '/dashboard',
   '/account',
-  '/form',
   '/list',
   '/profile',
   '/exception',

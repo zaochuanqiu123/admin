@@ -152,81 +152,33 @@ const routes = [
   {
     name: '门店',
     path: '/form',
-    component: './form',
-    // routes: [
-    //   {
-    //     path: '/form',
-    //     redirect: '/form/index',
-    //   },
-    //   {
-    //   path: '/form/index',
-    //   component: './form/index',
-    //   hideInMenu: true,
-    // },
-    //   {
-    //     name: 'basic-form',
-    //     icon: 'smile',
-    //     path: '/form/basic-form',
-    //     routes: [
-    //       {
-    //         path: '/form/basic-form',
-    //         redirect: '/form/basic-form/sub1',
-    //       },
-    //       {
-    //         name: '子菜单一',
-    //         path: '/form/basic-form/sub1',
-    //         component: './form/basic-form/sub1',
-    //       },
-    //       {
-    //         name: '子菜单二123123',
-    //         path: '/form/basic-form/sub2',
-    //         component: './form/basic-form/sub2',
-    //       },
-    //     ],
-    //   },
-    //   {
-    //     name: 'step-form',
-    //     icon: 'smile',
-    //     path: '/form/step-form',
-    //     routes: [
-    //       {
-    //         path: '/form/step-form',
-    //         redirect: '/form/step-form/sub1',
-    //       },
-    //       {
-    //         name: '子菜单一',
-    //         path: '/form/step-form/sub1',
-    //         component: './form/step-form/sub1',
-    //       },
-    //       {
-    //         name: '子菜单二',
-    //         path: '/form/step-form/sub2',
-    //         component: './form/step-form/sub2',
-    //       },
-    //     ],
-    //   },
-    //   {
-    //     name: 'advanced-form',
-    //     icon: 'smile',
-    //     path: '/form/advanced-form',
-    //     routes: [
-    //       {
-    //         path: '/form/advanced-form',
-    //         redirect: '/form/advanced-form/sub1',
-    //       },
-    //       {
-    //         name: '子菜单一',
-    //         path: '/form/advanced-form/sub1',
-    //         component: './form/advanced-form/sub1',
-    //       },
-    //       {
-    //         name: '子菜单二',
-    //         path: '/form/advanced-form/sub2',
-    //         component: './form/advanced-form/sub2',
-    //       },
-    //     ],
-    //   },
-    // ],
+    routes: [
+      {
+        path: '/form',
+        redirect: '/form/store-manage',
+      },
+      {
+        name: '门店管理',
+        path: '/form/store-manage',
+        component: './form/index',
+      },
+      {
+        name: '添加门店',
+        path: '/form/store-manage/create-single',
+        component: './form/store-create/index',
+        hideInMenu: true,
+      },
+      {
+        name: '所属行业',
+        path: '/form/industry',
+        component: './form/industry/index',
+      },
+      {
+        name: '串码查询',
+        path: '/form/sn-query',
+        component: './form/sn-query/index',
+      },
+    ],
   },
   {
     name: '商品',

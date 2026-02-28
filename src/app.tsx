@@ -1,4 +1,9 @@
-﻿import { DownOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons';
+import {
+  DownOutlined,
+  MoonOutlined,
+  SmileOutlined,
+  SunOutlined,
+} from '@ant-design/icons';
 
 import type {
   Settings as LayoutSettings,
@@ -85,6 +90,77 @@ function markThemeSwitching() {
   window.setTimeout(() => {
     document.body.classList.remove('theme-switching');
   }, 220);
+}
+
+const STORE_MENU_TEMPLATE: MenuDataItem[] = [
+  {
+    name: '门店信息',
+    icon: <SmileOutlined />,
+    children: [
+      {
+        name: '门店管理',
+        path: '/form/store-manage',
+      },
+      {
+        name: '所属行业',
+        path: '/form/industry',
+      },
+    ],
+  },
+  {
+    name: '商品查询',
+    icon: <SmileOutlined />,
+    children: [
+      {
+        name: '串码查询',
+        path: '/form/sn-query',
+      },
+    ],
+  },
+];
+
+function cloneMenuTree(items: MenuDataItem[]): MenuDataItem[] {
+  return items.map((item) => ({
+    ...item,
+    children: Array.isArray(item?.children)
+      ? cloneMenuTree(item.children as MenuDataItem[])
+      : undefined,
+  }));
+}
+
+function getModuleRoot(path: string | undefined): string {
+  if (!path) return '';
+  const pathname = String(path).split('?')[0] || '';
+  const root = pathname.split('/').filter(Boolean)[0] || '';
+  return root ? `/${root}` : '';
+}
+
+function normalizeStoreModuleMenus(menuItems: MenuDataItem[]): MenuDataItem[] {
+  if (!Array.isArray(menuItems) || menuItems.length === 0) return menuItems;
+
+  const formIndices = menuItems
+    .map((item, index) =>
+      getModuleRoot(item?.path ? String(item.path) : undefined) === '/form'
+        ? index
+        : -1,
+    )
+    .filter((index) => index >= 0);
+
+  if (formIndices.length === 0) return menuItems;
+
+  const firstIndex = formIndices[0];
+  const firstItem = menuItems[firstIndex];
+  const removed = new Set(formIndices);
+  const nextMenus = menuItems.filter((_, index) => !removed.has(index));
+
+  nextMenus.splice(firstIndex, 0, {
+    ...firstItem,
+    name: firstItem?.name || '门店',
+    path: '/form',
+    children: cloneMenuTree(STORE_MENU_TEMPLATE),
+  });
+
+  return nextMenus;
 }
 
 export async function getInitialState(): Promise<{
@@ -221,7 +297,10 @@ export const layout: RunTimeLayoutConfig = ({
             return path !== '/dashboard' && path !== '/dashboard/index';
           },
         );
-        return [dashboardMenu, ...visiblePermContextMenu];
+        const normalizedPermContextMenu = normalizeStoreModuleMenus(
+          visiblePermContextMenu,
+        );
+        return [dashboardMenu, ...normalizedPermContextMenu];
       }
 
       // 无权限菜单数据时：仅展示工作台（隐藏顶部全量 tabs）
@@ -338,7 +417,8 @@ export const layout: RunTimeLayoutConfig = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            width: 208,
+            width: 218,
+            height: 60,
             boxSizing: 'border-box',
           }}
         >
@@ -356,6 +436,7 @@ export const layout: RunTimeLayoutConfig = ({
               }}
               trigger={['click']}
               placement="bottomLeft"
+              overlayClassName="business-switch-menu"
               overlayStyle={{
                 minWidth: 200,
               }}
@@ -363,20 +444,16 @@ export const layout: RunTimeLayoutConfig = ({
               <Button
                 type="text"
                 size="small"
-                style={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  padding: '4px 8px',
-                  fontSize: 16,
-                }}
+                className="business-switch-pill"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                 }}
               >
-                {currentBusiness?.businessName || '请选择业态'}
-                <DownOutlined style={{ marginLeft: 4, fontSize: 10 }} />
+                <span className="business-switch-pill__label">
+                  {currentBusiness?.businessName || '请选择业态'}
+                </span>
+                <DownOutlined className="business-switch-pill__icon" />
               </Button>
             </Dropdown>
           )}
@@ -456,7 +533,13 @@ export const layout: RunTimeLayoutConfig = ({
       const isInDashboard =
         pathname === '/dashboard' || pathname.startsWith('/dashboard/');
 
-      if (!isInDashboard) return defaultDom;
+      if (!isInDashboard) {
+        return (
+          <div className="plain-sider-menu">
+            <div className="plain-sider-menu-content">{defaultDom}</div>
+          </div>
+        );
+      }
 
       const storageKey = `workplace_common_actions_${
         initialState?.currentUser?.name ?? 'guest'

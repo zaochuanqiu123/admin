@@ -22,6 +22,11 @@ const NoticeBell: React.FC = () => {
   const cardBg = isDark ? '#1f1f1f' : '#fff';
   const primaryText = isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.88)';
   const secondaryText = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)';
+  const bellBorderColor = isDark
+    ? 'rgba(255,255,255,0.28)'
+    : 'rgba(0,0,0,0.08)';
+  const bellBg = isDark ? 'rgba(255,255,255,0.05)' : 'transparent';
+  const bellColor = isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)';
 
   const dataSource = useMemo<Record<string, NoticeItem[]>>(
     () => ({
@@ -201,9 +206,12 @@ const NoticeBell: React.FC = () => {
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
-          border: '1px solid rgba(0,0,0,0.08)',
+          border: `1px solid ${bellBorderColor}`,
+          background: bellBg,
+          color: bellColor,
           width: '32px',
           height: '32px',
+          borderRadius: '50%',
         }}
       />
       <Drawer

@@ -76,6 +76,7 @@ const Login: React.FC = () => {
   const [form] = Form.useForm<API.LoginParams>();
   const carouselRef = useRef<any>(null);
   const [activeSlide, setActiveSlide] = useState<number>(0);
+  const [qrRefreshSpinKey, setQrRefreshSpinKey] = useState<number>(0);
 
   // 移除缩放逻辑，改用响应式布局
 
@@ -279,11 +280,19 @@ const Login: React.FC = () => {
                   className="qrRefresh"
                   type="button"
                   onClick={() => {
+                    setQrRefreshSpinKey((prev) => prev + 1);
                     message.success('已刷新');
                   }}
                 >
                   <span>刷新</span>
-                  <ReloadOutlined />
+                  <ReloadOutlined
+                    key={qrRefreshSpinKey}
+                    className={
+                      qrRefreshSpinKey > 0
+                        ? 'qrRefreshIcon qrRefreshIconSpinning'
+                        : 'qrRefreshIcon'
+                    }
+                  />
                 </button>
               </div>
               <div className="cardDivider" />
