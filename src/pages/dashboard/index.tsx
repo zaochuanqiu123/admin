@@ -387,7 +387,7 @@ const DashboardIndexPage: React.FC = () => {
                   }`}
                   onClick={() => setActiveOverviewKey(item.key)}
                 >
-                  <div className="dashboard-stat-main">
+                  <div className="dashboard-stat-main u-flex-center">
                     <img
                       className="dashboard-overview-icon"
                       src={
@@ -397,7 +397,7 @@ const DashboardIndexPage: React.FC = () => {
                       }
                       alt=""
                     />
-                    <div className="dashboard-stat-text">
+                    <div className="dashboard-stat-text u-flex-col">
                       <div className="dashboard-stat-label">{item.label}</div>
                       <div className="dashboard-stat-value">{item.value}</div>
                     </div>
@@ -421,7 +421,7 @@ const DashboardIndexPage: React.FC = () => {
                 </div>
                 <div className="dashboard-card-subtitle">02-25 ~ 02-25</div>
               </div>
-              <div className="dashboard-chip-row">
+              <div className="dashboard-chip-row u-flex u-flex-wrap">
                 <button type="button">线下门店商品数据</button>
                 <button type="button">线上商城商品数据</button>
               </div>
@@ -436,7 +436,7 @@ const DashboardIndexPage: React.FC = () => {
               ))}
             </div>
 
-            <div className="dashboard-chip-row">
+            <div className="dashboard-chip-row u-flex u-flex-wrap">
               <button type="button">付款商品数</button>
               <button type="button">交易笔数</button>
               <button type="button">交易人数</button>
@@ -456,7 +456,7 @@ const DashboardIndexPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="dashboard-chip-row">
+              <div className="dashboard-chip-row u-flex u-flex-wrap">
                 <button type="button">交易金额</button>
                 <button type="button">交易笔数</button>
               </div>
@@ -499,7 +499,7 @@ const DashboardIndexPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="dashboard-chip-row">
+              <div className="dashboard-chip-row u-flex u-flex-wrap">
                 <button type="button">成交金额</button>
                 <button type="button">成交件数</button>
               </div>
@@ -515,7 +515,7 @@ const DashboardIndexPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="dashboard-chip-row">
+              <div className="dashboard-chip-row u-flex u-flex-wrap">
                 <button type="button">会员注册</button>
                 <button type="button">会员消费</button>
               </div>
@@ -559,7 +559,7 @@ const DashboardIndexPage: React.FC = () => {
                   <div className="dashboard-card-subtitle">02-25 ~ 02-25</div>
                 </div>
               </div>
-              <div className="dashboard-chip-row">
+              <div className="dashboard-chip-row u-flex u-flex-wrap">
                 <button
                   type="button"
                   className={memberDistKey === 'gender' ? 'is-active' : ''}
@@ -603,7 +603,7 @@ const DashboardIndexPage: React.FC = () => {
                   <div className="dashboard-card-subtitle">02-25 ~ 02-25</div>
                 </div>
               </div>
-              <div className="dashboard-chip-row">
+              <div className="dashboard-chip-row u-flex u-flex-wrap">
                 <button
                   type="button"
                   className={mallVisitKey === 'visit' ? 'is-active' : ''}
@@ -637,22 +637,27 @@ const DashboardIndexPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="dashboard-org-actions">
+            <div className="dashboard-org-actions u-flex-between">
               <button type="button" className="dashboard-btn-lifetime">
                 终身
               </button>
-              <button type="button" className="dashboard-btn-shop">
-                <span className="dashboard-btn-shop-icon">♬</span>
+              <button
+                type="button"
+                className="dashboard-btn-shop u-inline-flex-center"
+              >
+                <span className="dashboard-btn-shop-icon u-inline-flex-middle">
+                  ♬
+                </span>
                 私域商城
               </button>
             </div>
 
-            <div className="dashboard-org-top">
-              <div className="dashboard-org-line">
+            <div className="dashboard-org-top u-flex-col">
+              <div className="dashboard-org-line u-flex-between">
                 <span>到期时间</span>
                 <span>2124-09-11</span>
               </div>
-              <div className="dashboard-org-line">
+              <div className="dashboard-org-line u-flex-between">
                 <span>剩余天数</span>
                 <span>35993</span>
               </div>
@@ -661,7 +666,7 @@ const DashboardIndexPage: React.FC = () => {
             <div className="dashboard-org-divider" />
 
             <div className="dashboard-org-block">
-              <div className="dashboard-org-block-head">
+              <div className="dashboard-org-block-head u-flex-between">
                 <span>门店数量</span>
                 <button type="button">管理</button>
               </div>
@@ -671,7 +676,7 @@ const DashboardIndexPage: React.FC = () => {
             <div className="dashboard-org-divider" />
 
             <div className="dashboard-org-block">
-              <div className="dashboard-org-block-head">
+              <div className="dashboard-org-block-head u-flex-between">
                 <span>插件数量</span>
                 <button type="button">详情</button>
               </div>
@@ -683,17 +688,17 @@ const DashboardIndexPage: React.FC = () => {
             <div className="dashboard-card-head">
               <div className="dashboard-card-title">应用排行</div>
             </div>
-            <ul className="dashboard-rank-list">
+            <ul className="dashboard-rank-list u-flex-col">
               {rankingApps.map((item, index) => (
-                <li key={item.key}>
-                  <span className="dashboard-rank-badge">
+                <li key={item.key} className="u-flex-center">
+                  <span className="dashboard-rank-badge u-inline-flex-middle">
                     <img
                       className="dashboard-rank-badge-img"
                       src={appRankBadges[index] || plugTop2}
                       alt=""
                     />
                   </span>
-                  <span className="dashboard-rank-meta">
+                  <span className="dashboard-rank-meta u-flex-col">
                     <span className="dashboard-rank-name">{item.name}</span>
                     <span className="dashboard-rank-status">{item.status}</span>
                   </span>

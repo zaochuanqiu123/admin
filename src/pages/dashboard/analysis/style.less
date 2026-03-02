@@ -1,4 +1,5 @@
 @import '~antd/es/style/themes/default.less';
+@import (reference) '../../../styles/utilities.less';
 
 .iconGroup {
   span.anticon {
@@ -17,8 +18,7 @@
   padding: 0;
   list-style: none;
   li {
-    display: flex;
-    align-items: center;
+    .mixin-flex-center();
     margin-top: 16px;
     zoom: 1;
     &::before,

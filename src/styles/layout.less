@@ -1,0 +1,627 @@
+/* 1. 子菜单变成“一行两个” */
+/* 1. 子菜单变成“一行两个” (仅在展开时生效) */
+.ant-layout-sider:not(.ant-layout-sider-collapsed) .ant-menu-sub.ant-menu-inline .ant-menu-item {
+  width: 47% !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  margin-bottom: 4px !important;
+  padding-right: 0 !important;
+
+  /* 关键修改：调整这个值来对齐图标 */
+  /* 建议尝试 12px ~ 16px，根据你父级图标的实际位置微调 */
+  padding-left: 10px !important;
+
+  /* 确保图标和文字垂直居中 */
+  display: inline-block !important;
+  align-items: center !important;
+}
+
+/* 2. 清除浮动 (解决点击收起时卡住的 Bug) */
+.pc-admin-sider-real-menu .ant-layout-sider:not(.ant-layout-sider-collapsed) .ant-menu-sub.ant-menu-inline:not(.ant-menu-hidden) {
+  // justify-content: flex-start;
+  /* 新增这一行：清除 ul 默认的 40px 内边距 */
+  // padding: 0;
+  margin: 0 !important;
+}
+/* 3.父级菜单选中时，强制保持“深灰色” (不让它变蓝) */
+.pc-admin-sider-real-menu .ant-layout-sider.ant-layout-sider-collapsed .ant-menu-sub .ant-menu-item {
+  float: none !important;
+  width: 100% !important;
+}
+
+.ant-layout-sider {
+  background: none !important;
+  height: calc(100vh - 88px) !important;
+}
+
+body .ant-pro-sider-mix .ant-layout-sider-children {
+  background: transparent !important;
+  margin-left: 16px;
+  margin-top: 16px !important;
+  border-radius: 16px !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+.pc-admin-workplace-common .workplace-common-card {
+  .mixin-white-card();
+}
+
+.pc-admin-workplace-common .workplace-common-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 0 4px 4px 4px;
+  height: 40px;
+  line-height: 40px;
+  padding: 0 34px 0 16px;
+  position: relative;
+  cursor: default;
+}
+
+.pc-admin-workplace-common .workplace-common-header .ant-menu-item-icon {
+  margin-right: 8px !important;
+  margin-left: 16px;
+}
+
+.pc-admin-workplace-common .workplace-common-header-extra {
+  opacity: 1;
+  color: rgb(54, 55, 61) !important;
+  font-size: 14px;
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.pc-admin-workplace-common .workplace-common-actions {
+  display: block;
+  margin: 0 4px;
+  padding: 0 0 0 0;
+}
+
+.pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline {
+  display: flex;
+  flex-wrap: wrap;
+  background: transparent !important;
+}
+
+.pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline .ant-menu-item {
+  width: 47% !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  margin-bottom: 2px !important;
+  padding-left: 10px !important;
+  padding-right: 0 !important;
+  line-height: 32px;
+  font-size: 12px;
+  background: transparent !important;
+  cursor: pointer;
+}
+
+.pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline .ant-menu-item:hover,
+.pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline .ant-menu-item-active {
+  background: transparent !important;
+}
+
+.pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline
+  .ant-menu-item:not(.ant-menu-item-disabled):hover
+  .ant-menu-title-content {
+  color: var(--ant-color-primary) !important;
+}
+
+.pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline
+  .ant-menu-item:not(.ant-menu-item-disabled).ant-menu-item-selected
+  .ant-menu-title-content {
+  color: var(--ant-color-primary) !important;
+}
+
+.pc-admin-workplace-common .workplace-common-actions .ant-menu-item .ant-menu-title-content {
+  font-size: 12px !important;
+  // max-width: 6.5em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+.dashboard-sider {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dashboard-sider-common {
+  margin-bottom: 8px;
+}
+
+.dashboard-sider-common .workplace-common-card {
+  background-image: linear-gradient(180deg, #d9e7ff, #fafcff) !important;
+  border: 1px solid #fafcff;
+}
+
+.dashboard-sider-menu {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: visible;
+}
+
+.dashboard-sider-menu::before,
+.dashboard-sider-menu::after {
+  content: '';
+  position: absolute;
+  width: 9px;
+  height: 34px;
+  top: -21px;
+  background-image: url('~@/assets/original.png');
+  background-repeat: no-repeat;
+  background-size: 9px 34px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.dashboard-sider-menu::before {
+  left: 10px;
+}
+
+.dashboard-sider-menu::after {
+  right: 10px;
+}
+
+.dashboard-sider-menu-content {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  .mixin-white-card();
+  .mixin-hide-scrollbar();
+}
+
+.dashboard-sider-menu > .ant-menu,
+.dashboard-sider-menu .ant-menu {
+  height: auto;
+  overflow: visible !important;
+}
+
+.dashboard-sider-menu .ant-pro-base-menu {
+  overflow: visible !important;
+}
+
+.dashboard-sider-menu-content .ant-menu-submenu-selected > .ant-menu-submenu-title,
+.dashboard-sider-menu-content .ant-menu-submenu-active > .ant-menu-submenu-title {
+  color: rgba(0, 0, 0, 0.88) !important;
+}
+
+.dashboard-sider-menu-content
+  .ant-menu-submenu-selected
+  > .ant-menu-submenu-title
+  .ant-menu-title-content {
+  color: rgba(0, 0, 0, 0.88) !important;
+}
+
+.plain-sider-menu {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.plain-sider-menu-content {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  .mixin-white-card();
+  .mixin-hide-scrollbar();
+}
+
+.plain-sider-menu > .ant-menu,
+.plain-sider-menu .ant-menu,
+.plain-sider-menu .ant-pro-base-menu {
+  height: auto;
+  overflow: visible !important;
+}
+
+.plain-sider-menu-content .ant-menu-sub.ant-menu-inline {
+  background: #ffffff !important;
+}
+
+/* 非工作台：二级菜单图标与文字对齐（跟工作台侧栏体验一致） */
+.plain-sider-menu-content .ant-menu-submenu-title {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding-left: 16px !important;
+  padding-right: 34px !important;
+}
+
+.plain-sider-menu-content .ant-menu-submenu-title .ant-menu-title-content {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.2;
+}
+
+.plain-sider-menu-content .ant-menu-submenu-title .ant-menu-submenu-arrow {
+  right: 14px !important;
+}
+
+.plain-sider-menu-content .ant-menu-submenu-title .ant-menu-item-icon,
+.plain-sider-menu-content .ant-menu-item .ant-menu-item-icon {
+  min-width: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  margin-right: 8px !important;
+}
+
+/* 非工作台：字体默认色与工作台一致 */
+.plain-sider-menu-content .ant-menu-item,
+.plain-sider-menu-content .ant-menu-submenu-title {
+  color: rgba(0, 0, 0, 0.88) !important;
+}
+
+/* 非工作台：选中叶子菜单文字色与工作台一致 */
+.plain-sider-menu-content .ant-menu-item-selected,
+.plain-sider-menu-content .ant-menu-item-selected .ant-menu-title-content,
+.plain-sider-menu-content .ant-menu-item-selected * {
+  color: var(--ant-color-primary) !important;
+}
+
+/* 非工作台：父级菜单保持常规态（不加粗、不变强调色） */
+.plain-sider-menu-content .ant-menu-submenu-selected > .ant-menu-submenu-title,
+.plain-sider-menu-content .ant-menu-submenu-open > .ant-menu-submenu-title,
+.plain-sider-menu-content .ant-menu-submenu-active > .ant-menu-submenu-title {
+  color: rgba(0, 0, 0, 0.88) !important;
+  font-weight: 400 !important;
+}
+
+.plain-sider-menu-content
+  .ant-menu-submenu-selected
+  > .ant-menu-submenu-title
+  *,
+.plain-sider-menu-content
+  .ant-menu-submenu-open
+  > .ant-menu-submenu-title
+  *,
+.plain-sider-menu-content
+  .ant-menu-submenu-active
+  > .ant-menu-submenu-title
+  * {
+  color: rgba(0, 0, 0, 0.88) !important;
+  font-weight: 400 !important;
+}
+
+.ant-layout-sider .ant-menu-submenu-title .ant-menu-title-content {
+  font-size: 16px !important;
+}
+
+.ant-layout-sider .ant-menu-item .ant-menu-title-content {
+  font-size: 12px !important;
+  max-width: 6.5em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ant-pro-top-nav-header-menu {
+  margin-left: 0;
+}
+
+/* =============================================================
+   顶部 Header / 顶部菜单高度：统一从默认 48 改为 60
+   - ProLayout 的 header 容器高度可由 defaultSettings.ts 的
+     token.header.heightLayoutHeader 控制
+   - 但 AntD 的 horizontal menu item 默认仍是 48，这里强制同步到 60
+   ============================================================= */
+
+/* Header 容器高度（部分版本需要用 CSS 再兜底一次） */
+.ant-pro-layout .ant-pro-layout-header {
+  height: 60px !important;
+  line-height: 60px !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* 页面滚动后：Header 变白 + 分割线 + 阴影（通过 JS 给 body 加 class 控制） */
+body.header-scrolled .ant-pro-layout .ant-pro-layout-header {
+  background: #fff !important;
+  background-color: #fff !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* 兜底：部分场景分割线在 ant-layout-header 上 */
+.ant-layout-header {
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+/* 顶部横向菜单：菜单项高度/行高改为 60 */
+.ant-pro-top-nav-header-menu.ant-menu-horizontal > .ant-menu-item,
+.ant-pro-top-nav-header-menu.ant-menu-horizontal > .ant-menu-submenu {
+  height: 60px !important;
+  line-height: 60px !important;
+}
+
+/* 顶部横向菜单：子菜单标题也跟随 60（防止 submenu 仍是 48） */
+.ant-pro-top-nav-header-menu.ant-menu-horizontal > .ant-menu-submenu > .ant-menu-submenu-title {
+  height: 60px !important;
+  line-height: 60px !important;
+}
+
+/* 有些版本顶部菜单不是直接挂在 .ant-pro-top-nav-header-menu 上，而是其内部的 .ant-menu */
+.ant-pro-top-nav-header-menu .ant-menu-horizontal > .ant-menu-item,
+.ant-pro-top-nav-header-menu .ant-menu-horizontal > .ant-menu-submenu,
+.ant-pro-top-nav-header-menu .ant-menu-horizontal > .ant-menu-submenu > .ant-menu-submenu-title {
+  height: 60px !important;
+  line-height: 60px !important;
+}
+
+/* 顶部导航栏：把外层容器也统一成 60，避免出现“菜单 60 但外层仍是 48/59”的情况 */
+.ant-pro-top-nav-header,
+.ant-pro-top-nav-header-main,
+.ant-pro-top-nav-header-menu,
+.ant-pro-top-nav-header-menu .ant-menu-horizontal {
+  height: 60px !important;
+  line-height: 60px !important;
+  min-height: 60px !important;
+  font-size: 16px !important;
+}
+
+.ant-pro-top-nav-header-menu .ant-menu-item .ant-menu-title-content {
+  font-size: 16px !important;
+  line-height: 60px !important;
+}
+
+.ant-pro-top-nav-header-menu .ant-menu-item:hover .ant-menu-title-content,
+.ant-pro-top-nav-header-menu .ant-menu-item-selected .ant-menu-title-content {
+  font-weight: 700 !important;
+}
+
+.business-switch-pill.ant-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 160px;
+  height: 32px;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  border: 1px solid #cfd7e6 !important;
+  background: #fff !important;
+  color: var(--ant-color-text) !important;
+  box-shadow: none;
+  transition: all 0.2s ease;
+}
+
+.business-switch-pill.ant-btn:hover,
+.business-switch-pill.ant-btn:focus,
+.business-switch-pill.ant-btn:active {
+  border-color: #c0cadb !important;
+  background: #fff !important;
+  color: var(--ant-color-text) !important;
+  box-shadow: none;
+}
+
+.business-switch-pill__label {
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: inherit;
+}
+
+.business-switch-pill__icon {
+  font-size: 11px;
+  opacity: 0.85;
+  color: inherit;
+  transition: transform 0.2s ease;
+}
+
+.business-switch-pill.ant-dropdown-open .business-switch-pill__icon {
+  transform: rotate(180deg);
+}
+
+.business-switch-menu .ant-dropdown-menu {
+  padding: 6px;
+  border-radius: 12px;
+  box-shadow: 0 10px 26px rgba(15, 43, 89, 0.18);
+}
+
+.business-switch-menu .ant-dropdown-menu-item,
+.business-switch-menu .ant-dropdown-menu-item-active,
+.business-switch-menu .ant-dropdown-menu-item-selected {
+  border-radius: 8px;
+}
+
+.business-switch-menu .ant-dropdown-menu-item-selected {
+  background: #eaf2ff;
+  color: #1655d6;
+  font-weight: 600;
+}
+
+body.theme-black-mode .business-switch-pill.ant-btn {
+  border-color: rgba(120, 157, 229, 0.58) !important;
+  background: linear-gradient(180deg, #22385e 0%, #1c2f4e 100%) !important;
+  color: #dbe8ff !important;
+  box-shadow: 0 4px 12px rgba(4, 10, 22, 0.38);
+}
+
+body.theme-black-mode .business-switch-menu .ant-dropdown-menu-item-selected {
+  background: rgba(67, 128, 255, 0.2);
+  color: #b7d2ff;
+}
+
+.ant-layout-sider .ant-menu-submenu-selected > .ant-menu-submenu-title,
+.ant-layout-sider .ant-menu-submenu-active > .ant-menu-submenu-title,
+.ant-layout-sider .ant-menu-submenu-selected > .ant-menu-submenu-title::after {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* 侧边栏子菜单展开/收起箭头颜色 */
+.ant-layout-sider .ant-menu-submenu-arrow,
+.ant-layout-sider .ant-menu-submenu-expand-icon,
+.ant-layout-sider .ant-menu-submenu-title .ant-menu-submenu-arrow,
+.ant-layout-sider .ant-menu-submenu-title .ant-menu-submenu-expand-icon {
+  color: rgb(139, 142, 160) !important;
+}
+
+.ant-layout-sider .ant-menu-submenu-arrow::before,
+.ant-layout-sider .ant-menu-submenu-arrow::after {
+  background: rgb(139, 142, 160) !important;
+}
+
+.ant-layout-sider .ant-menu-submenu-expand-icon svg {
+  color: rgb(139, 142, 160) !important;
+}
+
+.ant-pro-top-nav-header-menu .ant-menu-item-selected {
+  background: transparent !important;
+}
+
+.ant-pro-top-nav-header-menu .ant-menu-submenu-selected > .ant-menu-submenu-title {
+  background: transparent !important;
+}
+
+/* 子菜单容器背景色（仅影响菜单区域，不影响常用区域） */
+.dashboard-sider-menu .ant-menu-sub.ant-menu-inline {
+  background: #ffffff !important;
+}
+
+/* 子菜单 hover/选中：不要有任何背景块，只改文字颜色 */
+.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item,
+.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-submenu-title {
+  background: transparent !important;
+}
+
+.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item:hover,
+.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item-active,
+.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item-selected,
+.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-submenu-title:hover {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* 去掉左边那条选中高亮条，避免“闪一下”的感觉 */
+.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item::after,
+.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-submenu-title::after {
+  border-right: none !important;
+}
+
+.workplace-common-drawer .workplace-common-drawer-top-tabs {
+  height: 44px;
+  border-radius: 999px;
+  background: #e7edfb;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+.workplace-common-drawer .workplace-common-drawer-top-tabs-arrow.ant-btn {
+  height: 32px;
+  width: 32px;
+  min-width: 32px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.workplace-common-drawer .workplace-common-drawer-top-tabs-scroll {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.workplace-common-drawer .workplace-common-drawer-top-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.workplace-common-drawer .workplace-common-drawer-top-tabs-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.workplace-common-drawer .workplace-common-drawer-top-tabs-list {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  padding: 0 6px;
+}
+
+.workplace-common-drawer .workplace-common-drawer-top-tab {
+  height: 32px;
+  line-height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  color: rgba(0, 0, 0, 0.88);
+  font-size: 14px;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.workplace-common-drawer .workplace-common-drawer-top-tab-active {
+  background: #fff;
+  color: #005bf8;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+body .ant-pro-layout .ant-pro-layout-content {
+  margin: 0;
+  padding: 16px;
+  box-sizing: border-box;
+  min-height: calc(100vh - 64px);
+}
+
+/* ============================
+   子菜单 sub 页面：内容区卡片化（仅命中 /sub1 /sub2 ... 路由）
+   - 由 app.tsx childrenRender 在 sub 页面外包一层 .pc-admin-subpage-wrap
+   ============================ */
+
+.pc-admin-subpage-wrap {
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.pc-admin-subpage-wrap > * {
+  display: block;
+  min-height: calc(100vh - 64px - 32px);
+  padding: 24px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow:
+    0 10px 30px rgba(17, 38, 146, 0.1),
+    0 2px 10px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.ant-card {
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: #fff;
+  border-radius: 8px;
+}
+
+.ant-pro-base-menu-vertical-item-title-collapsed {
+  min-width: 0 !important;
+}

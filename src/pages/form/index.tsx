@@ -79,7 +79,7 @@ const StorePage: React.FC = () => {
         dataIndex: 'storeAddress',
         width: 280,
         render: (_value, record) => (
-          <div className="store-address-cell">
+          <div className="store-address-cell u-flex-center">
             <QrcodeOutlined
               className="store-qr-trigger"
               onClick={() => setCodeModalStore(record)}
@@ -113,14 +113,14 @@ const StorePage: React.FC = () => {
       },
       {
         title: (
-          <span className="status-column-title">
+          <span className="status-column-title u-inline-flex-center">
             门店信息状态 <InfoCircleOutlined />
           </span>
         ),
         dataIndex: 'statusText',
         width: 170,
         render: (value) => (
-          <span className="status-created">
+          <span className="status-created u-inline-flex-center">
             <span className="status-dot" />
             {value}
           </span>
@@ -132,7 +132,7 @@ const StorePage: React.FC = () => {
         width: 160,
         fixed: isScrollAtRightEnd ? undefined : 'right',
         render: () => (
-          <div className="action-links-inline">
+          <div className="action-links-inline u-flex-center">
             <a>详情</a>
             <a>编辑</a>
             <a>
@@ -174,17 +174,17 @@ const StorePage: React.FC = () => {
 
   return (
     <div className="store-page">
-      <div className="store-title-card">
+      <div className="store-title-card u-flex-between">
         <div className="title">门店管理</div>
         <a className="tips-link">门店管理说明</a>
       </div>
 
       <div className="overview-grid">
-        <div className="overview-card">
-          <div className="overview-title">已添加门店</div>
-          <div className="overview-main-row">
+        <div className="overview-card u-flex-col u-justify-between">
+          <div className="overview-title u-flex-center">已添加门店</div>
+          <div className="overview-main-row u-flex-between">
             <div className="overview-value">{stores.length}</div>
-            <div className="overview-actions">
+            <div className="overview-actions u-flex-center">
               <Button shape="round" className="overview-ghost-btn">
                 门店收款码
               </Button>
@@ -214,11 +214,12 @@ const StorePage: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="overview-card middle">
-          <div className="overview-title">
-            小程序绑定门店 <span className="new-badge">NEW</span>
+        <div className="overview-card middle u-flex-col u-justify-between">
+          <div className="overview-title u-flex-center">
+            小程序绑定门店{' '}
+            <span className="new-badge u-inline-flex-middle">NEW</span>
           </div>
-          <div className="overview-middle-row">
+          <div className="overview-middle-row u-flex u-justify-between">
             <div className="overview-desc">
               绑定后点击跳转你的小
               <br />
@@ -233,9 +234,9 @@ const StorePage: React.FC = () => {
             </Button>
           </div>
         </div>
-        <div className="overview-card">
-          <div className="overview-title">已关联店员</div>
-          <div className="overview-main-row">
+        <div className="overview-card u-flex-col u-justify-between">
+          <div className="overview-title u-flex-center">已关联店员</div>
+          <div className="overview-main-row u-flex-between">
             <div className="overview-value">0</div>
             <Button
               type="primary"
@@ -250,15 +251,15 @@ const StorePage: React.FC = () => {
 
       <div className="content-card">
         <div className="filter-grid">
-          <div className="field">
+          <div className="field u-flex-center">
             <span className="field-label">门店名称</span>
             <Input placeholder="支持模糊搜索: 如: 海底捞" />
           </div>
-          <div className="field">
+          <div className="field u-flex-center">
             <span className="field-label">门店编号</span>
             <Input placeholder="请输入精准编号" />
           </div>
-          <div className="field">
+          <div className="field u-flex-center">
             <span className="field-label">所属地区</span>
             <Space.Compact block>
               <Select
@@ -276,7 +277,7 @@ const StorePage: React.FC = () => {
               />
             </Space.Compact>
           </div>
-          <div className="field">
+          <div className="field u-flex-center">
             <span className="field-label">所属分公司</span>
             <Select
               allowClear
@@ -284,7 +285,7 @@ const StorePage: React.FC = () => {
               placeholder="请选择分公司"
             />
           </div>
-          <div className="field">
+          <div className="field u-flex-center">
             <span className="field-label">门店信息状态</span>
             <Select
               allowClear
@@ -295,13 +296,13 @@ const StorePage: React.FC = () => {
               placeholder="请选择门店信息状态"
             />
           </div>
-          <div className="field actions">
+          <div className="field actions u-flex-center">
             <Button type="primary">查询</Button>
             <Button>重置</Button>
           </div>
         </div>
 
-        <div className="toolbar">
+        <div className="toolbar u-flex-col">
           <Space>
             <Button type="primary" shape="round">
               批量更新门店
@@ -399,7 +400,7 @@ const StorePage: React.FC = () => {
         className="store-code-modal"
       >
         {codeModalStore ? (
-          <div className="store-code-modal-body">
+          <div className="store-code-modal-body u-flex-col u-items-center">
             <div className="store-code-card">
               <img src={storeCodeBg} alt="门店码背景" />
             </div>

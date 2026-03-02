@@ -1,3 +1,5 @@
+@import (reference) '../../../styles/utilities.less';
+
 .characterPage {
   position: relative;
   height: 100vh;
@@ -22,8 +24,6 @@
   position: relative;
   z-index: 1;
   height: 100vh;
-  display: flex;
-  align-items: center;
   justify-content: center;
   padding: 24px;
 }
@@ -65,7 +65,7 @@
   }
 }
 
-.ant-card-head-title {
+.characterSelectCard :global(.ant-card-head-title) {
   font-size: 35px;
   text-align: center;
   margin-top: 20px;
@@ -84,9 +84,7 @@
 
 /* 搜索区域优化 */
 .searchRow {
-  display: flex;
   gap: 16px;
-  align-items: center;
   margin-bottom: 24px;
 
   :global(.ant-form-item) {
@@ -137,10 +135,7 @@
   /* 锚点 */
   overflow: hidden;
   /* 关键：切掉飞出去的角标 */
-  display: flex;
   /* 启用Flex布局 */
-  align-items: center;
-  justify-content: space-between;
   width: 820px;
   max-width: 100%;
 
@@ -183,15 +178,11 @@
   /* 占据剩余空间 */
   padding-left: 12px;
   /* 给角标留点视觉空间 */
-  display: flex;
-  flex-direction: column;
   gap: 6px;
 }
 
 /* 标题行 */
 .storeTitleRow {
-  display: flex;
-  align-items: center;
   gap: 8px;
 }
 
@@ -215,8 +206,6 @@
 }
 
 .roleList {
-  display: flex;
-  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -262,15 +251,6 @@
 
 .tagCyan {
   background: linear-gradient(135deg, #13c2c2, #5cdbd3);
-}
-
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px dashed rgba(0, 0, 0, 0.06);
 }
 
 @media (max-width: 768px) {

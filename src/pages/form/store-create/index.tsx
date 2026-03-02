@@ -627,7 +627,7 @@ const StoreCreatePage: React.FC = () => {
     >
       <div className="store-create-page">
         <Card title="基础信息" className="store-create-card">
-          <div className="store-form-row">
+          <div className="store-form-row u-flex">
             <div className="store-form-label required">门店行业</div>
             <div className="store-form-control">
               <Select
@@ -641,7 +641,7 @@ const StoreCreatePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="store-form-row">
+          <div className="store-form-row u-flex">
             <div className="store-form-label required">经营类型</div>
             <div className="store-form-control">
               <Space size={0} className="choice-group">
@@ -665,7 +665,7 @@ const StoreCreatePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="store-form-row">
+          <div className="store-form-row u-flex">
             <div className="store-form-label required">供货商类型</div>
             <div className="store-form-control">
               <Space size={0} className="choice-group">
@@ -691,24 +691,24 @@ const StoreCreatePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="store-form-row">
+          <div className="store-form-row u-flex">
             <div className="store-form-label required">门店名称</div>
             <div className="store-form-control">
               <Input placeholder="请输入门店名称" />
             </div>
           </div>
 
-          <div className="store-form-row">
+          <div className="store-form-row u-flex">
             <div className="store-form-label required">门头照片</div>
             <div className="store-form-control">
-              <div className="upload-box">
+              <div className="upload-box u-flex-col u-flex-center">
                 <PlusOutlined />
                 <span>上传图片</span>
               </div>
             </div>
           </div>
 
-          <div className="store-form-row">
+          <div className="store-form-row u-flex">
             <div className="store-form-label required">省市区</div>
             <div className="store-form-control">
               <Select
@@ -718,7 +718,7 @@ const StoreCreatePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="store-form-row">
+          <div className="store-form-row u-flex">
             <div className="store-form-label">经纬度</div>
             <div className="store-form-control latlng-group">
               <Input
@@ -734,7 +734,7 @@ const StoreCreatePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="store-form-row">
+          <div className="store-form-row u-flex">
             <div className="store-form-label required">门店地址</div>
             <div className="store-form-control address-search">
               <AutoComplete
@@ -760,13 +760,13 @@ const StoreCreatePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="store-form-row">
+          <div className="store-form-row u-flex">
             <div className="store-form-label" />
             <div className="store-form-control">
               <div className="map-box">
                 <div ref={mapRef} className="map-canvas" />
                 {!mapReady ? (
-                  <div className="map-fallback">
+                  <div className="map-fallback u-flex-center">
                     {mapError || '地图加载中...'}
                   </div>
                 ) : null}
@@ -774,7 +774,7 @@ const StoreCreatePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="store-form-row">
+          <div className="store-form-row u-flex">
             <div className="store-form-label required">详细地址</div>
             <div className="store-form-control">
               <Input
@@ -787,7 +787,7 @@ const StoreCreatePage: React.FC = () => {
         </Card>
 
         <Card title="功能信息" className="store-create-card function-card">
-          <div className="function-row">
+          <div className="function-row u-flex-between">
             <div className="function-row-title">达达配送</div>
             <Space size={12}>
               <span className={`feature-status ${dadaEnabled ? 'on' : 'off'}`}>
@@ -798,7 +798,7 @@ const StoreCreatePage: React.FC = () => {
           </div>
         </Card>
 
-        <div className="store-create-actions">
+        <div className="store-create-actions u-flex">
           <Button
             type="primary"
             shape="round"

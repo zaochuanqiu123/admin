@@ -1,3 +1,5 @@
+@import (reference) '../../styles/utilities.less';
+
 .dashboard-index-page {
   min-height: calc(100vh - 84px);
   border-radius: 16px;
@@ -12,18 +14,18 @@
 }
 
 .dashboard-index-main {
-  flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-width: 0;
   gap: 16px;
 }
 
 .dashboard-index-side {
-  width: 280px;
-  min-width: 280px;
   display: flex;
   flex-direction: column;
+  width: 280px;
+  min-width: 280px;
   gap: 16px;
 }
 
@@ -31,7 +33,7 @@
   position: relative;
   overflow: hidden;
   border-radius: 16px;
-  background: #fff;
+  background: var(--ant-color-bg-container);
   padding: 0 16px 16px;
   box-shadow: 0 1px 2px rgba(15, 35, 95, 0.06);
 }
@@ -55,8 +57,8 @@
 }
 
 .dashboard-card-head {
-  padding-top: 16px;
   display: flex;
+  padding-top: 16px;
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
@@ -75,8 +77,7 @@
 }
 
 .dashboard-card-tools {
-  display: flex;
-  align-items: center;
+  .mixin-flex-center();
   gap: 8px;
 }
 
@@ -127,14 +128,11 @@
 }
 
 .dashboard-stat-main {
-  display: flex;
-  align-items: center;
+  .mixin-flex-center();
   gap: 8px;
 }
 
 .dashboard-stat-text {
-  display: flex;
-  flex-direction: column;
   min-width: 0;
 }
 
@@ -161,12 +159,11 @@
 }
 
 .dashboard-chart-placeholder {
+  .mixin-flex-center();
   height: 260px;
   border: 1px dashed #d9e1f2;
   border-radius: 12px;
   color: #8a95ad;
-  display: flex;
-  align-items: center;
   justify-content: center;
   font-size: 13px;
 }
@@ -176,8 +173,7 @@
 }
 
 .dashboard-chip-row {
-  display: flex;
-  flex-wrap: wrap;
+  .mixin-flex-center();
   gap: 8px;
   margin-bottom: 20px;
   margin-top: 10px;
@@ -272,23 +268,21 @@
 }
 
 .dashboard-empty-image {
+  .mixin-flex-center();
   height: 218px;
   border: 1px dashed #d9e1f2;
   border-radius: 12px;
   color: #a5aec3;
-  display: flex;
-  align-items: center;
   justify-content: center;
   font-size: 13px;
 }
 
 .dashboard-donut-placeholder {
+  .mixin-flex-center();
   height: 200px;
   border: 1px dashed #d9e1f2;
   border-radius: 12px;
   color: #8a95ad;
-  display: flex;
-  align-items: center;
   justify-content: center;
   font-size: 13px;
 }
@@ -298,10 +292,8 @@
 }
 
 .dashboard-org-actions {
+  .mixin-flex-center();
   margin-top: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: 10px;
 }
 
@@ -320,13 +312,12 @@
 }
 
 .dashboard-btn-shop {
+  .mixin-inline-flex-center();
   border: 1px solid #e0e0e0;
   border-radius: 16px;
   height: 30px;
   padding: 0 14px 0 10px;
   background: rgba(255, 255, 255, 0.39);
-  display: inline-flex;
-  align-items: center;
   gap: 6px;
   color: rgba(0, 0, 0, 0.88);
   font-size: 14px;
@@ -340,25 +331,20 @@
   border-radius: 50%;
   background: #00b341;
   color: #fff;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   font-size: 11px;
   line-height: 1;
 }
 
 .dashboard-org-top {
-  margin-top: 16px;
-  margin-bottom: 15px;
   display: flex;
   flex-direction: column;
+  margin-top: 16px;
+  margin-bottom: 15px;
   gap: 12px;
 }
 
 .dashboard-org-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  .mixin-flex-center();
   gap: 8px;
 }
 
@@ -382,9 +368,7 @@
 }
 
 .dashboard-org-block-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  .mixin-flex-between();
   gap: 8px;
 }
 
@@ -410,27 +394,25 @@
 }
 
 .dashboard-rank-list {
+  display: flex;
+  flex-direction: column;
   margin: 0;
   padding: 0;
   list-style: none;
-  display: flex;
-  flex-direction: column;
   gap: 10px;
 }
 
 .dashboard-rank-list li {
-  display: flex;
-  align-items: center;
+  .mixin-flex-center();
   margin-top: 20px;
   gap: 12px;
 }
 
 .dashboard-rank-badge {
+  .mixin-inline-flex-center();
+  justify-content: center;
   width: 40px;
   height: 40px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .dashboard-rank-badge-img {
@@ -438,19 +420,6 @@
   height: 40px;
   object-fit: contain;
   display: block;
-}
-
-.dashboard-rank-index {
-  width: 24px;
-  height: 24px;
-  border-radius: 12px;
-  background: #f5f8ff;
-  color: #2b74ff;
-  font-size: 12px;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .dashboard-rank-name {
@@ -465,9 +434,9 @@
 }
 
 .dashboard-rank-meta {
-  min-width: 0;
   display: flex;
   flex-direction: column;
+  min-width: 0;
   gap: 4px;
 }
 
@@ -552,11 +521,6 @@ body.theme-black-mode {
 
   .dashboard-org-block-head > button {
     color: #6fa1ff;
-  }
-
-  .dashboard-rank-index {
-    background: rgba(27, 111, 245, 0.2);
-    color: #8eb2ff;
   }
 
   .dashboard-btn-shop {

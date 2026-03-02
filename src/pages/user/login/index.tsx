@@ -252,13 +252,13 @@ const Login: React.FC = () => {
           })}
         </Carousel>
       </div>
-      <div className="loginOverlay">
+      <div className="loginOverlay u-flex-col">
         <Lang />
-        <div className="header">
-          <div className="brand">
+        <div className="header u-flex-between">
+          <div className="brand u-flex-center">
             <img src={LogoDark} alt="" className="brandLogo" />
           </div>
-          <div className="service">
+          <div className="service u-flex-center">
             <PhoneOutlined />
             <span>400-010-3000</span>
           </div>
@@ -266,18 +266,18 @@ const Login: React.FC = () => {
 
         <div className="content">
           <div className="loginPanel">
-            <div className="loginCard">
-              <div className="cardLeft">
+            <div className="loginCard u-flex">
+              <div className="cardLeft u-flex-col u-flex-center">
                 <div className="qrTitle">扫码登录</div>
                 <div className="qrTips">
                   <span className="qrTipsText">请使用微信打开扫一扫登录</span>
                 </div>
-                <div className="qrCode">
+                <div className="qrCode u-flex-col u-flex-center">
                   <WechatOutlined />
                   <div className="qrPlaceholder">二维码</div>
                 </div>
                 <button
-                  className="qrRefresh"
+                  className="qrRefresh u-inline-flex-center"
                   type="button"
                   onClick={() => {
                     setQrRefreshSpinKey((prev) => prev + 1);
@@ -428,7 +428,7 @@ const Login: React.FC = () => {
                     </>
                   )}
 
-                  <div className="extraRow">
+                  <div className="extraRow u-flex-between">
                     <Form.Item name="autoLogin" valuePropName="checked" noStyle>
                       <Checkbox>自动登录</Checkbox>
                     </Form.Item>
@@ -450,7 +450,7 @@ const Login: React.FC = () => {
           </div>
         </div>
 
-        <div className="carouselDots">
+        <div className="carouselDots u-flex-center">
           {bannerImages.map((src, idx) => {
             const active = idx === activeSlide;
             return (

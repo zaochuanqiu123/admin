@@ -315,7 +315,7 @@ const Character: FC = () => {
         <img className="characterBgImage" src={CharacterTv} alt="" />
       </div>
 
-      <div className="characterOverlay">
+      <div className="characterOverlay u-flex-center">
         <div className="glassMask" />
         <div className="cardWrap">
           <Card className="characterSelectCard" title="请选择登录身份">
@@ -324,7 +324,7 @@ const Character: FC = () => {
               layout="inline"
               initialValues={{ keyword: '', storeType: 'all' as StoreType }}
             >
-              <div className="searchRow">
+              <div className="searchRow u-flex-center">
                 <Form.Item name="keyword" style={{ flex: 1 }}>
                   <Input
                     className="searchInput"
@@ -365,7 +365,11 @@ const Character: FC = () => {
                 split={false}
                 renderItem={(item) => {
                   const active = item.id === selectedStoreId;
-                  const cls = ['storeItem', active ? 'storeItemActive' : '']
+                  const cls = [
+                    'storeItem',
+                    'u-flex-between',
+                    active ? 'storeItemActive' : '',
+                  ]
                     .filter(Boolean)
                     .join(' ');
 
@@ -382,9 +386,6 @@ const Character: FC = () => {
                           textAlign: 'left',
                           font: 'inherit',
                           color: 'inherit',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
                         }}
                       >
                         {item.badge && (
@@ -399,8 +400,8 @@ const Character: FC = () => {
                           </div>
                         )}
 
-                        <div className="itemContent">
-                          <div className="storeTitleRow">
+                        <div className="itemContent u-flex-col">
+                          <div className="storeTitleRow u-flex-center">
                             <span className="storeTitle">{item.name}</span>
                           </div>
                           {item.desc ? (
@@ -413,7 +414,7 @@ const Character: FC = () => {
                               <Spin size="small" />
                             </div>
                           ) : roleMap[item.id]?.length ? (
-                            <div className="storeDesc roleList">
+                            <div className="storeDesc roleList u-flex u-flex-wrap">
                               {roleMap[item.id].map((role, idx) => (
                                 <span
                                   key={`${item.id}-${role.roleName || role.name || idx}`}

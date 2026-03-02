@@ -1,0 +1,91 @@
+/* =====================
+   Atomic / Mixin Utils
+   ===================== */
+
+// Mixins for Less internal reuse.
+.mixin-hide-scrollbar() {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
+// Card surface style based on Ant Design css variables.
+.mixin-white-card() {
+  background: var(--ant-color-bg-container);
+  border-radius: 16px;
+  padding: 12px 0;
+}
+
+.mixin-flex-center() {
+  display: flex;
+  align-items: center;
+}
+
+.mixin-inline-flex-center() {
+  display: inline-flex;
+  align-items: center;
+}
+
+.mixin-flex-between() {
+  .mixin-flex-center();
+  justify-content: space-between;
+}
+
+/* Atomic classes used directly in JSX className where needed. */
+.u-flex {
+  display: flex;
+}
+
+.u-flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.u-flex-wrap {
+  flex-wrap: wrap;
+}
+
+.u-flex-center {
+  display: flex;
+  align-items: center;
+}
+
+.u-inline-flex-center {
+  display: inline-flex;
+  align-items: center;
+}
+
+.u-inline-flex-middle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.u-flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.u-justify-between {
+  justify-content: space-between;
+}
+
+.u-items-center {
+  align-items: center;
+}
+
+.u-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.u-hide-scroll {
+  .mixin-hide-scrollbar();
+}

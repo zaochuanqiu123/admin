@@ -1,14 +1,13 @@
+@import (reference) '../../styles/utilities.less';
+
 .store-page {
   min-height: calc(100vh - 112px);
 }
 
 .store-title-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   padding: 16px 24px;
   border-radius: 14px;
-  background: #fff;
+  background: var(--ant-color-bg-container);
 
   .title {
     font-size: 14px;
@@ -28,17 +27,12 @@
 }
 
 .overview-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
   min-height: 124px;
   padding: 20px 24px;
   border-radius: 16px;
- background: #fff;
+  background: var(--ant-color-bg-container);
 
   .overview-title {
-    display: flex;
-    align-items: center;
     font-size: 16px;
     font-weight: 500;
     line-height: 1.2;
@@ -46,9 +40,7 @@
   }
 
   .overview-main-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    .mixin-flex-between();
     gap: 16px;
   }
 
@@ -70,9 +62,8 @@
   }
 
   .overview-actions {
-    display: flex;
+    .mixin-flex-center();
     gap: 12px;
-    align-items: center;
     margin-left: auto;
   }
 
@@ -93,14 +84,11 @@
 
   .overview-ghost-btn.ant-btn:hover,
   .overview-ghost-btn.ant-btn:focus {
-    border-color: #1760d8 !important;
-    color: #1760d8 !important;
+    border-color: #1760d8;
+    color: #1760d8;
   }
 
   .new-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     min-width: 44px;
     margin-left: 8px;
     padding: 0 8px;
@@ -113,7 +101,6 @@
 
   &.middle {
     align-items: flex-start;
-    justify-content: space-between;
   }
 }
 
@@ -121,7 +108,7 @@
   margin-top: 16px;
   padding: 22px 24px 18px;
   border-radius: 14px;
-  background: #fff;
+  background: var(--ant-color-bg-container);
 }
 
 .filter-grid {
@@ -132,8 +119,7 @@
   border-bottom: 1px solid #eef2f8;
 
   .field {
-    display: flex;
-    align-items: center;
+    .mixin-flex-center();
     gap: 14px;
 
     .field-label {
@@ -192,9 +178,8 @@
 }
 
 .store-address-cell {
-  display: flex;
+  .mixin-flex-center();
   gap: 10px;
-  align-items: center;
 }
 
 .store-qr-trigger {
@@ -214,8 +199,7 @@
 }
 
 .status-column-title {
-  display: inline-flex;
-  align-items: center;
+  .mixin-inline-flex-center();
   gap: 4px;
 }
 
@@ -225,8 +209,7 @@
 }
 
 .status-created {
-  display: inline-flex;
-  align-items: center;
+  .mixin-inline-flex-center();
   gap: 8px;
 }
 
@@ -238,8 +221,7 @@
 }
 
 .action-links-inline {
-  display: flex;
-  align-items: center;
+  .mixin-flex-center();
   gap: 10px;
 
   a {
@@ -291,9 +273,6 @@
 }
 
 .store-code-modal-body {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
 }
 
 .store-code-card {

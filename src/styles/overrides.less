@@ -1,0 +1,45 @@
+/* Component overrides entry.
+   Keep force-overrides with clear [force] comments in this layer. */
+
+/* [force] antd Drawer 行内样式优先级高，透明抽屉必须强制覆盖 */
+.ant-pro-drawer-sider .ant-drawer-content-wrapper {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.ant-pro-drawer-sider .ant-drawer-content,
+.ant-pro-drawer-sider .ant-drawer-body {
+  background: transparent !important;
+}
+
+.ant-pro-drawer-sider .ant-drawer-body .ant-layout-sider {
+  height: 100% !important;
+  border-right: none !important;
+}
+
+.ant-pro-drawer-sider .ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item {
+  float: none !important;
+  width: 100% !important;
+  padding-left: 50px !important;
+}
+
+.ant-pro-drawer-sider .ant-layout-sider .ant-menu-item-icon,
+.ant-pro-drawer-sider .ant-layout-sider .ant-menu-submenu-title .anticon,
+.ant-pro-drawer-sider .ant-layout-sider .ant-menu-item .anticon {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  color: var(--ant-color-text) !important;
+}
+
+/* [force] @ant-design/pro-components 2.7.x + layout=mix + qiankun 场景下，ProLayout 会渲染 ant-pro-layout-bg-list 渐变层，需强制回退为纯色背景 */
+.ant-pro-layout,
+.ant-layout {
+  background: #e7edfb !important;
+  background-image: none !important;
+}
+
+/* [force] ProLayout 可能会注入背景层，需强制隐藏 */
+.ant-pro-layout-bg-list {
+  display: none !important;
+}
