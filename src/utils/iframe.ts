@@ -15,18 +15,14 @@ function splitPath(inputPath: string): {
 }
 
 export function normalizeIframePath(pathname: string): string {
-  if (pathname === '/dashboard') return '/dashboard/index';
   return pathname;
 }
 
 export function isIframeRoutePath(pathname: string | undefined): boolean {
   if (!pathname) return false;
   const normalizedPath = normalizeIframePath(pathname);
-  const moduleRoot = `/${normalizedPath.split('/').filter(Boolean)[0] || ''}`;
-  return (
-    IFRAME_PATHS.includes(normalizedPath) ||
-    (moduleRoot !== '/' && IFRAME_PATHS.includes(moduleRoot))
-  );
+  // 只有精确匹配 IFRAME_PATHS 中的路径才算 iframe 路由
+  return IFRAME_PATHS.includes(normalizedPath);
 }
 
 export function buildIframeRouteWithParams(
@@ -37,23 +33,28 @@ export function buildIframeRouteWithParams(
   const { pathname, searchParams } = splitPath(path);
   const normalizedPath = normalizeIframePath(pathname);
 
-  const currentTargetId = searchParams.get('targetId');
-  if (!currentTargetId) {
-    const fallbackTargetId =
-      explicitTargetId !== undefined &&
-      explicitTargetId !== null &&
-      String(explicitTargetId) !== ''
-        ? String(explicitTargetId)
-        : findTargetIdByPath(menuData, normalizedPath);
-    if (fallbackTargetId) {
-      searchParams.set('targetId', fallbackTargetId);
-    }
-  }
+  // 只有 iframe 路由才添加 targetId 和 token
+  const isIframePath = isIframeRoutePath(normalizedPath);
 
-  const tokenInQuery = searchParams.get('token');
-  const token = tokenInQuery || getToken();
-  if (token) {
-    searchParams.set('token', token);
+  if (isIframePath) {
+    const currentTargetId = searchParams.get('targetId');
+    if (!currentTargetId) {
+      const fallbackTargetId =
+        explicitTargetId !== undefined &&
+        explicitTargetId !== null &&
+        String(explicitTargetId) !== ''
+          ? String(explicitTargetId)
+          : findTargetIdByPath(menuData, normalizedPath);
+      if (fallbackTargetId) {
+        searchParams.set('targetId', fallbackTargetId);
+      }
+    }
+
+    const tokenInQuery = searchParams.get('token');
+    const token = tokenInQuery || getToken();
+    if (token) {
+      searchParams.set('token', token);
+    }
   }
 
   const nextSearch = searchParams.toString();

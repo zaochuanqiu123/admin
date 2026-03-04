@@ -27,6 +27,7 @@ import CharacterTv from '@/assets/character.png';
 import { IFRAME_PATHS } from '@/config/iframe.config';
 import {
   clearPostLoginRedirect,
+  consumeLoginPendingIdentity,
   getPostLoginRedirect,
   getRedirectFromSearch,
   normalizeRedirectPath,
@@ -306,6 +307,9 @@ const Character: FC = () => {
       }
     }
     clearPostLoginRedirect();
+    if (consumeLoginPendingIdentity()) {
+      message.success('登录成功！');
+    }
     history.replace(nextPath);
   };
 

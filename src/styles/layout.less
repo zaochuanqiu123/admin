@@ -583,6 +583,116 @@ body.theme-black-mode .business-switch-menu .ant-dropdown-menu-item-selected {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
+/* 用可关闭标签栏替代默认面包屑 */
+.ant-pro-page-container .ant-breadcrumb {
+  display: none !important;
+}
+
+.pc-admin-route-tabs-bar {
+  --pc-route-tab-wrap-bg: transparent;
+  --pc-route-tab-wrap-border: transparent;
+  --pc-route-tab-text: #42526b;
+  --pc-route-tab-bg: rgba(255, 255, 255, 0.9);
+  --pc-route-tab-border: #d6e0f3;
+  --pc-route-tab-hover-bg: #ffffff;
+  --pc-route-tab-hover-border: #b9cdf2;
+  --pc-route-tab-active-text: #0f4fd6;
+  --pc-route-tab-active-bg: #ffffff;
+  --pc-route-tab-active-border: #8fb4ff;
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  margin: 2px 0 12px;
+  padding: 0;
+  border-radius: 12px;
+  background: var(--pc-route-tab-wrap-bg);
+  border: none;
+  box-shadow: none;
+}
+
+.pc-admin-route-tabs-bar.pc-admin-route-tabs-bar-empty {
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.pc-admin-route-tabs-scroll {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.pc-admin-route-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.pc-admin-route-tab {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  width: fit-content;
+  gap: 6px;
+  height: 28px;
+  max-width: fit-content;
+  padding: 0 8px 0 10px;
+  border-radius: 7px;
+  border: 1px solid var(--pc-route-tab-border);
+  background: var(--pc-route-tab-bg);
+  color: var(--pc-route-tab-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pc-admin-route-tab:hover {
+  border-color: var(--pc-route-tab-hover-border);
+  background: var(--pc-route-tab-hover-bg);
+  transform: translateY(-1px);
+}
+
+.pc-admin-route-tab.pc-admin-route-tab-active {
+  border-color: var(--pc-route-tab-active-border);
+  background: var(--pc-route-tab-active-bg);
+  color: var(--pc-route-tab-active-text);
+  font-weight: 600;
+  box-shadow:
+    0 4px 10px rgba(43, 95, 230, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.pc-admin-route-tab-title {
+  max-width: 184px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 26px;
+}
+
+.pc-admin-route-tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 10px;
+  color: inherit;
+}
+
+.pc-admin-route-tab-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
 body .ant-pro-layout .ant-pro-layout-content {
   margin: 0;
   padding: 16px;

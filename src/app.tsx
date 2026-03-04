@@ -17,6 +17,7 @@ import {
   Button,
   Dropdown,
   type MenuProps,
+  Modal,
   message,
   Switch,
   Tooltip,
@@ -43,6 +44,7 @@ import {
 } from '@/api/storage';
 import logoDark from '@/assets/logo-dark.png';
 import HeaderScrollWatcher from '@/components/Layout/HeaderScrollWatcher';
+import RouteTabsKeepAlive from '@/components/Layout/RouteTabsKeepAlive';
 import WorkplaceCommonMenu from '@/components/Workplace/WorkplaceCommonMenu';
 import { IFRAME_PATHS } from '@/config/iframe.config';
 import {
@@ -211,6 +213,12 @@ export async function getInitialState(): Promise<{
     )
   ) {
     const hasToken = !!getToken();
+    if (!hasToken) {
+      return {
+        fetchUserInfo,
+        settings: defaultSettings as Partial<LayoutSettings>,
+      };
+    }
     const selectedOrgCode = getSelectedOrgCode() || undefined;
     if (hasToken && !selectedOrgCode) {
       // 如果有 token 但没有选择身份，无论是否在 character 页面都提前返回
@@ -707,12 +715,13 @@ export const layout: RunTimeLayoutConfig = ({
     onPageChange: () => {
       if (devBypassAuth) return;
       const { location } = history;
+      if (location.pathname === loginPath) {
+        Modal.destroyAll();
+        return;
+      }
+
       const hasToken = !!getToken();
-      if (
-        !initialState?.currentUser &&
-        !hasToken &&
-        location.pathname !== loginPath
-      ) {
+      if (!hasToken) {
         const redirect = `${location.pathname}${location.search || ''}`;
         redirectToLogin(redirect);
         return;
@@ -754,10 +763,16 @@ export const layout: RunTimeLayoutConfig = ({
 
     menuHeaderRender: undefined,
     childrenRender: (children) => {
+      const keepAliveThemeKey = `${
+        (initialState?.settings as any)?.navTheme || 'light'
+      }::${(initialState?.settings as any)?.colorPrimary || ''}`;
+
       return (
         <>
           <HeaderScrollWatcher />
-          {children}
+          <RouteTabsKeepAlive themeCacheKey={keepAliveThemeKey}>
+            {children}
+          </RouteTabsKeepAlive>
           {isDev && (
             <SettingDrawer
               disableUrlParams

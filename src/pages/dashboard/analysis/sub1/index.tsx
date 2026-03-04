@@ -154,7 +154,7 @@ const Page: React.FC = () => {
   ];
 
   return (
-    <PageContainer title="指标概念">
+    <PageContainer title="指标概念" ghost>
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
         <Card variant="borderless" styles={{ body: { paddingBottom: 0 } }}>
           <Form

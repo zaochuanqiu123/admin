@@ -11,10 +11,14 @@ import {
 
 const loginPath = '/user/login';
 const redirectStorageKey = 'post_login_redirect';
+const logoutReasonStorageKey = 'auth_logout_reason';
+const pendingIdentityStorageKey = 'auth_login_pending_identity';
 const devBypassAuth =
   typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
 
-let authExpiredModalOpen = false;
+let authRedirecting = false;
+
+export type AuthLogoutReason = 'mutual_login' | 'expired';
 
 function getCurrentRelativePath(): string {
   if (typeof window !== 'undefined') {
@@ -62,6 +66,49 @@ export function clearPostLoginRedirect() {
   }
 }
 
+function normalizeLogoutReason(raw: unknown): AuthLogoutReason | undefined {
+  if (raw === 'mutual_login' || raw === 'expired') return raw;
+  return undefined;
+}
+
+export function setAuthLogoutReason(reason?: AuthLogoutReason) {
+  const normalized = normalizeLogoutReason(reason);
+  if (!normalized) return;
+  try {
+    sessionStorage.setItem(logoutReasonStorageKey, normalized);
+  } catch {
+    // ignore
+  }
+}
+
+export function consumeAuthLogoutReason(): AuthLogoutReason | undefined {
+  try {
+    const raw = sessionStorage.getItem(logoutReasonStorageKey);
+    sessionStorage.removeItem(logoutReasonStorageKey);
+    return normalizeLogoutReason(raw);
+  } catch {
+    return undefined;
+  }
+}
+
+export function markLoginPendingIdentity() {
+  try {
+    sessionStorage.setItem(pendingIdentityStorageKey, '1');
+  } catch {
+    // ignore
+  }
+}
+
+export function consumeLoginPendingIdentity(): boolean {
+  try {
+    const raw = sessionStorage.getItem(pendingIdentityStorageKey);
+    sessionStorage.removeItem(pendingIdentityStorageKey);
+    return raw === '1';
+  } catch {
+    return false;
+  }
+}
+
 export function consumePostLoginRedirect(): string | undefined {
   const redirect = getPostLoginRedirect();
   clearPostLoginRedirect();
@@ -88,15 +135,40 @@ export function clearAuthStorage() {
   clearToken();
 }
 
+function closeAllModals() {
+  try {
+    Modal.destroyAll();
+  } catch {
+    // ignore
+  }
+}
+
+export function forceLogoutAndRedirect(
+  redirect?: string,
+  reason?: AuthLogoutReason,
+) {
+  if (devBypassAuth) return;
+  setAuthLogoutReason(reason);
+  clearAuthStorage();
+  redirectToLogin(redirect || getCurrentRelativePath());
+}
+
 export function redirectToLogin(redirect?: string) {
+  closeAllModals();
   const saved =
     setPostLoginRedirect(redirect) ||
     getPostLoginRedirect() ||
     setPostLoginRedirect(getCurrentRelativePath());
 
   if (history.location.pathname === loginPath) {
+    authRedirecting = false;
     return;
   }
+
+  if (authRedirecting) {
+    return;
+  }
+  authRedirecting = true;
 
   const search = saved
     ? new URLSearchParams({
@@ -108,6 +180,14 @@ export function redirectToLogin(redirect?: string) {
     pathname: loginPath,
     search,
   });
+
+  if (typeof window !== 'undefined') {
+    window.setTimeout(() => {
+      authRedirecting = false;
+    }, 0);
+  } else {
+    authRedirecting = false;
+  }
 }
 
 export function isAuthExpiredCode(code: unknown): boolean {
@@ -116,35 +196,10 @@ export function isAuthExpiredCode(code: unknown): boolean {
 
 export function handleAuthExpiredByCode(
   code: unknown,
-  errorMessage?: string,
+  _errorMessage?: string,
 ): boolean {
   if (!isAuthExpiredCode(code)) return false;
   if (devBypassAuth) return true;
-
-  setPostLoginRedirect(getCurrentRelativePath());
-  clearAuthStorage();
-
-  if (history.location.pathname === loginPath) {
-    return true;
-  }
-
-  if (authExpiredModalOpen) {
-    return true;
-  }
-
-  authExpiredModalOpen = true;
-  Modal.warning({
-    title: '登录状态已失效',
-    content: errorMessage || '用户已在其他设备登录，请重新登录。',
-    centered: true,
-    okText: '去登录',
-    onOk: () => {
-      authExpiredModalOpen = false;
-      redirectToLogin();
-    },
-    afterClose: () => {
-      authExpiredModalOpen = false;
-    },
-  });
+  forceLogoutAndRedirect(getCurrentRelativePath(), 'mutual_login');
   return true;
 }

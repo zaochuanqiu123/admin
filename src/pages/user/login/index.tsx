@@ -14,9 +14,10 @@ import {
   Checkbox,
   Form,
   Input,
+  Modal,
   Tabs,
 } from 'antd';
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { login } from '@/api/auth';
 import {
   clearSelectedOrgCode,
@@ -32,8 +33,10 @@ import LogoDark from '@/assets/logo-dark.png';
 import { Footer } from '@/components';
 import {
   clearPostLoginRedirect,
+  consumeAuthLogoutReason,
   getPostLoginRedirect,
   getRedirectFromSearch,
+  markLoginPendingIdentity,
   setPostLoginRedirect,
 } from '@/utils/auth-expired';
 import Settings from '../../../../config/defaultSettings';
@@ -70,6 +73,9 @@ const Login: React.FC = () => {
   const [userLoginState, setUserLoginState] = useState<API.LoginResult>({});
   const [type, setType] = useState<string>('account');
   const [loginErrorText, setLoginErrorText] = useState<string | undefined>();
+  const [logoutReasonText, setLogoutReasonText] = useState<
+    string | undefined
+  >();
   const { message } = App.useApp();
   const intl = useIntl();
   const { setInitialState } = useModel('@@initialState');
@@ -77,6 +83,20 @@ const Login: React.FC = () => {
   const carouselRef = useRef<any>(null);
   const [activeSlide, setActiveSlide] = useState<number>(0);
   const [qrRefreshSpinKey, setQrRefreshSpinKey] = useState<number>(0);
+
+  useEffect(() => {
+    Modal.destroyAll();
+    const reason = consumeAuthLogoutReason();
+    if (reason === 'mutual_login') {
+      setLogoutReasonText(
+        '登录状态已失效，您的账号已在其他设备登录，请重新登录。',
+      );
+      return;
+    }
+    if (reason === 'expired') {
+      setLogoutReasonText('登录状态已过期，请重新登录。');
+    }
+  }, []);
 
   // 移除缩放逻辑，改用响应式布局
 
@@ -169,12 +189,7 @@ const Login: React.FC = () => {
 
       setUserLoginState({ status: 'ok', type });
       setLoginErrorText(undefined);
-
-      const defaultLoginSuccessMessage = intl.formatMessage({
-        id: 'pages.login.success',
-        defaultMessage: '登录成功！',
-      });
-      message.success(defaultLoginSuccessMessage);
+      markLoginPendingIdentity();
 
       const redirect =
         getRedirectFromSearch() || getPostLoginRedirect() || undefined;
@@ -323,6 +338,15 @@ const Login: React.FC = () => {
                     },
                   ]}
                 />
+
+                {logoutReasonText && (
+                  <Alert
+                    style={{ marginBottom: 24 }}
+                    type="warning"
+                    showIcon
+                    message={logoutReasonText}
+                  />
+                )}
 
                 {status === 'error' && (
                   <LoginMessage

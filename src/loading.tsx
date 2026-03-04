@@ -19,12 +19,42 @@
  * 示例（启用后的代码）：
  * <Skeleton active paragraph={{ rows: 8 }} />
  */
-import { Skeleton } from 'antd';
+import { Skeleton, Spin } from 'antd';
 
 const Loading: React.FC = () => {
   const isDarkMode =
     typeof document !== 'undefined' &&
     document.body.classList.contains('theme-black-mode');
+  const pathname =
+    typeof window !== 'undefined' ? window.location.pathname : '';
+  const isLoginPage = pathname === '/user/login';
+  if (isLoginPage) {
+    return (
+      <div
+        className="route-loading route-loading-login"
+        style={{
+          width: '100%',
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: isDarkMode ? '#141414' : '#E7EDFB',
+        }}
+      >
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 10,
+            color: isDarkMode ? 'rgba(255,255,255,0.75)' : '#667289',
+          }}
+        >
+          <Spin size="small" />
+          <span>正在进入登录页...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

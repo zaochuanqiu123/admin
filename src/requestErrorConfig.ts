@@ -3,9 +3,8 @@ import type { RequestConfig } from '@umijs/max';
 import { message, notification } from 'antd';
 import { getSelectedOrgCode, getToken } from '@/api/storage';
 import {
-  clearAuthStorage,
+  forceLogoutAndRedirect,
   handleAuthExpiredByCode,
-  redirectToLogin,
 } from '@/utils/auth-expired';
 
 const devBypassAuth =
@@ -92,8 +91,7 @@ export const errorConfig: RequestConfig = {
           if (devBypassAuth) {
             return;
           }
-          clearAuthStorage();
-          redirectToLogin();
+          forceLogoutAndRedirect(undefined, 'expired');
           return;
         }
         message.error(`Response status:${error.response.status}`);

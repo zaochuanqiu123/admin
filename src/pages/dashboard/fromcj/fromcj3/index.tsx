@@ -1,8 +1,6 @@
-import { CloseCircleOutlined } from '@ant-design/icons';
 import type { ProColumnType } from '@ant-design/pro-components';
 import {
   EditableProTable,
-  FooterToolbar,
   PageContainer,
   ProForm,
   ProFormDateRangePicker,
@@ -10,10 +8,8 @@ import {
   ProFormText,
   ProFormTimePicker,
 } from '@ant-design/pro-components';
-import { Card, Col, message, Popover, Row } from 'antd';
+import { Card, Col, Row } from 'antd';
 import type { FC } from 'react';
-import { useState } from 'react';
-import { fakeSubmitForm } from './service';
 import useStyles from './style.style';
 
 interface TableFormDateType {
@@ -24,7 +20,6 @@ interface TableFormDateType {
   isNew?: boolean;
   editable?: boolean;
 }
-type InternalNamePath = (string | number)[];
 const fieldLabels = {
   name: '仓库名',
   url: '仓库域名',
@@ -59,79 +54,8 @@ const tableData = [
     department: 'Sidney No. 1 Lake Park',
   },
 ];
-interface ErrorField {
-  name: InternalNamePath;
-  errors: string[];
-}
 const AdvancedForm: FC<Record<string, any>> = () => {
   const { styles } = useStyles();
-  const [error, setError] = useState<ErrorField[]>([]);
-  const getErrorInfo = (errors: ErrorField[]) => {
-    const errorCount = errors.filter((item) => item.errors.length > 0).length;
-    if (!errors || errorCount === 0) {
-      return null;
-    }
-    const scrollToField = (fieldKey: string) => {
-      const labelNode = document.querySelector(`label[for="${fieldKey}"]`);
-      if (labelNode) {
-        labelNode.scrollIntoView(true);
-      }
-    };
-    const errorList = errors.map((err) => {
-      if (!err || err.errors.length === 0) {
-        return null;
-      }
-      const key = err.name[0] as
-        | 'name'
-        | 'url'
-        | 'owner'
-        | 'approver'
-        | 'dateRange'
-        | 'type';
-      return (
-        <li
-          key={key}
-          className={styles.errorListItem}
-          onClick={() => scrollToField(key)}
-        >
-          <CloseCircleOutlined className={styles.errorIcon} />
-          <div>{err.errors[0]}</div>
-          <div className={styles.errorField}>{fieldLabels[key]}</div>
-        </li>
-      );
-    });
-    return (
-      <span className={styles.errorIcon}>
-        <Popover
-          title="表单校验信息"
-          content={errorList}
-          overlayClassName={styles.errorPopover}
-          trigger="click"
-          getPopupContainer={(trigger: HTMLElement) => {
-            if (trigger?.parentNode) {
-              return trigger.parentNode as HTMLElement;
-            }
-            return trigger;
-          }}
-        >
-          <CloseCircleOutlined />
-        </Popover>
-        {errorCount}
-      </span>
-    );
-  };
-  const onFinish = async (values: Record<string, any>) => {
-    setError([]);
-    try {
-      await fakeSubmitForm(values);
-      message.success('提交成功');
-    } catch {
-      // console.log
-    }
-  };
-  const onFinishFailed = (errorInfo: any) => {
-    setError(errorInfo.errorFields);
-  };
   const columns: ProColumnType<TableFormDateType>[] = [
     {
       title: '成员姓名',
@@ -173,21 +97,10 @@ const AdvancedForm: FC<Record<string, any>> = () => {
     <ProForm
       layout="vertical"
       hideRequiredMark
-      submitter={{
-        render: (_props, dom) => {
-          return (
-            <FooterToolbar>
-              {getErrorInfo(error)}
-              {dom}
-            </FooterToolbar>
-          );
-        },
-      }}
+      submitter={false}
       initialValues={{
         members: tableData,
       }}
-      onFinish={onFinish}
-      onFinishFailed={onFinishFailed}
     >
       <PageContainer content="高级表单常见于一次性输入和提交大批量数据的场景。">
         <Card title="仓库管理" className={styles.card} bordered={false}>

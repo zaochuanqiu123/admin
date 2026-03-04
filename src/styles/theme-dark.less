@@ -236,7 +236,8 @@ body.theme-black-mode .ant-empty-description {
 body.theme-black-mode .ant-layout-sider .ant-menu-submenu-title .ant-menu-title-content,
 body.theme-black-mode .ant-layout-sider .ant-menu-item .ant-menu-title-content,
 body.theme-black-mode .pc-admin-workplace-common .workplace-common-header-extra,
-body.theme-black-mode .workplace-common-drawer .workplace-common-drawer-top-tab {
+body.theme-black-mode .workplace-common-drawer .workplace-common-drawer-top-tab,
+body.theme-black-mode .pc-admin-route-tab {
   color: var(--pc-dark-text) !important;
 }
 
@@ -249,6 +250,46 @@ body.theme-black-mode .ant-layout-sider .ant-menu-item-active {
 body.theme-black-mode .workplace-common-drawer .workplace-common-drawer-top-tab-active {
   background: var(--pc-dark-bg-elevated) !important;
   color: #005BF8 !important;
+}
+
+body.theme-black-mode .pc-admin-route-tab {
+  border-color: #334766 !important;
+  background: rgba(33, 47, 72, 0.78) !important;
+}
+
+body.theme-black-mode .pc-admin-route-tab:hover {
+  border-color: #547fc5 !important;
+  background: rgba(38, 56, 88, 0.95) !important;
+}
+
+body.theme-black-mode .pc-admin-route-tab.pc-admin-route-tab-active {
+  border-color: #5b8fef !important;
+  background: #294779 !important;
+  color: #89b4ff !important;
+  box-shadow:
+    0 6px 14px rgba(9, 20, 44, 0.45),
+    inset 0 1px 0 rgba(129, 168, 244, 0.16) !important;
+}
+
+body.theme-black-mode .pc-admin-route-tab-close:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+}
+
+body.theme-black-mode .pc-admin-route-tabs-bar {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+}
+
+body.theme-black-mode .pc-admin-route-tabs-scroll {
+  width: auto !important;
+}
+
+body.theme-black-mode .pc-admin-route-tab {
+  flex: 0 0 auto !important;
+  width: auto !important;
 }
 
 body.theme-black-mode .ant-layout-sider .ant-menu-item-icon,

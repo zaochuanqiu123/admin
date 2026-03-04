@@ -4,8 +4,6 @@
  */
 export const IFRAME_PATHS = [
   '/admin',
-  '/dashboard/index',
-  '/dashboard',
   '/account',
   '/list',
   '/profile',

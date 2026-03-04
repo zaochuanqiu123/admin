@@ -7,7 +7,9 @@ import proxy from './proxy';
 
 import routes from './routes';
 
-const { REACT_APP_ENV = 'dev' } = process.env;
+const { REACT_APP_ENV = 'dev', REACT_APP_ENABLE_QIANKUN = 'false' } =
+  process.env;
+const enableQiankun = REACT_APP_ENABLE_QIANKUN === 'true';
 
 /**
  * @name 使用公共路径
@@ -218,28 +220,32 @@ export default defineConfig({
    */
   access: {},
 
-  /**
-   * @name qiankun 微前端插件
-   * @description 配置主应用
-   * @doc https://umijs.org/docs/max/micro-frontend
-   */
-  qiankun: {
-    master: {
-      apps: [
-        {
-          // 🔥注意：这个 name 必须和你 routes.ts 里的 microApp: 'jquery-app' 保持一致
-          name: 'micro-app',
+  ...(enableQiankun
+    ? {
+        /**
+         * @name qiankun 微前端插件
+         * @description 配置主应用
+         * @doc https://umijs.org/docs/max/micro-frontend
+         */
+        qiankun: {
+          master: {
+            apps: [
+              {
+                // 🔥注意：这个 name 必须和你 routes.ts 里的 microApp: 'jquery-app' 保持一致
+                name: 'micro-app',
 
-          // 🔥🔥【修改】这里不填 https://... 而是填上面的代理路径
-          // 浏览器请求 /api-old-app/... -> Umi 转发给 test.suifuda.com/...
-          entry: '//192.168.0.104:8002',
+                // 🔥🔥【修改】这里不填 https://... 而是填上面的代理路径
+                // 浏览器请求 /api-old-app/... -> Umi 转发给 test.suifuda.com/...
+                entry: '//192.168.0.104:8002',
+              },
+            ],
+            sandbox: {
+              experimentalStyleIsolation: true,
+            },
+          },
         },
-      ],
-      sandbox: {
-        experimentalStyleIsolation: true,
-      },
-    },
-  },
+      }
+    : {}),
 
   /**
    * @name <head> 中额外的 script
