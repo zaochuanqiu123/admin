@@ -1,6 +1,14 @@
-import { CloseOutlined } from '@ant-design/icons';
+import {
+  AppstoreOutlined,
+  CloseOutlined,
+  LeftOutlined,
+  ReloadOutlined,
+  RightOutlined,
+} from '@ant-design/icons';
 import { history, useLocation } from '@umijs/max';
+import { Button, Dropdown, type MenuProps } from 'antd';
 import React, { Activity } from 'react';
+import { createPortal } from 'react-dom';
 import {
   UNSAFE_LocationContext,
   UNSAFE_NavigationContext,
@@ -212,6 +220,16 @@ const RouteTabsKeepAlive: React.FC<{
   const cacheEntryMapRef = React.useRef<Record<string, CacheEntry>>({});
   const suppressedPathRef = React.useRef<string>('');
   const cacheKeyRef = React.useRef<string>(themeCacheKey || '');
+  const [headerTabsSlot, setHeaderTabsSlot] =
+    React.useState<HTMLElement | null>(null);
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
+  const tabRefs = React.useRef<Record<string, HTMLButtonElement | null>>({});
+  const [canScrollLeft, setCanScrollLeft] = React.useState(false);
+  const [canScrollRight, setCanScrollRight] = React.useState(false);
+  const [hasOverflow, setHasOverflow] = React.useState(false);
+  const [refreshVersionMap, setRefreshVersionMap] = React.useState<
+    Record<string, number>
+  >({});
 
   // AntD cssVar class may change after theme switch (e.g. css-var-r_0 -> css-var-r_2).
   // Clear cached route nodes so stale theme-scope nodes are not reused.
@@ -221,6 +239,21 @@ const RouteTabsKeepAlive: React.FC<{
     cacheKeyRef.current = nextKey;
     cacheEntryMapRef.current = {};
   }, [themeCacheKey]);
+
+  React.useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const resolveSlot = () => {
+      setHeaderTabsSlot(
+        document.getElementById('pc-admin-header-route-tabs-slot'),
+      );
+    };
+
+    resolveSlot();
+    const timerId = window.setTimeout(resolveSlot, 0);
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [pathname]);
 
   const isTaggablePage =
     isTaggableRoot(rawPathname) &&
@@ -254,8 +287,11 @@ const RouteTabsKeepAlive: React.FC<{
   ]);
 
   const hasActiveTab = renderedTabs.some((tab) => tab.key === pathname);
+  const shouldRenderTabsInHeader = !!headerTabsSlot;
   const barInlineStyle: React.CSSProperties = {
-    display: 'block',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
     minHeight: 0,
     margin: '2px 0 12px',
     padding: 0,
@@ -278,6 +314,25 @@ const RouteTabsKeepAlive: React.FC<{
     fontSize: 13,
     lineHeight: '26px',
   };
+  const updateScrollState = React.useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) {
+      setCanScrollLeft(false);
+      setCanScrollRight(false);
+      setHasOverflow(false);
+      return;
+    }
+    const maxScrollLeft = Math.max(el.scrollWidth - el.clientWidth, 0);
+    setHasOverflow(maxScrollLeft > 1);
+    setCanScrollLeft(el.scrollLeft > 1);
+    setCanScrollRight(el.scrollLeft < maxScrollLeft - 1);
+  }, []);
+
+  const scrollByAmount = React.useCallback((delta: number) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: delta, behavior: 'smooth' });
+  }, []);
 
   React.useEffect(() => {
     if (suppressedPathRef.current && suppressedPathRef.current !== pathname) {
@@ -350,6 +405,13 @@ const RouteTabsKeepAlive: React.FC<{
 
         const nextTabs = prev.filter((tab) => tab.key !== targetKey);
         delete cacheEntryMapRef.current[targetKey];
+        delete tabRefs.current[targetKey];
+        setRefreshVersionMap((versionsPrev) => {
+          if (!(targetKey in versionsPrev)) return versionsPrev;
+          const nextVersions = { ...versionsPrev };
+          delete nextVersions[targetKey];
+          return nextVersions;
+        });
 
         if (targetKey !== pathname) {
           return nextTabs;
@@ -372,6 +434,160 @@ const RouteTabsKeepAlive: React.FC<{
     },
     [pathname],
   );
+
+  const handleRefreshCurrentTab = React.useCallback(() => {
+    delete cacheEntryMapRef.current[pathname];
+    setRefreshVersionMap((prev) => ({
+      ...prev,
+      [pathname]: (prev[pathname] || 0) + 1,
+    }));
+  }, [pathname]);
+
+  const handleCloseCurrentTab = React.useCallback(() => {
+    if (isFixedTabKey(pathname)) return;
+    handleCloseTab(pathname);
+  }, [handleCloseTab, pathname]);
+
+  const handleCloseOtherTabs = React.useCallback(() => {
+    setTabs((prev) => {
+      const keepKeys = new Set([FIXED_TAB_PATH, pathname]);
+      const removedKeys = prev
+        .filter((tab) => !keepKeys.has(tab.key))
+        .map((tab) => tab.key);
+      if (removedKeys.length === 0) return prev;
+
+      removedKeys.forEach((key) => {
+        delete cacheEntryMapRef.current[key];
+        delete tabRefs.current[key];
+      });
+      setRefreshVersionMap((versionsPrev) => {
+        let changed = false;
+        const nextVersions = { ...versionsPrev };
+        removedKeys.forEach((key) => {
+          if (key in nextVersions) {
+            delete nextVersions[key];
+            changed = true;
+          }
+        });
+        return changed ? nextVersions : versionsPrev;
+      });
+      return prev.filter((tab) => keepKeys.has(tab.key));
+    });
+  }, [pathname]);
+
+  const handleCloseAllTabs = React.useCallback(() => {
+    setTabs((prev) => {
+      const removedKeys = prev
+        .filter((tab) => !isFixedTabKey(tab.key))
+        .map((tab) => tab.key);
+      if (removedKeys.length === 0) return prev;
+
+      removedKeys.forEach((key) => {
+        delete cacheEntryMapRef.current[key];
+        delete tabRefs.current[key];
+      });
+      setRefreshVersionMap((versionsPrev) => {
+        let changed = false;
+        const nextVersions = { ...versionsPrev };
+        removedKeys.forEach((key) => {
+          if (key in nextVersions) {
+            delete nextVersions[key];
+            changed = true;
+          }
+        });
+        return changed ? nextVersions : versionsPrev;
+      });
+      return prev.filter((tab) => isFixedTabKey(tab.key));
+    });
+    if (pathname !== FIXED_TAB_PATH) {
+      history.push(FIXED_TAB_PATH);
+    }
+  }, [pathname]);
+
+  const canCloseCurrentTab = !isFixedTabKey(pathname);
+  const canCloseOtherTabs = renderedTabs.some(
+    (tab) => !isFixedTabKey(tab.key) && tab.key !== pathname,
+  );
+  const canCloseAllTabs = renderedTabs.some((tab) => !isFixedTabKey(tab.key));
+
+  const tabActionItems = React.useMemo<MenuProps['items']>(
+    () => [
+      {
+        key: 'refresh',
+        label: '刷新当前',
+        icon: <ReloadOutlined />,
+      },
+      {
+        key: 'close-current',
+        label: '关闭当前',
+        disabled: !canCloseCurrentTab,
+      },
+      {
+        key: 'close-others',
+        label: '关闭其他',
+        disabled: !canCloseOtherTabs,
+      },
+      {
+        key: 'close-all',
+        label: '关闭全部',
+        disabled: !canCloseAllTabs,
+      },
+    ],
+    [canCloseAllTabs, canCloseCurrentTab, canCloseOtherTabs],
+  );
+
+  const handleTabActionMenuClick = React.useCallback<
+    NonNullable<MenuProps['onClick']>
+  >(
+    ({ key }) => {
+      switch (key) {
+        case 'refresh':
+          handleRefreshCurrentTab();
+          break;
+        case 'close-current':
+          handleCloseCurrentTab();
+          break;
+        case 'close-others':
+          handleCloseOtherTabs();
+          break;
+        case 'close-all':
+          handleCloseAllTabs();
+          break;
+        default:
+          break;
+      }
+    },
+    [
+      handleCloseAllTabs,
+      handleCloseCurrentTab,
+      handleCloseOtherTabs,
+      handleRefreshCurrentTab,
+    ],
+  );
+
+  React.useEffect(() => {
+    const el = scrollRef.current;
+    updateScrollState();
+    if (!el) return;
+
+    const onScroll = () => updateScrollState();
+    el.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', updateScrollState);
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', updateScrollState);
+    };
+  }, [renderedTabs.length, shouldRenderTabsInHeader, updateScrollState]);
+
+  React.useEffect(() => {
+    const activeTabEl = tabRefs.current[pathname];
+    if (!activeTabEl) return;
+    activeTabEl.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'center',
+    });
+  }, [pathname, renderedTabs.length]);
 
   if (!isTaggablePage) {
     return (
@@ -418,48 +634,108 @@ const RouteTabsKeepAlive: React.FC<{
     );
   }
 
+  const tabsBarStyle: React.CSSProperties = shouldRenderTabsInHeader
+    ? {
+        ...barInlineStyle,
+        margin: 0,
+        minHeight: 32,
+      }
+    : barInlineStyle;
+
+  const tabsBarNode = (
+    <div
+      role="tablist"
+      aria-label="页面标签"
+      className={`pc-admin-route-tabs-bar${shouldRenderTabsInHeader ? ' pc-admin-route-tabs-bar-in-header' : ''}`}
+      style={tabsBarStyle}
+    >
+      <div className="pc-admin-route-tabs-main">
+        {hasOverflow && (
+          <Button
+            type="text"
+            className="pc-admin-route-tabs-arrow"
+            icon={<LeftOutlined />}
+            disabled={!canScrollLeft}
+            onClick={() => scrollByAmount(-220)}
+          />
+        )}
+        <div className="pc-admin-route-tabs-scroll" ref={scrollRef}>
+          <div className="pc-admin-route-tabs-scroll-inner">
+            {renderedTabs.map((tab) => {
+              const active = tab.key === pathname;
+              const fixed = isFixedTabKey(tab.key);
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={`pc-admin-route-tab${active ? ' pc-admin-route-tab-active' : ''}`}
+                  onClick={() => handleTabClick(tab.path)}
+                  ref={(node) => {
+                    tabRefs.current[tab.key] = node;
+                  }}
+                  style={{
+                    ...tabBaseStyle,
+                    border: active ? '1px solid #8fb4ff' : '1px solid #d6e0f3',
+                    background:
+                      'linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%)',
+                    color: active ? '#0f4fd6' : '#42526b',
+                    fontWeight: active ? 600 : 400,
+                    boxShadow: 'none',
+                  }}
+                >
+                  <span className="pc-admin-route-tab-title">{tab.title}</span>
+                  {!fixed && (
+                    <span
+                      className="pc-admin-route-tab-close"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleCloseTab(tab.key);
+                      }}
+                    >
+                      <CloseOutlined />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {hasOverflow && (
+          <Button
+            type="text"
+            className="pc-admin-route-tabs-arrow"
+            icon={<RightOutlined />}
+            disabled={!canScrollRight}
+            onClick={() => scrollByAmount(220)}
+          />
+        )}
+      </div>
+      <div className="pc-admin-route-tabs-ops">
+        <Dropdown
+          menu={{ items: tabActionItems, onClick: handleTabActionMenuClick }}
+          trigger={['click']}
+          placement="bottomRight"
+          overlayClassName="pc-admin-route-tabs-more-menu"
+        >
+          <Button
+            type="text"
+            className="pc-admin-route-tabs-more"
+            icon={<AppstoreOutlined />}
+            aria-label="综合操作"
+          />
+        </Dropdown>
+      </div>
+    </div>
+  );
+
   return (
     <>
-      <div role="tablist" aria-label="页面标签" style={barInlineStyle}>
-        <div className="pc-admin-route-tabs-scroll">
-          {renderedTabs.map((tab) => {
-            const active = tab.key === pathname;
-            const fixed = isFixedTabKey(tab.key);
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                className={`pc-admin-route-tab${active ? ' pc-admin-route-tab-active' : ''}`}
-                onClick={() => handleTabClick(tab.path)}
-                style={{
-                  ...tabBaseStyle,
-                  border: active ? '1px solid #8fb4ff' : '1px solid #d6e0f3',
-                  background:
-                    'linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%)',
-                  color: active ? '#0f4fd6' : '#42526b',
-                  fontWeight: active ? 600 : 400,
-                  boxShadow: 'none',
-                }}
-              >
-                <span className="pc-admin-route-tab-title">{tab.title}</span>
-                {!fixed && (
-                  <span
-                    className="pc-admin-route-tab-close"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleCloseTab(tab.key);
-                    }}
-                  >
-                    <CloseOutlined />
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {!shouldRenderTabsInHeader && tabsBarNode}
+      {shouldRenderTabsInHeader && headerTabsSlot
+        ? createPortal(tabsBarNode, headerTabsSlot)
+        : null}
 
       {renderedTabs.map((tab) => {
         const visible = tab.key === pathname;
@@ -477,13 +753,15 @@ const RouteTabsKeepAlive: React.FC<{
         const routeContextForTab = useLiveNode
           ? routeContextValue
           : (cacheEntry?.routeContext ?? routeContextValue);
+        const refreshVersion = refreshVersionMap[tab.key] || 0;
         return (
           <div key={tab.key}>
             <UNSAFE_NavigationContext.Provider value={navigationContextForTab}>
               <UNSAFE_LocationContext.Provider value={locationContextForTab}>
                 <UNSAFE_RouteContext.Provider value={routeContextForTab}>
                   <Activity
-                    name={`route-tab:${tab.key}`}
+                    key={`route-tab-activity:${tab.key}:${refreshVersion}`}
+                    name={`route-tab:${tab.key}:${refreshVersion}`}
                     mode={visible ? 'visible' : 'hidden'}
                   >
                     {node}

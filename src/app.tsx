@@ -22,6 +22,7 @@ import {
   Switch,
   Tooltip,
 } from 'antd';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AvatarName, NoticeBell } from '@/components';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
@@ -43,6 +44,7 @@ import {
   setCurrentBusinessCode,
 } from '@/api/storage';
 import logoDark from '@/assets/logo-dark.png';
+import DashboardHomeSplitMenu from '@/components/Layout/DashboardHomeSplitMenu';
 import HeaderScrollWatcher from '@/components/Layout/HeaderScrollWatcher';
 import RouteTabsKeepAlive from '@/components/Layout/RouteTabsKeepAlive';
 import WorkplaceCommonMenu from '@/components/Workplace/WorkplaceCommonMenu';
@@ -165,6 +167,48 @@ function normalizeStoreModuleMenus(menuItems: MenuDataItem[]): MenuDataItem[] {
   return nextMenus;
 }
 
+function normalizePathname(pathname: string | undefined): string {
+  const value =
+    String(pathname || '')
+      .split('?')[0]
+      ?.split('#')[0] || '';
+  if (!value) return '/';
+  if (value === '/') return '/';
+  return value.endsWith('/') ? value.slice(0, -1) : value;
+}
+
+function isDashboardRoute(pathname: string): boolean {
+  const normalized = normalizePathname(pathname);
+  return normalized === '/dashboard' || normalized.startsWith('/dashboard/');
+}
+
+class DashboardHomeMenuBoundary extends Component<
+  {
+    fallback: ReactNode;
+    children: ReactNode;
+  },
+  {
+    hasError: boolean;
+  }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('DashboardHomeSplitMenu render failed:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+
 export async function getInitialState(): Promise<{
   settings?: Partial<LayoutSettings>;
   currentUser?: API.CurrentUser;
@@ -283,41 +327,63 @@ export const layout: RunTimeLayoutConfig = ({
   if (typeof window !== 'undefined') {
     (window as any).g_initialState = initialState;
   }
+
+  let cachedTopMenus: MenuDataItem[] = [];
+
+  const buildTopMenus = (
+    menuData: MenuDataItem[] | undefined,
+  ): MenuDataItem[] => {
+    const dashboardFromRoutes = (menuData || []).find(
+      (item) => item?.path === '/dashboard',
+    );
+
+    const dashboardMenu: MenuDataItem = {
+      name: '工作台',
+      path: '/dashboard',
+      children: dashboardFromRoutes?.children,
+    } as any;
+
+    if (
+      initialState?.permContextMenu &&
+      initialState.permContextMenu.length > 0
+    ) {
+      const visiblePermContextMenu = initialState.permContextMenu.filter(
+        (item) => {
+          const path = String(item?.path || '');
+          return path !== '/dashboard' && path !== '/dashboard/index';
+        },
+      );
+      const normalizedPermContextMenu = normalizeStoreModuleMenus(
+        visiblePermContextMenu,
+      );
+      return [dashboardMenu, ...normalizedPermContextMenu];
+    }
+
+    return [dashboardMenu];
+  };
+
+  const navigateMenu = (path: string | undefined, targetId?: string) => {
+    const targetPath = String(path || '').trim();
+    if (!targetPath) return;
+
+    if (isIframeRoutePath(targetPath)) {
+      const nextUrl = buildIframeRouteWithParams(
+        targetPath,
+        initialState?.permContextMenu,
+        targetId,
+      );
+      history.push(nextUrl);
+      return;
+    }
+
+    history.push(targetPath);
+  };
+
   return {
     menuDataRender: (menuData) => {
-      const dashboardFromRoutes = (menuData || []).find(
-        (item) => item?.path === '/dashboard',
-      );
-
-      // 如果有接口返回的菜单：严格只展示「工作台 + 权限菜单」，不混入 routes 的默认菜单
-      if (
-        initialState?.permContextMenu &&
-        initialState.permContextMenu.length > 0
-      ) {
-        const dashboardMenu: MenuDataItem = {
-          name: '工作台',
-          path: '/dashboard',
-          children: dashboardFromRoutes?.children,
-        } as any;
-        const visiblePermContextMenu = initialState.permContextMenu.filter(
-          (item) => {
-            const path = String(item?.path || '');
-            return path !== '/dashboard' && path !== '/dashboard/index';
-          },
-        );
-        const normalizedPermContextMenu = normalizeStoreModuleMenus(
-          visiblePermContextMenu,
-        );
-        return [dashboardMenu, ...normalizedPermContextMenu];
-      }
-
-      // 无权限菜单数据时：仅展示工作台（隐藏顶部全量 tabs）
-      const dashboardMenu: MenuDataItem = {
-        name: '工作台',
-        path: '/dashboard',
-        children: dashboardFromRoutes?.children,
-      } as any;
-      return [dashboardMenu];
+      const nextMenus = buildTopMenus(menuData);
+      cachedTopMenus = nextMenus;
+      return nextMenus;
     },
     menu: {
       locale: false,
@@ -329,20 +395,10 @@ export const layout: RunTimeLayoutConfig = ({
         <div
           style={{ cursor: 'pointer', width: '100%', height: '100%' }}
           onClickCapture={() => {
-            const path = item.path ? String(item.path) : '';
-            if (!path) return;
-
-            if (isIframeRoutePath(path)) {
-              const nextUrl = buildIframeRouteWithParams(
-                path,
-                initialState?.permContextMenu,
-                (item as any)?.targetId,
-              );
-              history.push(nextUrl);
-              return;
-            }
-
-            history.push(path);
+            navigateMenu(
+              item.path ? String(item.path) : undefined,
+              (item as any)?.targetId,
+            );
           }}
         >
           {dom}
@@ -538,10 +594,26 @@ export const layout: RunTimeLayoutConfig = ({
     ) => {
       const pathname =
         menuProps?.location?.pathname ?? history.location.pathname;
-      const isInDashboard =
-        pathname === '/dashboard' || pathname.startsWith('/dashboard/');
+      const isInDashboard = isDashboardRoute(pathname);
+      const topMenus = cachedTopMenus.length > 0 ? cachedTopMenus : [];
+      const useSplitMenu = topMenus.length > 0;
 
       if (!isInDashboard) {
+        if (useSplitMenu) {
+          return (
+            <div className="plain-sider-menu plain-sider-menu-split">
+              <div className="plain-sider-split-content">
+                <DashboardHomeMenuBoundary fallback={defaultDom}>
+                  <DashboardHomeSplitMenu
+                    topMenus={topMenus}
+                    pathname={pathname}
+                    onNavigate={navigateMenu}
+                  />
+                </DashboardHomeMenuBoundary>
+              </div>
+            </div>
+          );
+        }
         return (
           <div className="plain-sider-menu">
             <div className="plain-sider-menu-content">{defaultDom}</div>
@@ -559,10 +631,34 @@ export const layout: RunTimeLayoutConfig = ({
             <WorkplaceCommonMenu storageKey={storageKey} />
           </div>
 
-          <div className="dashboard-sider-menu">
-            <div className="dashboard-sider-menu-content">{defaultDom}</div>
+          <div
+            className={`dashboard-sider-menu${useSplitMenu ? ' dashboard-sider-menu-split' : ''}`}
+          >
+            <div
+              className={`dashboard-sider-menu-content${useSplitMenu ? ' dashboard-sider-menu-content-split' : ''}`}
+            >
+              {useSplitMenu ? (
+                <DashboardHomeMenuBoundary fallback={defaultDom}>
+                  <DashboardHomeSplitMenu
+                    topMenus={topMenus}
+                    pathname={pathname}
+                    onNavigate={navigateMenu}
+                  />
+                </DashboardHomeMenuBoundary>
+              ) : (
+                defaultDom
+              )}
+            </div>
           </div>
         </div>
+      );
+    },
+    headerContentRender: () => {
+      return (
+        <div
+          id="pc-admin-header-route-tabs-slot"
+          className="pc-admin-header-route-tabs-slot"
+        />
       );
     },
 

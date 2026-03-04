@@ -78,9 +78,12 @@ body.theme-black-mode .ant-pro-page-container,
 body.theme-black-mode .ant-pro-page-container-children-container,
 body.theme-black-mode .ant-pro-page-container-warp,
 body.theme-black-mode .dashboard-sider-menu-content,
+body.theme-black-mode .dashboard-home-split-menu-icons,
+body.theme-black-mode .dashboard-home-split-menu-tree,
 body.theme-black-mode .plain-sider-menu-content,
 body.theme-black-mode .dashboard-sider-common .workplace-common-card,
 body.theme-black-mode .dashboard-sider-menu .ant-menu-sub.ant-menu-inline,
+body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-sub.ant-menu-inline,
 body.theme-black-mode .plain-sider-menu-content .ant-menu-sub.ant-menu-inline,
 body.theme-black-mode .workplace-common-drawer .workplace-common-drawer-top-tabs,
 body.theme-black-mode .workplace-common-drawer .workplace-common-drawer-top-tab-active,
@@ -108,6 +111,29 @@ body.theme-black-mode .ant-popover-inner {
 
 body.theme-black-mode .plain-sider-menu-content {
   border: 1px solid var(--pc-dark-border) !important;
+}
+
+body.theme-black-mode .dashboard-home-split-menu-icons,
+body.theme-black-mode .dashboard-home-split-menu-tree {
+  border-color: var(--pc-dark-border) !important;
+}
+
+body.theme-black-mode .dashboard-home-split-menu-icon-btn {
+  color: rgba(213, 225, 247, 0.7) !important;
+}
+
+body.theme-black-mode .dashboard-home-split-menu-icon-btn:hover,
+body.theme-black-mode .dashboard-home-split-menu-icon-btn-active {
+  color: #7eadff !important;
+}
+
+body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-submenu-title,
+body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-item {
+  color: var(--pc-dark-text) !important;
+}
+
+body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-item-selected .ant-menu-title-content {
+  color: #7eadff !important;
 }
 
 body.theme-black-mode .plain-sider-menu-content .ant-menu-item,
@@ -260,6 +286,31 @@ body.theme-black-mode .pc-admin-route-tab {
 body.theme-black-mode .pc-admin-route-tab:hover {
   border-color: #547fc5 !important;
   background: rgba(38, 56, 88, 0.95) !important;
+}
+
+body.theme-black-mode .pc-admin-route-tabs-arrow.ant-btn,
+body.theme-black-mode .pc-admin-route-tabs-more.ant-btn {
+  border-color: #334766 !important;
+  background: rgba(33, 47, 72, 0.78) !important;
+  color: #d5e1f7 !important;
+}
+
+body.theme-black-mode .pc-admin-route-tabs-arrow.ant-btn:hover,
+body.theme-black-mode .pc-admin-route-tabs-more.ant-btn:hover {
+  border-color: #5b8fef !important;
+  background: rgba(38, 56, 88, 0.95) !important;
+  color: #89b4ff !important;
+}
+
+body.theme-black-mode .pc-admin-route-tabs-arrow.ant-btn:disabled {
+  border-color: #2f3f59 !important;
+  background: rgba(26, 36, 56, 0.82) !important;
+  color: rgba(213, 225, 247, 0.4) !important;
+}
+
+body.theme-black-mode .pc-admin-route-tabs-more-menu .ant-dropdown-menu {
+  background: var(--pc-dark-bg-surface) !important;
+  border: 1px solid var(--pc-dark-border) !important;
 }
 
 body.theme-black-mode .pc-admin-route-tab.pc-admin-route-tab-active {
