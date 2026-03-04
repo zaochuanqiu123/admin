@@ -210,44 +210,64 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 }
 
 .dashboard-home-split-menu-icons {
-  width: 52px;
-  flex: 0 0 52px;
-  padding: 16px 0;
+  width: 84px;
+  flex: 0 0 84px;
+  padding: 12px 8px;
   border-radius: 10px;
   background: #ffffff;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
 .dashboard-home-split-menu-icon-btn {
-  width: 34px;
-  height: 34px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: #8b8ea0;
+  width: 100%;
+  min-height: 58px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: #f5f8ff;
+  color: #6f7690;
   cursor: pointer;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  transition: color 0.2s ease;
+  gap: 4px;
+  padding: 6px 4px;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .dashboard-home-split-menu-icon-btn:hover {
-  color: #3e6cf6;
+  color: #2f64f8;
+  border-color: #cddcff;
+  background: #edf4ff;
 }
 
 .dashboard-home-split-menu-icon-btn-active {
-  color: #2663ff;
+  color: #1f5bff;
+  border-color: #b5ccff;
+  background: #e8f1ff;
 }
 
 .dashboard-home-split-menu-icon {
   font-size: 16px;
   line-height: 1;
+}
+
+.dashboard-home-split-menu-icon-label {
+  width: 100%;
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dashboard-home-split-menu-tree {
@@ -373,7 +393,7 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 .plain-sider-split-content .dashboard-home-split-menu-icons {
   background: transparent;
   border-radius: 0;
-  padding: 0px;
+  padding: 10px 8px;
 }
 
 .plain-sider-split-content .dashboard-home-split-menu-tree {

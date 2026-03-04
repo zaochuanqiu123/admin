@@ -308,6 +308,9 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
                 onClick={() => handleTopClick(node)}
               >
                 <span className="dashboard-home-split-menu-icon">{icon}</span>
+                <span className="dashboard-home-split-menu-icon-label">
+                  {node.name}
+                </span>
               </button>
             </Tooltip>
           );
