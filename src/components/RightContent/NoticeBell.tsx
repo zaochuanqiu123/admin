@@ -1,7 +1,6 @@
 import { BellOutlined, CloseOutlined } from '@ant-design/icons';
-import { useModel } from '@umijs/max';
 import type { TabsProps } from 'antd';
-import { Button, Drawer, Empty, List, Tabs, Tag } from 'antd';
+import { Button, Drawer, Empty, List, Tabs, Tag, theme } from 'antd';
 import React, { useMemo, useState } from 'react';
 
 type NoticeItem = {
@@ -12,21 +11,18 @@ type NoticeItem = {
 };
 
 const NoticeBell: React.FC = () => {
-  const { initialState } = useModel('@@initialState');
-  const isDark = (initialState?.settings as any)?.navTheme === 'realDark';
+  const { token } = theme.useToken();
 
   const [open, setOpen] = useState(false);
   const [activeKey, setActiveKey] = useState('notice');
 
-  const drawerBg = isDark ? '#141414' : '#FAFCFF';
-  const cardBg = isDark ? '#1f1f1f' : '#fff';
-  const primaryText = isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.88)';
-  const secondaryText = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)';
-  const bellBorderColor = isDark
-    ? 'rgba(255,255,255,0.28)'
-    : 'rgba(0,0,0,0.08)';
-  const bellBg = isDark ? 'rgba(255,255,255,0.05)' : 'transparent';
-  const bellColor = isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)';
+  const drawerBg = token.colorBgLayout;
+  const cardBg = token.colorBgContainer;
+  const primaryText = token.colorText;
+  const secondaryText = token.colorTextSecondary;
+  const bellBorderColor = token.colorBorderSecondary;
+  const bellBg = token.colorFillQuaternary;
+  const bellColor = token.colorTextSecondary;
 
   const dataSource = useMemo<Record<string, NoticeItem[]>>(
     () => ({

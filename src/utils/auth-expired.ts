@@ -5,6 +5,7 @@ import {
   clearCurrentBusinessCode,
   clearLoginOrgList,
   clearLoginUserInfo,
+  clearRouteTabs,
   clearSelectedOrgCode,
   clearToken,
 } from '@/api/storage';
@@ -133,6 +134,7 @@ export function clearAuthStorage() {
   clearBusinessList();
   clearCurrentBusinessCode();
   clearToken();
+  clearRouteTabs();
 }
 
 function closeAllModals() {

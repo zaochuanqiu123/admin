@@ -1,5 +1,5 @@
 import { history, useLocation, useModel } from '@umijs/max';
-import { Card, message, Spin } from 'antd';
+import { Card, message, Spin, theme } from 'antd';
 import React, {
   useCallback,
   useEffect,
@@ -47,9 +47,9 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
 }) => {
   const location = useLocation();
   const { initialState } = useModel('@@initialState');
-  const isDarkMode = (initialState?.settings as any)?.navTheme === 'realDark';
-  const loadingMaskBg = isDarkMode ? '#141414' : '#E7EDFB';
-  const loadingTextColor = isDarkMode ? 'rgba(255, 255, 255, 0.85)' : '#1890ff';
+  const { token } = theme.useToken();
+  const loadingMaskBg = token.colorBgLayout;
+  const loadingTextColor = token.colorTextSecondary;
   const [loading, setLoading] = useState(true);
   const [_iframeHeight, setIframeHeight] = useState<number>(
     Math.max(window.innerHeight, minHeight),

@@ -20,7 +20,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { history, useModel } from '@umijs/max';
-import { Button, Drawer, message, Space, Typography } from 'antd';
+import { Button, Drawer, message, Space, Typography, theme } from 'antd';
 import React, { useEffect } from 'react';
 import {
   COMMON_ACTION_MAX,
@@ -47,6 +47,7 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
   storageKey,
 }) => {
   const { initialState } = useModel('@@initialState');
+  const { token } = theme.useToken();
   const [open, setOpen] = React.useState(false);
   const [savedList, setSavedList] = React.useState<CommonAction[]>(
     DEFAULT_COMMON_ACTIONS,
@@ -67,19 +68,17 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
   const [activeSubGroupId, setActiveSubGroupId] = React.useState<string>(
     COMMON_GROUPS[0]?.children?.[0]?.id ?? '',
   );
-  const isDarkMode = (initialState?.settings as any)?.navTheme === 'realDark';
-  const drawerSurfaceBg = isDarkMode ? '#1a1a1a' : '#FAFCFF';
-  const drawerPanelBg = isDarkMode ? '#1f1f1f' : '#ffffff';
-  const drawerPanelMutedBg = isDarkMode ? '#1a1a1a' : '#FAFCFF';
-  const drawerBorderColor = isDarkMode ? '#303030' : '#f0f0f0';
-  const drawerTextPrimary = isDarkMode ? 'rgba(255, 255, 255, 0.88)' : '#333';
-  const drawerTextSecondary = isDarkMode ? 'rgba(255, 255, 255, 0.65)' : '#999';
-  const drawerTextTertiary = isDarkMode ? 'rgba(255, 255, 255, 0.72)' : '#666';
-  const drawerOverlayBg = isDarkMode ? '#262626' : '#F4F6F8';
-  const drawerOverlayIconBg = isDarkMode ? '#595959' : '#C0C4CC';
-  const drawerOverlayShadow = isDarkMode
-    ? '0 4px 16px rgba(0,0,0,0.45)'
-    : '0 4px 16px rgba(0,0,0,0.12)';
+  const isDarkMode = token.colorBgBase === '#000';
+  const drawerSurfaceBg = token.colorBgLayout;
+  const drawerPanelBg = token.colorBgContainer;
+  const drawerPanelMutedBg = token.colorBgElevated;
+  const drawerBorderColor = token.colorBorderSecondary;
+  const drawerTextPrimary = token.colorText;
+  const drawerTextSecondary = token.colorTextSecondary;
+  const drawerTextTertiary = token.colorTextDescription;
+  const drawerOverlayBg = token.colorFillTertiary;
+  const drawerOverlayIconBg = token.colorFillSecondary;
+  const drawerOverlayShadow = token.boxShadowSecondary;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -300,11 +299,7 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
         closable={false}
         placement="right"
         width={650}
-        className={
-          isDarkMode
-            ? 'workplace-common-drawer workplace-common-drawer-dark'
-            : 'workplace-common-drawer'
-        }
+        className="workplace-common-drawer"
         onClose={cancelEdit}
         style={{ background: drawerSurfaceBg }}
         styles={{
@@ -357,13 +352,6 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                   padding: '0 15px',
                   height: 32,
                   lineHeight: '32px',
-                  ...(isDarkMode
-                    ? {
-                        color: drawerTextPrimary,
-                        borderColor: '#434343',
-                        background: drawerPanelBg,
-                      }
-                    : {}),
                 }}
               >
                 取消

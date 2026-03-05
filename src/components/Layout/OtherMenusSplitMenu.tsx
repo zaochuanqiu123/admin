@@ -15,7 +15,7 @@ import type { MenuDataItem } from '@ant-design/pro-components';
 import { Menu, type MenuProps } from 'antd';
 import React from 'react';
 
-type DashboardHomeSplitMenuProps = {
+type OtherMenusSplitMenuProps = {
   topMenus?: MenuDataItem[];
   pathname: string;
   onNavigate: (path?: string, targetId?: string) => void;
@@ -162,7 +162,7 @@ function collectParentKeys(
   return result;
 }
 
-const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
+const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
   topMenus,
   pathname,
   onNavigate,
@@ -287,12 +287,12 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
   );
 
   if (!activeTopNode) {
-    return <div className="dashboard-home-split-menu-empty" />;
+    return <div className="other-menus-split-menu-empty" />;
   }
 
   return (
-    <div className="dashboard-home-split-menu">
-      <div className="dashboard-home-split-menu-icons">
+    <div className="other-menus-split-menu">
+      <div className="other-menus-split-menu-icons">
         {topNodes.map((node, index) => {
           const active = node.key === activeTopNode.key;
           const icon = FIRST_LEVEL_ICONS[index % FIRST_LEVEL_ICONS.length];
@@ -301,14 +301,14 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
               key={node.key}
               type="button"
               className={
-                'dashboard-home-split-menu-icon-btn' +
-                (active ? ' dashboard-home-split-menu-icon-btn-active' : '')
+                'other-menus-split-menu-icon-btn' +
+                (active ? ' other-menus-split-menu-icon-btn-active' : '')
               }
               aria-label={node.name}
               onClick={() => handleTopClick(node)}
             >
-              <span className="dashboard-home-split-menu-icon">{icon}</span>
-              <span className="dashboard-home-split-menu-icon-label">
+              <span className="other-menus-split-menu-icon">{icon}</span>
+              <span className="other-menus-split-menu-icon-label">
                 {node.name}
               </span>
             </button>
@@ -316,7 +316,7 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
         })}
       </div>
 
-      <div className="dashboard-home-split-menu-tree">
+      <div className="other-menus-split-menu-tree">
         <Menu
           mode="inline"
           items={menuMeta.items}
@@ -326,11 +326,11 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
             setOpenKeys((keys as React.Key[]).map((key) => String(key)))
           }
           onClick={handleItemClick}
-          className="dashboard-home-split-menu-ant"
+          className="other-menus-split-menu-ant"
         />
       </div>
     </div>
   );
 };
 
-export default DashboardHomeSplitMenu;
+export default OtherMenusSplitMenu;

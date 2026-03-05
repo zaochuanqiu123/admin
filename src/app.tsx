@@ -34,6 +34,7 @@ import {
   clearCurrentBusinessCode,
   clearLoginOrgList,
   clearLoginUserInfo,
+  clearRouteTabs,
   clearSelectedOrgCode,
   clearToken,
   getBusinessList,
@@ -46,6 +47,7 @@ import {
 import logoDark from '@/assets/logo-dark.png';
 import DashboardHomeSplitMenu from '@/components/Layout/DashboardHomeSplitMenu';
 import HeaderScrollWatcher from '@/components/Layout/HeaderScrollWatcher';
+import OtherMenusSplitMenu from '@/components/Layout/OtherMenusSplitMenu';
 import RouteTabsKeepAlive from '@/components/Layout/RouteTabsKeepAlive';
 import WorkplaceCommonMenu from '@/components/Workplace/WorkplaceCommonMenu';
 import { IFRAME_PATHS } from '@/config/iframe.config';
@@ -604,7 +606,7 @@ export const layout: RunTimeLayoutConfig = ({
             <div className="plain-sider-menu plain-sider-menu-split">
               <div className="plain-sider-split-content">
                 <DashboardHomeMenuBoundary fallback={defaultDom}>
-                  <DashboardHomeSplitMenu
+                  <OtherMenusSplitMenu
                     topMenus={topMenus}
                     pathname={pathname}
                     onNavigate={navigateMenu}
@@ -718,6 +720,7 @@ export const layout: RunTimeLayoutConfig = ({
               clearBusinessList();
               clearCurrentBusinessCode();
               clearToken();
+              clearRouteTabs();
               clearPostLoginRedirect();
               clearWorkplaceCache();
 

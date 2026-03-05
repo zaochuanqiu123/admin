@@ -212,13 +212,14 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 .dashboard-home-split-menu-icons {
   width: 84px;
   flex: 0 0 84px;
-  padding: 12px 8px;
+  padding: 0px 8px;
   border-radius: 10px;
-  background: #ffffff;
+  background: var(--ant-color-bg-container);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  margin-top: 10px;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -241,6 +242,10 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
     color 0.2s ease,
     border-color 0.2s ease,
     background-color 0.2s ease;
+}
+
+.dashboard-home-split-menu-icons > .dashboard-home-split-menu-icon-btn:first-of-type {
+  margin-top: 10px !important;
 }
 
 .dashboard-home-split-menu-icon-btn:hover {
@@ -275,7 +280,7 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
   min-width: 0;
   min-height: 0;
   border-radius: 10px;
-  background: #ffffff;
+  background: var(--ant-color-bg-container);
   overflow: auto;
   padding: 16px 0;
 }
@@ -368,6 +373,175 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
   border-right: none !important;
 }
 
+.other-menus-split-menu {
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.other-menus-split-menu-empty {
+  height: 100%;
+}
+
+.other-menus-split-menu-icons {
+  width: 84px;
+  flex: 0 0 84px;
+  padding: 0px 8px;
+  border-radius: 10px;
+  background: var(--ant-color-bg-container);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.other-menus-split-menu-icon-btn {
+  width: 100%;
+  min-height: 58px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: #f5f8ff;
+  color: #6f7690;
+  cursor: pointer;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 4px;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.other-menus-split-menu-icon-btn:hover {
+  color: #2f64f8;
+  border-color: #cddcff;
+  background: #edf4ff;
+}
+
+.other-menus-split-menu-icon-btn-active {
+  color: #1f5bff;
+  border-color: #b5ccff;
+  background: #e8f1ff;
+}
+
+.other-menus-split-menu-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.other-menus-split-menu-icon-label {
+  width: 100%;
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.other-menus-split-menu-tree {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 10px;
+  background: var(--ant-color-bg-container);
+  overflow: auto;
+}
+
+.other-menus-split-menu-ant.ant-menu {
+  border-inline-end: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.other-menus-split-menu-ant .ant-menu-item-icon,
+.other-menus-split-menu-ant .ant-menu-title-content > .anticon,
+.other-menus-split-menu-ant .ant-menu-item > .anticon {
+  display: none !important;
+}
+
+.other-menus-split-menu-ant .ant-menu-submenu-title,
+.other-menus-split-menu-ant .ant-menu-item {
+  min-height: 34px;
+  line-height: 34px !important;
+  margin: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 34px !important;
+}
+
+.other-menus-split-menu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item {
+  width: 100% !important;
+  display: block !important;
+  margin: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 34px !important;
+}
+
+.other-menus-split-menu-ant .ant-menu-sub.ant-menu-inline .ant-menu-submenu-title {
+  padding-left: 0 !important;
+  padding-right: 34px !important;
+}
+
+.other-menus-split-menu-ant .ant-menu-submenu-title {
+  color: rgba(0, 0, 0, 0.88) !important;
+  font-size: 15px !important;
+}
+
+.other-menus-split-menu-ant > .ant-menu-submenu-inline > .ant-menu-submenu-title {
+  font-size: 15px !important;
+  font-weight: 500;
+}
+
+.other-menus-split-menu-ant .ant-menu-item {
+  font-size: 14px !important;
+  color: rgba(0, 0, 0, 0.88) !important;
+}
+
+.other-menus-split-menu-ant .ant-menu-item .ant-menu-title-content,
+.other-menus-split-menu-ant .ant-menu-submenu-title .ant-menu-title-content {
+  max-width: none !important;
+  margin-left: 0 !important;
+}
+
+.other-menus-split-menu-ant .ant-menu-item-selected,
+.other-menus-split-menu-ant .ant-menu-item-active,
+.other-menus-split-menu-ant .ant-menu-item:hover,
+.other-menus-split-menu-ant .ant-menu-submenu-title:hover {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.other-menus-split-menu-ant .ant-menu-item-selected .ant-menu-title-content {
+  color: var(--ant-color-primary) !important;
+}
+
+.other-menus-split-menu-ant .ant-menu-item:hover .ant-menu-title-content,
+.other-menus-split-menu-ant .ant-menu-item-active .ant-menu-title-content,
+.other-menus-split-menu-ant .ant-menu-submenu-title:hover .ant-menu-title-content {
+  color: var(--ant-color-primary) !important;
+}
+
+/* 仅取消二级菜单（右侧树直接子级）的 hover 高亮，三级保持不变 */
+.other-menus-split-menu-ant > .ant-menu-item:hover .ant-menu-title-content,
+.other-menus-split-menu-ant > .ant-menu-item-active .ant-menu-title-content,
+.other-menus-split-menu-ant
+  > .ant-menu-submenu-inline
+  > .ant-menu-submenu-title:hover
+  .ant-menu-title-content {
+  color: inherit !important;
+}
+
+.other-menus-split-menu-ant .ant-menu-item::after,
+.other-menus-split-menu-ant .ant-menu-submenu-title::after {
+  border-right: none !important;
+}
+
 .plain-sider-menu {
   height: 100%;
   min-height: 0;
@@ -393,13 +567,22 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 .plain-sider-split-content .dashboard-home-split-menu-icons {
   background: transparent;
   border-radius: 0;
-  padding: 10px 8px;
+  padding: 0px 8px;
 }
 
 .plain-sider-split-content .dashboard-home-split-menu-tree {
   background: transparent;
   border-radius: 0;
   padding: 0px;
+}
+
+.plain-sider-split-content .other-menus-split-menu {
+  gap: 8px;
+}
+
+.plain-sider-split-content .other-menus-split-menu-tree {
+  background: var(--ant-color-bg-container);
+  border-radius: 10px;
 }
 
 .plain-sider-menu-content {
@@ -418,7 +601,7 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 }
 
 .plain-sider-menu-content .ant-menu-sub.ant-menu-inline {
-  background: #ffffff !important;
+  background: var(--ant-color-bg-container) !important;
 }
 
 /* 非工作台：二级菜单图标与文字对齐（跟工作台侧栏体验一致） */
@@ -519,11 +702,12 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
   background: transparent !important;
 }
 
-/* 页面滚动后：Header 变白 + 分割线 + 阴影（通过 JS 给 body 加 class 控制） */
+/* 页面滚动后：回到 ProLayout 默认毛玻璃（rgba(255,255,255,0.6) + blur(8px)） */
 body.header-scrolled .ant-pro-layout .ant-pro-layout-header {
-  background: #fff !important;
-  background-color: #fff !important;
+  background-color: rgba(255, 255, 255, 0.6) !important;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
 }
 
@@ -639,16 +823,11 @@ body.header-scrolled .ant-pro-layout .ant-pro-layout-header {
   font-weight: 600;
 }
 
-body.theme-black-mode .business-switch-pill.ant-btn {
+body.theme-black-mode .business-switch-pill {
   border-color: rgba(120, 157, 229, 0.58) !important;
   background: linear-gradient(180deg, #22385e 0%, #1c2f4e 100%) !important;
   color: #dbe8ff !important;
   box-shadow: 0 4px 12px rgba(4, 10, 22, 0.38);
-}
-
-body.theme-black-mode .business-switch-menu .ant-dropdown-menu-item-selected {
-  background: rgba(67, 128, 255, 0.2);
-  color: #b7d2ff;
 }
 
 .ant-layout-sider .ant-menu-submenu-selected > .ant-menu-submenu-title,
@@ -685,7 +864,7 @@ body.theme-black-mode .business-switch-menu .ant-dropdown-menu-item-selected {
 
 /* 子菜单容器背景色（仅影响菜单区域，不影响常用区域） */
 .dashboard-sider-menu .ant-menu-sub.ant-menu-inline {
-  background: #ffffff !important;
+  background: var(--ant-color-bg-container) !important;
 }
 
 /* 子菜单 hover/选中：不要有任何背景块，只改文字颜色 */
@@ -999,8 +1178,9 @@ body .ant-pro-layout .ant-pro-layout-content {
 }
 
 .ant-card {
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  background: #fff;
+  border: 1px solid var(--ant-color-border-secondary, rgba(0, 0, 0, 0.06));
+  background: var(--ant-color-bg-container, #fff);
+  color: var(--ant-color-text, rgba(0, 0, 0, 0.88));
   border-radius: 8px;
 }
 

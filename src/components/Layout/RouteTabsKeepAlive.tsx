@@ -7,7 +7,7 @@ import {
 } from '@ant-design/icons';
 import { history, useLocation } from '@umijs/max';
 import { Button, Dropdown, type MenuProps } from 'antd';
-import React, { Activity } from 'react';
+import React from 'react';
 import { createPortal } from 'react-dom';
 import {
   UNSAFE_LocationContext,
@@ -15,6 +15,7 @@ import {
   UNSAFE_RouteContext,
   useOutlet,
 } from 'react-router-dom';
+import { ROUTE_TABS_STORAGE_KEY } from '@/api/storage';
 import routes from '../../../config/routes';
 
 type RouteTabItem = {
@@ -197,6 +198,63 @@ function isFixedTabKey(key: string): boolean {
   return normalizePath(key) === FIXED_TAB_PATH;
 }
 
+function createFixedTab(): RouteTabItem {
+  return {
+    key: FIXED_TAB_PATH,
+    path: FIXED_TAB_PATH,
+    title: resolveTabTitle(FIXED_TAB_PATH),
+  };
+}
+
+function isPersistableTabPath(pathname: string): boolean {
+  const normalized = normalizePath(pathname);
+  return isTaggableRoot(normalized) && !isExcludedPath(normalized);
+}
+
+function sanitizeStoredTabs(raw: unknown): RouteTabItem[] {
+  const fixedTab = createFixedTab();
+  if (!Array.isArray(raw)) return [fixedTab];
+
+  const seen = new Set<string>([fixedTab.key]);
+  const restored: RouteTabItem[] = [fixedTab];
+
+  raw.forEach((item: any) => {
+    const candidate =
+      typeof item?.path === 'string'
+        ? item.path
+        : typeof item?.key === 'string'
+          ? item.key
+          : '';
+    if (!candidate) return;
+
+    const normalized = normalizePath(resolveTagPath(candidate));
+    if (isFixedTabKey(normalized)) return;
+    if (!isPersistableTabPath(normalized)) return;
+    if (seen.has(normalized)) return;
+
+    seen.add(normalized);
+    restored.push({
+      key: normalized,
+      path: normalized,
+      title: resolveTabTitle(normalized),
+    });
+  });
+
+  return restored;
+}
+
+function readTabsFromStorage(): RouteTabItem[] {
+  if (typeof window === 'undefined') return [createFixedTab()];
+
+  try {
+    const raw = localStorage.getItem(ROUTE_TABS_STORAGE_KEY);
+    if (!raw) return [createFixedTab()];
+    return sanitizeStoredTabs(JSON.parse(raw));
+  } catch {
+    return [createFixedTab()];
+  }
+}
+
 const RouteTabsKeepAlive: React.FC<{
   children: React.ReactNode;
   themeCacheKey?: string;
@@ -210,13 +268,9 @@ const RouteTabsKeepAlive: React.FC<{
   const rawPathname = normalizePath(location.pathname);
   const pathname = resolveTagPath(rawPathname);
   const isPathMappedFromRedirect = rawPathname !== pathname;
-  const [tabs, setTabs] = React.useState<RouteTabItem[]>(() => [
-    {
-      key: FIXED_TAB_PATH,
-      path: FIXED_TAB_PATH,
-      title: resolveTabTitle(FIXED_TAB_PATH),
-    },
-  ]);
+  const [tabs, setTabs] = React.useState<RouteTabItem[]>(() =>
+    readTabsFromStorage(),
+  );
   const cacheEntryMapRef = React.useRef<Record<string, CacheEntry>>({});
   const suppressedPathRef = React.useRef<string>('');
   const cacheKeyRef = React.useRef<string>(themeCacheKey || '');
@@ -231,13 +285,9 @@ const RouteTabsKeepAlive: React.FC<{
     Record<string, number>
   >({});
 
-  // AntD cssVar class may change after theme switch (e.g. css-var-r_0 -> css-var-r_2).
-  // Clear cached route nodes so stale theme-scope nodes are not reused.
+  // Keep latest theme cache key reference; theme switch should not invalidate route cache.
   React.useEffect(() => {
-    const nextKey = themeCacheKey || '';
-    if (cacheKeyRef.current === nextKey) return;
-    cacheKeyRef.current = nextKey;
-    cacheEntryMapRef.current = {};
+    cacheKeyRef.current = themeCacheKey || '';
   }, [themeCacheKey]);
 
   React.useEffect(() => {
@@ -254,6 +304,33 @@ const RouteTabsKeepAlive: React.FC<{
       window.clearTimeout(timerId);
     };
   }, [pathname]);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const fixedTab = createFixedTab();
+      const seen = new Set<string>([fixedTab.key]);
+      const persistTabs: RouteTabItem[] = [fixedTab];
+
+      tabs.forEach((tab) => {
+        const normalized = normalizePath(resolveTagPath(tab.path || tab.key));
+        if (!normalized) return;
+        if (isFixedTabKey(normalized)) return;
+        if (!isPersistableTabPath(normalized)) return;
+        if (seen.has(normalized)) return;
+        seen.add(normalized);
+        persistTabs.push({
+          key: normalized,
+          path: normalized,
+          title: resolveTabTitle(normalized),
+        });
+      });
+
+      localStorage.setItem(ROUTE_TABS_STORAGE_KEY, JSON.stringify(persistTabs));
+    } catch {
+      // ignore
+    }
+  }, [tabs]);
 
   const isTaggablePage =
     isTaggableRoot(rawPathname) &&
@@ -613,9 +690,9 @@ const RouteTabsKeepAlive: React.FC<{
                     routeContextValue
                   }
                 >
-                  <Activity name={`route-tab:${tab.key}`} mode="hidden">
+                  <div style={{ display: 'none' }}>
                     {cacheEntryMapRef.current[tab.key]?.node}
-                  </Activity>
+                  </div>
                 </UNSAFE_RouteContext.Provider>
               </UNSAFE_LocationContext.Provider>
             </UNSAFE_NavigationContext.Provider>
@@ -759,13 +836,12 @@ const RouteTabsKeepAlive: React.FC<{
             <UNSAFE_NavigationContext.Provider value={navigationContextForTab}>
               <UNSAFE_LocationContext.Provider value={locationContextForTab}>
                 <UNSAFE_RouteContext.Provider value={routeContextForTab}>
-                  <Activity
+                  <div
                     key={`route-tab-activity:${tab.key}:${refreshVersion}`}
-                    name={`route-tab:${tab.key}:${refreshVersion}`}
-                    mode={visible ? 'visible' : 'hidden'}
+                    style={{ display: visible ? 'block' : 'none' }}
                   >
                     {node}
-                  </Activity>
+                  </div>
                 </UNSAFE_RouteContext.Provider>
               </UNSAFE_LocationContext.Provider>
             </UNSAFE_NavigationContext.Provider>

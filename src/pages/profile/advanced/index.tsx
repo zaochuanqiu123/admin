@@ -24,6 +24,7 @@ import {
   Steps,
   Table,
   Tooltip,
+  theme,
 } from 'antd';
 import classNames from 'classnames';
 import type { FC } from 'react';
@@ -154,6 +155,7 @@ type AdvancedState = {
 };
 const Advanced: FC = () => {
   const { styles } = useStyles();
+  const { token } = theme.useToken();
 
   const extra = (
     <div className={styles.moreInfo}>
@@ -241,7 +243,7 @@ const Advanced: FC = () => {
             text={
               <span
                 style={{
-                  color: 'rgba(0, 0, 0, 0.45)',
+                  color: token.colorTextSecondary,
                 }}
               >
                 未响应
@@ -400,7 +402,7 @@ const Advanced: FC = () => {
                     <Tooltip title="数据说明">
                       <InfoCircleOutlined
                         style={{
-                          color: 'rgba(0, 0, 0, 0.43)',
+                          color: token.colorTextSecondary,
                           marginLeft: 4,
                         }}
                       />

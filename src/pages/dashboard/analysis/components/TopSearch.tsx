@@ -1,6 +1,6 @@
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { Area } from '@ant-design/plots';
-import { Card, Col, Row, Table, Tooltip } from 'antd';
+import { Card, Col, Row, Table, Tooltip, theme } from 'antd';
 import numeral from 'numeral';
 import React from 'react';
 import type { DataItem } from '../data.d';
@@ -18,6 +18,8 @@ const TopSearch = ({
   dropdownGroup: React.ReactNode;
   searchData: DataItem[];
 }) => {
+  const { token } = theme.useToken();
+  const areaFill = `linear-gradient(-90deg, ${token.colorBgContainer} 0%, ${token.colorPrimary} 100%)`;
   const columns = [
     {
       title: '排名',
@@ -117,7 +119,7 @@ const TopSearch = ({
             axis={false}
             padding={-12}
             style={{
-              fill: 'linear-gradient(-90deg, white 0%, #6294FA 100%)',
+              fill: areaFill,
               fillOpacity: 0.4,
             }}
             data={visitData2}
@@ -155,7 +157,7 @@ const TopSearch = ({
             height={45}
             padding={-12}
             style={{
-              fill: 'linear-gradient(-90deg, white 0%, #6294FA 100%)',
+              fill: areaFill,
               fillOpacity: 0.4,
             }}
             data={visitData2}

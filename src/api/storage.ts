@@ -4,6 +4,7 @@ export const LOGIN_USER_INFO_STORAGE_KEY = 'login_user_info';
 export const SELECTED_ORG_CODE_STORAGE_KEY = 'selected_org_code';
 export const BUSINESS_LIST_STORAGE_KEY = 'business_list';
 export const CURRENT_BUSINESS_CODE_STORAGE_KEY = 'current_business_code';
+export const ROUTE_TABS_STORAGE_KEY = 'pc_admin_route_tabs';
 
 export function getToken(): string | null {
   try {
@@ -161,6 +162,14 @@ export function setCurrentBusinessCode(businessCode: string) {
 export function clearCurrentBusinessCode() {
   try {
     localStorage.removeItem(CURRENT_BUSINESS_CODE_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+export function clearRouteTabs() {
+  try {
+    localStorage.removeItem(ROUTE_TABS_STORAGE_KEY);
   } catch {
     // ignore
   }

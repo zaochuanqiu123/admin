@@ -19,15 +19,21 @@
  * 示例（启用后的代码）：
  * <Skeleton active paragraph={{ rows: 8 }} />
  */
-import { Skeleton, Spin } from 'antd';
+import { Skeleton, Spin, theme } from 'antd';
 
 const Loading: React.FC = () => {
+  const { token } = theme.useToken();
   const isDarkMode =
     typeof document !== 'undefined' &&
     document.body.classList.contains('theme-black-mode');
   const pathname =
     typeof window !== 'undefined' ? window.location.pathname : '';
   const isLoginPage = pathname === '/user/login';
+  const isNoDarkPage = isLoginPage || pathname === '/user/character';
+  const loadingBg =
+    !isDarkMode || isNoDarkPage ? '#E7EDFB' : token.colorBgLayout;
+  const loadingTextColor =
+    !isDarkMode || isNoDarkPage ? '#667289' : token.colorTextSecondary;
   if (isLoginPage) {
     return (
       <div
@@ -38,7 +44,7 @@ const Loading: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: isDarkMode ? '#141414' : '#E7EDFB',
+          background: loadingBg,
         }}
       >
         <div
@@ -46,7 +52,7 @@ const Loading: React.FC = () => {
             display: 'inline-flex',
             alignItems: 'center',
             gap: 10,
-            color: isDarkMode ? 'rgba(255,255,255,0.75)' : '#667289',
+            color: loadingTextColor,
           }}
         >
           <Spin size="small" />
@@ -62,7 +68,7 @@ const Loading: React.FC = () => {
       style={{
         width: '100%',
         minHeight: 'calc(100vh - 60px)', // 减去 header 高度，占满全屏
-        background: isDarkMode ? '#141414' : '#E7EDFB',
+        background: loadingBg,
         padding: '24px 40px',
         boxSizing: 'border-box',
       }}

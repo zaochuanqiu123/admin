@@ -1,6 +1,6 @@
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { Area, Column } from '@ant-design/plots';
-import { Col, Progress, Row, Tooltip } from 'antd';
+import { Col, Progress, Row, Tooltip, theme } from 'antd';
 import numeral from 'numeral';
 import type { DataItem } from '../data.d';
 import useStyles from '../style.style';
@@ -26,6 +26,8 @@ const IntroduceRow = ({
   visitData: DataItem[];
 }) => {
   const { styles } = useStyles();
+  const { token } = theme.useToken();
+  const visitAreaFill = `linear-gradient(-90deg, ${token.colorBgContainer} 0%, ${token.colorPrimary} 100%)`;
   return (
     <Row gutter={24}>
       <Col {...topColResponsiveProps}>
@@ -86,7 +88,7 @@ const IntroduceRow = ({
             height={46}
             axis={false}
             style={{
-              fill: 'linear-gradient(-90deg, white 0%, #975FE4 100%)',
+              fill: visitAreaFill,
               fillOpacity: 0.6,
               width: '100%',
             }}
@@ -157,7 +159,7 @@ const IntroduceRow = ({
         >
           <Progress
             percent={78}
-            strokeColor={{ from: '#108ee9', to: '#87d068' }}
+            strokeColor={{ from: token.colorPrimary, to: token.colorSuccess }}
             status="active"
           />
         </ChartCard>

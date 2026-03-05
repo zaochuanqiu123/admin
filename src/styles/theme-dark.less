@@ -19,90 +19,35 @@ body.theme-black-mode {
 }
 
 body.theme-black-mode,
-body.theme-black-mode #root,
-body.theme-black-mode .ant-pro-layout,
-body.theme-black-mode .ant-layout,
-body.theme-black-mode .ant-pro-layout .ant-pro-layout-container,
-body.theme-black-mode .ant-pro-layout .ant-pro-layout-content {
+body.theme-black-mode #root {
   background: var(--pc-dark-bg-page) !important;
   background-image: none !important;
   color: var(--pc-dark-text) !important;
-}
-
-body.theme-black-mode .route-loading .ant-skeleton-title,
-body.theme-black-mode .route-loading .ant-skeleton-paragraph > li {
-  background: rgba(255, 255, 255, 0.12) !important;
-}
-
-body.theme-black-mode .route-loading .ant-skeleton.ant-skeleton-active .ant-skeleton-title,
-body.theme-black-mode
-  .route-loading
-  .ant-skeleton.ant-skeleton-active
-  .ant-skeleton-paragraph
-  > li {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.08) 25%,
-    rgba(255, 255, 255, 0.2) 37%,
-    rgba(255, 255, 255, 0.08) 63%
-  ) !important;
-  background-size: 400% 100% !important;
 }
 
 body.theme-black-mode .ant-pro-layout-bg-list {
   display: none !important;
 }
 
-body.theme-black-mode .ant-pro-layout .ant-pro-layout-header,
-body.theme-black-mode .ant-layout-header,
-body.theme-black-mode .ant-pro-layout .ant-pro-top-nav-header-main,
-body.theme-black-mode .ant-pro-top-nav-header,
-body.theme-black-mode .ant-pro-top-nav-header-menu,
-body.theme-black-mode .ant-pro-top-nav-header-menu .ant-menu-horizontal {
-  background: var(--pc-dark-bg-header) !important;
+body.theme-black-mode .ant-pro-layout,
+body.theme-black-mode .ant-layout,
+body.theme-black-mode .ant-pro-layout .ant-pro-layout-container,
+body.theme-black-mode .ant-pro-layout .ant-pro-layout-content,
+body.theme-black-mode .dashboard-index-page {
+  background: var(--pc-dark-bg-page) !important;
   background-image: none !important;
-  border-color: var(--pc-dark-border) !important;
 }
 
-body.theme-black-mode.header-scrolled .ant-pro-layout .ant-pro-layout-header {
-  background: var(--pc-dark-bg-header) !important;
-  background-color: var(--pc-dark-bg-header) !important;
-  border-bottom: 1px solid var(--pc-dark-border) !important;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45) !important;
-}
-
-body.theme-black-mode .ant-card,
-body.theme-black-mode .ant-card .ant-card-body,
-body.theme-black-mode .ant-pro-card,
-body.theme-black-mode .ant-pro-page-container,
-body.theme-black-mode .ant-pro-page-container-children-container,
-body.theme-black-mode .ant-pro-page-container-warp,
 body.theme-black-mode .dashboard-sider-menu-content,
 body.theme-black-mode .dashboard-home-split-menu-icons,
 body.theme-black-mode .dashboard-home-split-menu-tree,
+body.theme-black-mode .other-menus-split-menu-icons,
+body.theme-black-mode .other-menus-split-menu-tree,
 body.theme-black-mode .plain-sider-menu-content,
 body.theme-black-mode .dashboard-sider-common .workplace-common-card,
-body.theme-black-mode .dashboard-sider-menu .ant-menu-sub.ant-menu-inline,
-body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-sub.ant-menu-inline,
-body.theme-black-mode .plain-sider-menu-content .ant-menu-sub.ant-menu-inline,
 body.theme-black-mode .workplace-common-drawer .workplace-common-drawer-top-tabs,
 body.theme-black-mode .workplace-common-drawer .workplace-common-drawer-top-tab-active,
-body.theme-black-mode .pc-admin-subpage-wrap > *,
-body.theme-black-mode .ant-table,
-body.theme-black-mode .ant-table-container,
-body.theme-black-mode .ant-table-thead > tr > th,
-body.theme-black-mode .ant-table-tbody > tr > td,
-body.theme-black-mode .ant-picker,
-body.theme-black-mode .ant-picker-panel,
-body.theme-black-mode .ant-select-selector,
-body.theme-black-mode .ant-select-dropdown,
-body.theme-black-mode .ant-input,
-body.theme-black-mode .ant-input-affix-wrapper,
-body.theme-black-mode .ant-input-number,
-body.theme-black-mode .ant-dropdown .ant-dropdown-menu,
-body.theme-black-mode .ant-modal-content,
-body.theme-black-mode .ant-drawer-content,
-body.theme-black-mode .ant-popover-inner {
+body.theme-black-mode .pc-admin-subpage-wrap > * {
   background: var(--pc-dark-bg-surface) !important;
   background-image: none !important;
   border-color: var(--pc-dark-border) !important;
@@ -114,7 +59,14 @@ body.theme-black-mode .plain-sider-menu-content {
 }
 
 body.theme-black-mode .dashboard-home-split-menu-icons,
+body.theme-black-mode .other-menus-split-menu-icons,
+body.theme-black-mode .other-menus-split-menu-tree,
 body.theme-black-mode .dashboard-home-split-menu-tree {
+  border-color: var(--pc-dark-border) !important;
+}
+
+body.theme-black-mode .plain-sider-split-content {
+  background: var(--pc-dark-bg-surface) !important;
   border-color: var(--pc-dark-border) !important;
 }
 
@@ -131,150 +83,23 @@ body.theme-black-mode .dashboard-home-split-menu-icon-btn-active {
   border-color: #47689c !important;
 }
 
-body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-submenu-title,
-body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-item {
-  color: var(--pc-dark-text) !important;
+body.theme-black-mode .other-menus-split-menu-icon-btn {
+  color: rgba(213, 225, 247, 0.78) !important;
+  background: rgba(37, 53, 80, 0.72) !important;
+  border-color: transparent !important;
 }
 
-body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-item-selected .ant-menu-title-content {
+body.theme-black-mode .other-menus-split-menu-icon-btn:hover,
+body.theme-black-mode .other-menus-split-menu-icon-btn-active {
   color: #7eadff !important;
+  background: rgba(48, 72, 108, 0.92) !important;
+  border-color: #47689c !important;
 }
 
-body.theme-black-mode .plain-sider-menu-content .ant-menu-item,
-body.theme-black-mode .plain-sider-menu-content .ant-menu-submenu-title,
-body.theme-black-mode .plain-sider-menu-content .ant-menu-item .ant-menu-title-content,
-body.theme-black-mode
-  .plain-sider-menu-content
-  .ant-menu-submenu-title
-  .ant-menu-title-content {
-  color: var(--pc-dark-text) !important;
-}
-
-body.theme-black-mode
-  .plain-sider-menu-content
-  .ant-menu-submenu-title
-  .ant-menu-item-icon,
-body.theme-black-mode .plain-sider-menu-content .ant-menu-item .ant-menu-item-icon,
-body.theme-black-mode
-  .plain-sider-menu-content
-  .ant-menu-submenu-title
-  .anticon {
-  color: var(--pc-dark-text) !important;
-}
-
-body.theme-black-mode .plain-sider-menu-content .ant-menu-submenu-arrow::before,
-body.theme-black-mode .plain-sider-menu-content .ant-menu-submenu-arrow::after {
-  background: rgba(255, 255, 255, 0.72) !important;
-}
-
-body.theme-black-mode .plain-sider-menu-content .ant-menu-item:hover,
-body.theme-black-mode .plain-sider-menu-content .ant-menu-item-active,
-body.theme-black-mode .plain-sider-menu-content .ant-menu-submenu-title:hover {
-  background: transparent !important;
-  border-radius: 0 !important;
-}
-
-body.theme-black-mode
-  .plain-sider-menu-content
-  .ant-menu-sub.ant-menu-inline
-  .ant-menu-item-selected,
-body.theme-black-mode
-  .plain-sider-menu-content
-  .ant-menu-sub.ant-menu-inline
-  .ant-menu-item-active,
-body.theme-black-mode
-  .plain-sider-menu-content
-  .ant-menu-submenu-selected
-  > .ant-menu-submenu-title,
-body.theme-black-mode
-  .plain-sider-menu-content
-  .ant-menu-submenu-open
-  > .ant-menu-submenu-title {
-  background: transparent !important;
-  border-radius: 0 !important;
-}
-
-body.theme-black-mode .plain-sider-menu-content .ant-menu-item-selected,
-body.theme-black-mode .plain-sider-menu-content .ant-menu-item-selected *,
-body.theme-black-mode
-  .plain-sider-menu-content
-  .ant-menu-item-selected
-  .ant-menu-item-icon {
-  color: #63a9ff !important;
-}
-
-body.theme-black-mode .plain-sider-menu-content .ant-menu-submenu-selected > .ant-menu-submenu-title,
-body.theme-black-mode
-  .plain-sider-menu-content
-  .ant-menu-submenu-open
-  > .ant-menu-submenu-title,
-body.theme-black-mode
-  .plain-sider-menu-content
-  .ant-menu-submenu-active
-  > .ant-menu-submenu-title,
-body.theme-black-mode
-  .plain-sider-menu-content
-  .ant-menu-submenu-selected
-  > .ant-menu-submenu-title
-  *,
-body.theme-black-mode
-  .plain-sider-menu-content
-  .ant-menu-submenu-open
-  > .ant-menu-submenu-title
-  *,
-body.theme-black-mode
-  .plain-sider-menu-content
-  .ant-menu-submenu-active
-  > .ant-menu-submenu-title
-  * {
-  background: transparent !important;
-  color: var(--pc-dark-text) !important;
-  font-weight: 400 !important;
-}
-
-body.theme-black-mode
-  .plain-sider-menu-content
-  .ant-menu-sub.ant-menu-inline
-  .ant-menu-item::after,
-body.theme-black-mode
-  .plain-sider-menu-content
-  .ant-menu-submenu-title::after {
-  border-right: none !important;
-}
-
-body.theme-black-mode .ant-table-thead > tr > th::before {
-  background-color: var(--pc-dark-border) !important;
-}
-
-body.theme-black-mode .ant-menu,
-body.theme-black-mode .ant-menu-title-content,
-body.theme-black-mode .ant-typography,
-body.theme-black-mode .ant-pro-page-container .ant-breadcrumb,
-body.theme-black-mode .ant-pro-page-container .ant-breadcrumb a,
-body.theme-black-mode .ant-form-item-label > label,
-body.theme-black-mode .ant-statistic-title,
-body.theme-black-mode .ant-statistic-content,
-body.theme-black-mode .ant-descriptions-item-label,
-body.theme-black-mode .ant-descriptions-item-content,
-body.theme-black-mode .ant-tabs-tab-btn,
-body.theme-black-mode .ant-radio-wrapper,
-body.theme-black-mode .ant-checkbox-wrapper,
-body.theme-black-mode .ant-empty-description {
-  color: var(--pc-dark-text) !important;
-}
-
-body.theme-black-mode .ant-layout-sider .ant-menu-submenu-title .ant-menu-title-content,
-body.theme-black-mode .ant-layout-sider .ant-menu-item .ant-menu-title-content,
 body.theme-black-mode .pc-admin-workplace-common .workplace-common-header-extra,
 body.theme-black-mode .workplace-common-drawer .workplace-common-drawer-top-tab,
 body.theme-black-mode .pc-admin-route-tab {
   color: var(--pc-dark-text) !important;
-}
-
-body.theme-black-mode .ant-layout-sider .ant-menu-item-selected,
-body.theme-black-mode .ant-layout-sider .ant-menu-item-active {
-  background: var(--pc-dark-bg-elevated) !important;
-  border-radius: 10px !important;
 }
 
 body.theme-black-mode .workplace-common-drawer .workplace-common-drawer-top-tab-active {
@@ -292,29 +117,24 @@ body.theme-black-mode .pc-admin-route-tab:hover {
   background: rgba(38, 56, 88, 0.95) !important;
 }
 
-body.theme-black-mode .pc-admin-route-tabs-arrow.ant-btn,
-body.theme-black-mode .pc-admin-route-tabs-more.ant-btn {
+body.theme-black-mode .pc-admin-route-tabs-arrow,
+body.theme-black-mode .pc-admin-route-tabs-more {
   border-color: #334766 !important;
   background: rgba(33, 47, 72, 0.78) !important;
   color: #d5e1f7 !important;
 }
 
-body.theme-black-mode .pc-admin-route-tabs-arrow.ant-btn:hover,
-body.theme-black-mode .pc-admin-route-tabs-more.ant-btn:hover {
+body.theme-black-mode .pc-admin-route-tabs-arrow:hover,
+body.theme-black-mode .pc-admin-route-tabs-more:hover {
   border-color: #5b8fef !important;
   background: rgba(38, 56, 88, 0.95) !important;
   color: #89b4ff !important;
 }
 
-body.theme-black-mode .pc-admin-route-tabs-arrow.ant-btn:disabled {
+body.theme-black-mode .pc-admin-route-tabs-arrow:disabled {
   border-color: #2f3f59 !important;
   background: rgba(26, 36, 56, 0.82) !important;
   color: rgba(213, 225, 247, 0.4) !important;
-}
-
-body.theme-black-mode .pc-admin-route-tabs-more-menu .ant-dropdown-menu {
-  background: var(--pc-dark-bg-surface) !important;
-  border: 1px solid var(--pc-dark-border) !important;
 }
 
 body.theme-black-mode .pc-admin-route-tab.pc-admin-route-tab-active {
@@ -347,29 +167,132 @@ body.theme-black-mode .pc-admin-route-tab {
   width: auto !important;
 }
 
-body.theme-black-mode .ant-layout-sider .ant-menu-item-icon,
-body.theme-black-mode .ant-layout-sider .ant-menu-submenu-arrow,
-body.theme-black-mode .ant-layout-sider .ant-menu-submenu-expand-icon,
-body.theme-black-mode .ant-pro-top-nav-header-menu .ant-menu-item .ant-menu-title-content {
+body.theme-black-mode .ant-pro-layout .ant-pro-layout-content {
+  background: var(--pc-dark-bg-page) !important;
+}
+
+body.theme-black-mode .ant-pro-layout .ant-pro-layout-header,
+body.theme-black-mode .ant-layout-header,
+body.theme-black-mode .ant-pro-top-nav-header,
+body.theme-black-mode .ant-pro-top-nav-header-main,
+body.theme-black-mode .ant-pro-top-nav-header-menu,
+body.theme-black-mode .ant-pro-top-nav-header-menu .ant-menu-horizontal {
+  background: transparent !important;
+  background-color: transparent !important;
+  border-color: transparent !important;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: none !important;
+}
+
+body.theme-black-mode.header-scrolled .ant-pro-layout .ant-pro-layout-header {
+  background-color: rgba(20, 20, 20, 0.55) !important;
+  border-bottom: 1px solid var(--pc-dark-border) !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45) !important;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+body.theme-black-mode .ant-pro-top-nav-header-menu .ant-menu-item .ant-menu-title-content,
+body.theme-black-mode
+  .ant-pro-top-nav-header-menu
+  .ant-menu-submenu-title
+  .ant-menu-title-content {
   color: var(--pc-dark-text) !important;
 }
 
-body.theme-black-mode .dashboard-sider-menu-content .ant-menu-item-selected .ant-menu-title-content,
-body.theme-black-mode .dashboard-sider-menu-content .ant-menu-item-active .ant-menu-title-content,
-body.theme-black-mode .ant-layout-sider .ant-menu-item-selected .ant-menu-title-content,
-body.theme-black-mode .ant-layout-sider .ant-menu-item-active .ant-menu-title-content,
-body.theme-black-mode .ant-pro-top-nav-header-menu .ant-menu-item-selected .ant-menu-title-content,
-body.theme-black-mode .ant-pro-top-nav-header-menu .ant-menu-submenu-selected > .ant-menu-submenu-title .ant-menu-title-content {
-  color: var(--ant-color-primary) !important;
+body.theme-black-mode .dashboard-sider-menu .ant-menu-sub.ant-menu-inline,
+body.theme-black-mode .plain-sider-menu-content .ant-menu-sub.ant-menu-inline {
+  background: var(--pc-dark-bg-surface) !important;
 }
 
-body.theme-black-mode .ant-menu-submenu-arrow::before,
-body.theme-black-mode .ant-menu-submenu-arrow::after {
-  background: rgba(255, 255, 255, 0.7) !important;
+body.theme-black-mode .ant-layout-sider .ant-menu-sub.ant-menu-inline {
+  background: var(--pc-dark-bg-surface) !important;
 }
 
-body.theme-black-mode .ant-divider {
-  border-color: var(--pc-dark-border) !important;
+body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-submenu-title,
+body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-item,
+body.theme-black-mode .other-menus-split-menu-ant .ant-menu-submenu-title,
+body.theme-black-mode .other-menus-split-menu-ant .ant-menu-item,
+body.theme-black-mode .plain-sider-menu-content .ant-menu-item,
+body.theme-black-mode .plain-sider-menu-content .ant-menu-submenu-title,
+body.theme-black-mode
+  .plain-sider-menu-content
+  .ant-menu-submenu-selected
+  > .ant-menu-submenu-title,
+body.theme-black-mode
+  .plain-sider-menu-content
+  .ant-menu-submenu-open
+  > .ant-menu-submenu-title,
+body.theme-black-mode
+  .plain-sider-menu-content
+  .ant-menu-submenu-active
+  > .ant-menu-submenu-title {
+  color: var(--pc-dark-text) !important;
+}
+
+/* 分栏菜单（首页/非首页）暗黑态选中与展开：保持透明底，避免出现黑色块 */
+body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-item-selected,
+body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-item-active,
+body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-item:hover,
+body.theme-black-mode
+  .dashboard-home-split-menu-ant
+  .ant-menu-submenu-selected
+  > .ant-menu-submenu-title,
+body.theme-black-mode
+  .dashboard-home-split-menu-ant
+  .ant-menu-submenu-open
+  > .ant-menu-submenu-title,
+body.theme-black-mode
+  .dashboard-home-split-menu-ant
+  .ant-menu-submenu-active
+  > .ant-menu-submenu-title,
+body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-submenu-title:hover,
+body.theme-black-mode .other-menus-split-menu-ant .ant-menu-item-selected,
+body.theme-black-mode .other-menus-split-menu-ant .ant-menu-item-active,
+body.theme-black-mode .other-menus-split-menu-ant .ant-menu-item:hover,
+body.theme-black-mode
+  .other-menus-split-menu-ant
+  .ant-menu-submenu-selected
+  > .ant-menu-submenu-title,
+body.theme-black-mode
+  .other-menus-split-menu-ant
+  .ant-menu-submenu-open
+  > .ant-menu-submenu-title,
+body.theme-black-mode
+  .other-menus-split-menu-ant
+  .ant-menu-submenu-active
+  > .ant-menu-submenu-title,
+body.theme-black-mode .other-menus-split-menu-ant .ant-menu-submenu-title:hover {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+body.theme-black-mode
+  .dashboard-home-split-menu-ant
+  .ant-menu-submenu-selected
+  > .ant-menu-submenu-title
+  *,
+body.theme-black-mode
+  .dashboard-home-split-menu-ant
+  .ant-menu-submenu-open
+  > .ant-menu-submenu-title
+  *,
+body.theme-black-mode
+  .dashboard-home-split-menu-ant
+  .ant-menu-submenu-active
+  > .ant-menu-submenu-title
+  * {
+  color: var(--pc-dark-text) !important;
+}
+
+body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-submenu-arrow::before,
+body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-submenu-arrow::after,
+body.theme-black-mode .other-menus-split-menu-ant .ant-menu-submenu-arrow::before,
+body.theme-black-mode .other-menus-split-menu-ant .ant-menu-submenu-arrow::after,
+body.theme-black-mode .plain-sider-menu-content .ant-menu-submenu-arrow::before,
+body.theme-black-mode .plain-sider-menu-content .ant-menu-submenu-arrow::after {
+  background: rgba(255, 255, 255, 0.72) !important;
 }
 
 body.theme-switching *,

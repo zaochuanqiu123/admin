@@ -621,9 +621,9 @@ const StoreCreatePage: React.FC = () => {
 
   return (
     <PageContainer
-      title="门店管理"
       className="store-create-container"
       contentWidth="Fluid"
+      pageHeaderRender={false}
     >
       <div className="store-create-page">
         <Card title="基础信息" className="store-create-card">
