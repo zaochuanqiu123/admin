@@ -114,6 +114,8 @@ ol {
 }
 
 .theme-switch.ant-switch {
+  width: 44px !important;
+  min-width: 44px !important;
   border-radius: 999px !important;
 }
 
@@ -123,6 +125,45 @@ ol {
 
 .theme-switch.ant-switch .ant-switch-handle::before {
   border-radius: 999px !important;
+}
+
+.pc-admin-header-circle-action.ant-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50% !important;
+  border: 1px solid var(--ant-color-border-secondary);
+  background: var(--ant-color-fill-quaternary);
+  color: var(--ant-color-text-secondary);
+}
+
+.pc-admin-header-circle-action.ant-btn:hover,
+.pc-admin-header-circle-action.ant-btn:focus,
+.pc-admin-header-circle-action.ant-btn:active {
+  border-color: var(--ant-color-border-secondary) !important;
+  background: var(--ant-color-fill-quaternary) !important;
+  color: var(--ant-color-text) !important;
+}
+
+.pc-admin-route-tabs-bar-in-header .pc-admin-route-tabs-more.ant-btn {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  border-radius: 50% !important;
+  border: 1px solid var(--ant-color-border-secondary) !important;
+  background: var(--ant-color-fill-quaternary) !important;
+  color: var(--ant-color-text-secondary) !important;
+}
+
+.pc-admin-route-tabs-bar-in-header .pc-admin-route-tabs-more.ant-btn:hover,
+.pc-admin-route-tabs-bar-in-header .pc-admin-route-tabs-more.ant-btn:focus,
+.pc-admin-route-tabs-bar-in-header .pc-admin-route-tabs-more.ant-btn:active {
+  border-color: var(--ant-color-border-secondary) !important;
+  background: var(--ant-color-fill-quaternary) !important;
+  color: var(--ant-color-text) !important;
 }
 
 .notice-bell-tabs .ant-tabs-nav::before {

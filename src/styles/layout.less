@@ -126,27 +126,24 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 
 .dashboard-sider-common {
   margin-bottom: 8px;
+  position: relative;
+  overflow: visible;
 }
 
 .dashboard-sider-common .workplace-common-card {
   background-image: linear-gradient(180deg, #d9e7ff, #fafcff) !important;
   border: 1px solid #fafcff;
-}
-
-.dashboard-sider-menu {
-  flex: 1;
-  min-height: 0;
   position: relative;
   overflow: visible;
 }
 
-.dashboard-sider-menu::before,
-.dashboard-sider-menu::after {
+.dashboard-sider-common .workplace-common-card::before,
+.dashboard-sider-common .workplace-common-card::after {
   content: '';
   position: absolute;
   width: 9px;
   height: 34px;
-  top: -21px;
+  bottom: -21px;
   background-image: url('~@/assets/original.png');
   background-repeat: no-repeat;
   background-size: 9px 34px;
@@ -154,12 +151,19 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
   z-index: 3;
 }
 
-.dashboard-sider-menu::before {
+.dashboard-sider-common .workplace-common-card::before {
   left: 10px;
 }
 
-.dashboard-sider-menu::after {
+.dashboard-sider-common .workplace-common-card::after {
   right: 10px;
+}
+
+.dashboard-sider-menu {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: visible;
 }
 
 .dashboard-sider-menu-content {
@@ -174,6 +178,8 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 
 .dashboard-sider-menu-content.dashboard-sider-menu-content-split {
   padding: 0 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
 }
 
 .dashboard-sider-menu > .ant-menu,
@@ -205,39 +211,50 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
   gap: 8px;
 }
 
+.dashboard-sider-menu-content.dashboard-sider-menu-content-split .dashboard-home-split-menu {
+  gap: 2px;
+}
+
 .dashboard-home-split-menu-empty {
   height: 100%;
 }
 
 .dashboard-home-split-menu-icons {
-  width: 84px;
-  flex: 0 0 84px;
-  padding: 0px 8px;
+  width: 76px;
+  flex: 0 0 76px;
+  padding: 0 6px;
   border-radius: 10px;
   background: var(--ant-color-bg-container);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin-top: 10px;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
+.dashboard-sider-menu-content.dashboard-sider-menu-content-split .dashboard-home-split-menu-icons {
+  .mixin-white-card();
+  padding: 10px 6px 10px 10px;
+  margin-top: 0;
+  border-radius:  16px 0 0 16px;
+}
+
 .dashboard-home-split-menu-icon-btn {
   width: 100%;
-  min-height: 58px;
+  min-height: 52px;
   border: 1px solid transparent;
   border-radius: 10px;
-  background: #f5f8ff;
+  background: #fafbff;
   color: #6f7690;
   cursor: pointer;
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 6px 4px;
+  gap: 3px;
+  padding: 5px 3px;
   transition:
     color 0.2s ease,
     border-color 0.2s ease,
@@ -283,6 +300,12 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
   background: var(--ant-color-bg-container);
   overflow: auto;
   padding: 16px 0;
+}
+
+.dashboard-sider-menu-content.dashboard-sider-menu-content-split .dashboard-home-split-menu-tree {
+  .mixin-white-card();
+  padding: 12px 0;
+  border-radius:0 16px 16px 0;
 }
 
 .dashboard-home-split-menu-ant.ant-menu {
@@ -337,7 +360,7 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 .dashboard-home-split-menu-ant .ant-menu-item .ant-menu-title-content,
 .dashboard-home-split-menu-ant .ant-menu-submenu-title .ant-menu-title-content {
   max-width: none !important;
-  margin-left: 0 !important;
+  margin-left: 10px !important;
 }
 
 .dashboard-home-split-menu-ant .ant-menu-item-selected,
@@ -385,33 +408,33 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 }
 
 .other-menus-split-menu-icons {
-  width: 84px;
-  flex: 0 0 84px;
-  padding: 0px 8px;
+  width: 76px;
+  flex: 0 0 76px;
+  padding: 0 6px;
   border-radius: 10px;
   background: var(--ant-color-bg-container);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
 .other-menus-split-menu-icon-btn {
   width: 100%;
-  min-height: 58px;
+  min-height: 52px;
   border: 1px solid transparent;
   border-radius: 10px;
-  background: #f5f8ff;
+  background: #fafbff;
   color: #6f7690;
   cursor: pointer;
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 6px 4px;
+  gap: 3px;
+  padding: 5px 3px;
   transition:
     color 0.2s ease,
     border-color 0.2s ease,
@@ -471,7 +494,7 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
   min-height: 34px;
   line-height: 34px !important;
   margin: 0 !important;
-  padding-left: 0 !important;
+  padding-left: 10px !important;
   padding-right: 34px !important;
 }
 
@@ -479,7 +502,7 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
   width: 100% !important;
   display: block !important;
   margin: 0 !important;
-  padding-left: 0 !important;
+  padding-left: 10px !important;
   padding-right: 34px !important;
 }
 
@@ -556,7 +579,9 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  .mixin-white-card();
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
 }
 
 /* 非工作台分栏：单侧边栏容器内左右布局（不是两个独立卡片） */
@@ -577,12 +602,22 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 }
 
 .plain-sider-split-content .other-menus-split-menu {
-  gap: 8px;
+  height: 100%;
+  gap: 2px;
+}
+
+.plain-sider-split-content .other-menus-split-menu-icons {
+  .mixin-white-card();
+  padding: 10px 6px 10px 10px;
+  border-radius: 16px 0 0 16px;
+  
 }
 
 .plain-sider-split-content .other-menus-split-menu-tree {
-  background: var(--ant-color-bg-container);
-  border-radius: 10px;
+  .mixin-white-card();
+  padding: 5px 0;
+  border-radius: 0 16px 16px 0;
+  
 }
 
 .plain-sider-menu-content {
@@ -1050,12 +1085,13 @@ body.theme-black-mode .business-switch-pill {
 .pc-admin-route-tabs-arrow.ant-btn,
 .pc-admin-route-tabs-more.ant-btn {
   height: 28px;
+  width: 28px;
   min-width: 28px;
-  border-radius: 8px;
+  border-radius: 50%;
   border: 1px solid #d6e0f3;
   background: #ffffff;
   color: #42526b;
-  padding: 0 8px;
+  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1096,7 +1132,7 @@ body.theme-black-mode .business-switch-pill {
   height: 28px;
   max-width: fit-content;
   padding: 0 8px 0 10px;
-  border-radius: 7px;
+  border-radius: 16px;
   border: 1px solid var(--pc-route-tab-border);
   background: var(--pc-route-tab-bg);
   color: var(--pc-route-tab-text);

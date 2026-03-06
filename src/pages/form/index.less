@@ -2,6 +2,18 @@
 
 .store-page {
   min-height: calc(100vh - 112px);
+  --store-accent: var(--ant-color-primary);
+  --store-accent-hover: var(
+    --ant-color-primary-hover,
+    var(--ant-color-primary)
+  );
+  --store-btn-ghost-bg: var(--ant-color-bg-container);
+  --store-batch-border: var(--ant-color-border-secondary);
+  --store-batch-bg: var(--ant-color-fill-quaternary);
+  --store-batch-text: var(--ant-color-text-secondary);
+  --store-btn-disabled-text: var(--ant-color-text-tertiary);
+  --store-btn-disabled-border: var(--ant-color-border);
+  --store-btn-disabled-bg: var(--ant-color-fill-tertiary);
 }
 
 .store-title-card {
@@ -15,7 +27,7 @@
 
   .tips-link {
     font-size: 14px;
-    color: #1c6ff4;
+    color: var(--store-accent);
   }
 }
 
@@ -77,15 +89,15 @@
   }
 
   .overview-ghost-btn.ant-btn {
-    border-color: #1c6ff4;
-    color: #1c6ff4;
-    background: #fff;
+    border-color: var(--store-accent);
+    color: var(--store-accent);
+    background: var(--store-btn-ghost-bg);
   }
 
   .overview-ghost-btn.ant-btn:hover,
   .overview-ghost-btn.ant-btn:focus {
-    border-color: #1760d8;
-    color: #1760d8;
+    border-color: var(--store-accent-hover);
+    color: var(--store-accent-hover);
   }
 
   .new-badge {
@@ -142,39 +154,39 @@
 
   .record-link {
     width: fit-content;
-    color: #1c6ff4;
+    color: var(--store-accent);
   }
 }
 
 .batch-bar {
   margin-bottom: 10px;
   padding: 10px 12px;
-  border: 1px solid #e5ebf7;
+  border: 1px solid var(--store-batch-border);
   border-radius: 8px;
-  background: #f5f8ff;
+  background: var(--store-batch-bg);
 
   .selected-count {
-    color: #3e4a62;
+    color: var(--store-batch-text);
   }
 
   .selected-count-number {
-    color: #1c6ff4;
+    color: var(--store-accent);
   }
 
   .ant-btn[disabled] {
-    color: #a9b3c6;
-    border-color: #d6deea;
-    background: #f2f5fa;
+    color: var(--store-btn-disabled-text);
+    border-color: var(--store-btn-disabled-border);
+    background: var(--store-btn-disabled-bg);
   }
 }
 
 .content-card .ant-table-thead > tr > th {
-  color: #1f2837;
+  color: var(--ant-color-text-heading, var(--ant-color-text));
   font-weight: 600;
 }
 
 .content-card .ant-table-tbody > tr > td {
-  color: #2d3850;
+  color: var(--ant-color-text);
 }
 
 .store-address-cell {
@@ -191,11 +203,11 @@
 
 .address-text {
   line-height: 1.5;
-  color: #2d3850;
+  color: var(--ant-color-text);
 }
 
 .address-detail {
-  color: #5c6880;
+  color: var(--ant-color-text-secondary);
 }
 
 .status-column-title {
@@ -205,7 +217,7 @@
 
 .status-column-title .anticon {
   font-size: 12px;
-  color: #a5afc2;
+  color: var(--ant-color-text-tertiary, var(--ant-color-text-secondary));
 }
 
 .status-created {
@@ -225,23 +237,23 @@
   gap: 10px;
 
   a {
-    color: #1c6ff4;
+    color: var(--store-accent);
     white-space: nowrap;
   }
 }
 
 .manager-phone {
   margin-top: 2px;
-  color: #7f8aa2;
+  color: var(--ant-color-text-secondary);
 }
 
 .wechat-label {
-  color: #7f8aa2;
+  color: var(--ant-color-text-secondary);
 }
 
 .page-note {
   margin: 14px 0 0;
-  color: #76839d;
+  color: var(--ant-color-text-secondary);
 }
 
 .store-code-modal .ant-modal-content {
@@ -314,6 +326,18 @@ body.theme-black-mode .content-card {
   border: 1px solid var(--pc-dark-border);
 }
 
+body.theme-black-mode .store-page {
+  --store-accent: #4f9dff;
+  --store-accent-hover: #74b6ff;
+  --store-btn-ghost-bg: var(--pc-dark-bg-elevated);
+  --store-batch-border: var(--pc-dark-border);
+  --store-batch-bg: rgba(79, 157, 255, 0.12);
+  --store-batch-text: var(--pc-dark-text-secondary);
+  --store-btn-disabled-text: rgba(255, 255, 255, 0.45);
+  --store-btn-disabled-border: rgba(255, 255, 255, 0.14);
+  --store-btn-disabled-bg: rgba(255, 255, 255, 0.08);
+}
+
 body.theme-black-mode .store-title-card .title,
 body.theme-black-mode .overview-card .overview-title,
 body.theme-black-mode .overview-card .overview-value,
@@ -337,7 +361,7 @@ body.theme-black-mode .toolbar .record-link,
 body.theme-black-mode .action-links-inline a,
 body.theme-black-mode .store-qr-trigger,
 body.theme-black-mode .batch-bar .selected-count-number {
-  color: #4f9dff !important;
+  color: var(--store-accent) !important;
 }
 
 body.theme-black-mode .filter-grid {
@@ -345,8 +369,8 @@ body.theme-black-mode .filter-grid {
 }
 
 body.theme-black-mode .batch-bar {
-  background: rgba(79, 157, 255, 0.12);
-  border-color: var(--pc-dark-border);
+  background: var(--store-batch-bg);
+  border-color: var(--store-batch-border);
 }
 
 body.theme-black-mode .status-dot {

@@ -18,9 +18,9 @@ function CommonChip({
   isDarkMode?: boolean;
   onRemove: (id: string) => void;
 }) {
-  const chipBg = isDarkMode ? '#262626' : '#F4F6F8';
-  const chipTextColor = isDarkMode ? 'rgba(255, 255, 255, 0.88)' : '#333';
-  const chipCloseBg = isDarkMode ? '#595959' : '#C0C4CC';
+  const chipBg = isDarkMode ? 'var(--ant-color-fill-secondary)' : '#FFFFFF';
+  const chipTextColor = 'var(--ant-color-text)';
+  const chipCloseBg = isDarkMode ? 'rgba(255, 255, 255, 0.26)' : '#C0C4CC';
   const {
     attributes,
     listeners,

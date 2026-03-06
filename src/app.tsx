@@ -1,6 +1,7 @@
 import {
   DownOutlined,
   MoonOutlined,
+  ReloadOutlined,
   SmileOutlined,
   SunOutlined,
 } from '@ant-design/icons';
@@ -48,7 +49,9 @@ import logoDark from '@/assets/logo-dark.png';
 import DashboardHomeSplitMenu from '@/components/Layout/DashboardHomeSplitMenu';
 import HeaderScrollWatcher from '@/components/Layout/HeaderScrollWatcher';
 import OtherMenusSplitMenu from '@/components/Layout/OtherMenusSplitMenu';
-import RouteTabsKeepAlive from '@/components/Layout/RouteTabsKeepAlive';
+import RouteTabsKeepAlive, {
+  ROUTE_TAB_REFRESH_EVENT,
+} from '@/components/Layout/RouteTabsKeepAlive';
 import WorkplaceCommonMenu from '@/components/Workplace/WorkplaceCommonMenu';
 import { IFRAME_PATHS } from '@/config/iframe.config';
 import {
@@ -530,11 +533,22 @@ export const layout: RunTimeLayoutConfig = ({
       const checked = (initialState?.settings as any)?.navTheme === 'realDark';
 
       return [
+        <Tooltip key="refresh" title="刷新当前页">
+          <Button
+            type="text"
+            shape="circle"
+            className="pc-admin-header-circle-action"
+            icon={<ReloadOutlined />}
+            onClick={() => {
+              window.dispatchEvent(new Event(ROUTE_TAB_REFRESH_EVENT));
+            }}
+          />
+        </Tooltip>,
         <Tooltip key="theme" title={checked ? '切换亮色模式' : '切换暗黑模式'}>
           <Switch
             checked={checked}
             className="theme-switch"
-            style={{ minWidth: 52, borderRadius: 999, marginRight: 20 }}
+            style={{ marginRight: 20, borderRadius: 999 }}
             checkedChildren={
               <span
                 style={{
@@ -758,8 +772,26 @@ export const layout: RunTimeLayoutConfig = ({
           }
         };
 
+        const handleOpenProfileCenter = () => {
+          history.push('/dashboard/settings');
+        };
+
+        const handleSwitchStore = () => {
+          history.push('/user/character');
+        };
+
         // 下拉菜单配置
-        const menuItems: MenuProps['items'] = [
+        const userMenuItems: MenuProps['items'] = [
+          {
+            key: 'profile-center',
+            label: '个人中心',
+            onClick: handleOpenProfileCenter,
+          },
+          {
+            key: 'switch-store',
+            label: '切换门店',
+            onClick: handleSwitchStore,
+          },
           {
             key: 'logout',
             label: '退出登录',
@@ -769,7 +801,7 @@ export const layout: RunTimeLayoutConfig = ({
 
         return (
           <Dropdown
-            menu={{ items: menuItems }}
+            menu={{ items: userMenuItems }}
             placement="bottomRight"
             trigger={['hover']}
           >
@@ -792,15 +824,6 @@ export const layout: RunTimeLayoutConfig = ({
                 (e.currentTarget as HTMLSpanElement).style.backgroundColor =
                   'transparent';
               }}
-              onMouseDown={(e) => {
-                (e.currentTarget as HTMLSpanElement).style.backgroundColor =
-                  'rgba(0, 0, 0, 0.08)';
-              }}
-              onMouseUp={(e) => {
-                (e.currentTarget as HTMLSpanElement).style.backgroundColor =
-                  'rgba(0, 0, 0, 0.04)';
-              }}
-              onClick={() => history.push('/dashboard/settings')}
             >
               {avatarChildren}
             </span>

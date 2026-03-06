@@ -38,6 +38,8 @@ type CacheEntry = {
   routeContext: any;
 };
 
+export const ROUTE_TAB_REFRESH_EVENT = 'pc-admin-refresh-current-tab';
+
 const EXCLUDED_PREFIXES = ['/user', '/micro-app', '/admin'];
 const FIXED_TAB_PATH = '/dashboard/index';
 const TAGGABLE_ROOTS = ['/dashboard', '/form'];
@@ -385,7 +387,7 @@ const RouteTabsKeepAlive: React.FC<{
     height: 28,
     maxWidth: 'fit-content',
     padding: '0 8px 0 10px',
-    borderRadius: 7,
+    borderRadius: 16,
     cursor: 'pointer',
     transition: 'all .2s ease',
     fontSize: 13,
@@ -590,11 +592,6 @@ const RouteTabsKeepAlive: React.FC<{
   const tabActionItems = React.useMemo<MenuProps['items']>(
     () => [
       {
-        key: 'refresh',
-        label: '刷新当前',
-        icon: <ReloadOutlined />,
-      },
-      {
         key: 'close-current',
         label: '关闭当前',
         disabled: !canCloseCurrentTab,
@@ -618,9 +615,6 @@ const RouteTabsKeepAlive: React.FC<{
   >(
     ({ key }) => {
       switch (key) {
-        case 'refresh':
-          handleRefreshCurrentTab();
-          break;
         case 'close-current':
           handleCloseCurrentTab();
           break;
@@ -634,13 +628,21 @@ const RouteTabsKeepAlive: React.FC<{
           break;
       }
     },
-    [
-      handleCloseAllTabs,
-      handleCloseCurrentTab,
-      handleCloseOtherTabs,
-      handleRefreshCurrentTab,
-    ],
+    [handleCloseAllTabs, handleCloseCurrentTab, handleCloseOtherTabs],
   );
+
+  React.useEffect(() => {
+    const handleExternalRefresh = () => {
+      handleRefreshCurrentTab();
+    };
+    window.addEventListener(ROUTE_TAB_REFRESH_EVENT, handleExternalRefresh);
+    return () => {
+      window.removeEventListener(
+        ROUTE_TAB_REFRESH_EVENT,
+        handleExternalRefresh,
+      );
+    };
+  }, [handleRefreshCurrentTab]);
 
   React.useEffect(() => {
     const el = scrollRef.current;
@@ -798,7 +800,8 @@ const RouteTabsKeepAlive: React.FC<{
         >
           <Button
             type="text"
-            className="pc-admin-route-tabs-more"
+            shape="circle"
+            className="pc-admin-route-tabs-more pc-admin-header-circle-action"
             icon={<AppstoreOutlined />}
             aria-label="综合操作"
           />

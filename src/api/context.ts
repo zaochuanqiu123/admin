@@ -1,10 +1,21 @@
-import { apiData } from '@/api/http';
+import { apiData, apiRequest } from '@/api/http';
 
 export async function getUserLoginContext(
   orgCode: string,
   options?: { [key: string]: any },
 ) {
   return apiData<any>('/api/system/getUserLoginContext', {
+    method: 'GET',
+    params: { orgCode },
+    ...(options || {}),
+  });
+}
+
+export async function getUserLoginContextResponse(
+  orgCode: string,
+  options?: { [key: string]: any },
+) {
+  return apiRequest<any>('/api/system/getUserLoginContext', {
     method: 'GET',
     params: { orgCode },
     ...(options || {}),

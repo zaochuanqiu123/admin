@@ -196,19 +196,9 @@ const NoticeBell: React.FC = () => {
       <Button
         type="text"
         shape="circle"
+        className="pc-admin-header-circle-action"
         icon={<BellOutlined />}
         onClick={() => setOpen(true)}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          border: `1px solid ${bellBorderColor}`,
-          background: bellBg,
-          color: bellColor,
-          width: '32px',
-          height: '32px',
-          borderRadius: '50%',
-        }}
       />
       <Drawer
         open={open}

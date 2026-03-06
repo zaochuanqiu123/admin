@@ -197,9 +197,10 @@ export default defineConfig({
     appConfig: {},
     configProvider: {
       theme: {
-        cssVar: true,
+        cssVar: {
+          key: 'suifida-admin',
+        },
         token: {
-          colorBgLayout: '#5F3237',
           fontFamily: 'AlibabaSans, sans-serif',
         },
       },

@@ -68,11 +68,12 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
   const [activeSubGroupId, setActiveSubGroupId] = React.useState<string>(
     COMMON_GROUPS[0]?.children?.[0]?.id ?? '',
   );
-  const isDarkMode = token.colorBgBase === '#000';
-  const drawerSurfaceBg = token.colorBgLayout;
-  const drawerPanelBg = token.colorBgContainer;
-  const drawerPanelMutedBg = token.colorBgElevated;
-  const drawerBorderColor = token.colorBorderSecondary;
+  const isDarkMode = (initialState?.settings as any)?.navTheme === 'realDark';
+  const drawerSurfaceBg = isDarkMode ? token.colorBgLayout : '#E7EDFB';
+  const drawerPanelBg = isDarkMode ? token.colorBgContainer : '#FFFFFF';
+  const drawerPanelMutedBg = isDarkMode ? token.colorBgElevated : '#F3F6FC';
+  const drawerNestedPanelBg = isDarkMode ? token.colorBgElevated : '#E7EDFB';
+  const drawerBorderColor = isDarkMode ? token.colorBorderSecondary : '#D6DEEA';
   const drawerTextPrimary = token.colorText;
   const drawerTextSecondary = token.colorTextSecondary;
   const drawerTextTertiary = token.colorTextDescription;
@@ -474,14 +475,22 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                 display: 'flex',
                 marginTop: 12,
                 padding: '0 24px',
+                background: 'transparent',
               }}
             >
-              <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: 0,
+                  display: 'flex',
+                  background: 'transparent',
+                }}
+              >
                 {/* 左侧：Level 1 一级菜单 (可拖拽) */}
                 <div
                   style={{
                     width: 170,
-                    background: drawerPanelMutedBg,
+                    background: 'transparent',
                     overflowY: 'auto',
                     padding: 0,
                     margin: 0,
@@ -511,8 +520,8 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                 <div
                   style={{
                     width: 202,
-                    background: drawerPanelBg,
-                    borderRadius: 16,
+                    background: drawerNestedPanelBg,
+                    borderRadius: 0,
                     overflowY: 'auto',
                     padding: 0,
                     marginLeft: 8,
@@ -547,8 +556,8 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
                     width: 210,
                     overflowY: 'auto',
                     padding: '12px 24px 12px 32px',
-                    background: drawerPanelBg,
-                    borderRadius: 16,
+                    background: drawerNestedPanelBg,
+                    borderRadius: 0,
                   }}
                 >
                   <div

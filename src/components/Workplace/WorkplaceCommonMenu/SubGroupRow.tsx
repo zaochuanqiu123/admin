@@ -17,10 +17,11 @@ function SubGroupRow({
 }) {
   const [hovering, setHovering] = React.useState(false);
   const high = active || hovering;
-  const defaultTextColor = isDarkMode ? 'rgba(255, 255, 255, 0.88)' : '#333';
+  const activeColor = 'var(--ant-color-primary)';
+  const defaultTextColor = 'var(--ant-color-text)';
   const defaultSecondaryColor = isDarkMode
-    ? 'rgba(255, 255, 255, 0.55)'
-    : '#999';
+    ? 'rgba(255, 255, 255, 0.72)'
+    : 'var(--ant-color-text-secondary)';
   return (
     <button
       type="button"
@@ -37,7 +38,7 @@ function SubGroupRow({
         cursor: 'pointer',
         userSelect: 'none',
         fontSize: 14,
-        color: high ? '#005BF8' : defaultTextColor,
+        color: high ? activeColor : defaultTextColor,
         background: 'transparent',
         border: 0,
         outline: 'none',
@@ -60,7 +61,7 @@ function SubGroupRow({
       </span>
       <RightOutlined
         style={{
-          color: high ? '#005BF8' : defaultSecondaryColor,
+          color: high ? activeColor : defaultSecondaryColor,
           fontSize: 12,
           marginLeft: 8,
         }}

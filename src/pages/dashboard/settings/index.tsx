@@ -77,7 +77,6 @@ const Settings: React.FC = () => {
   return (
     <GridContent
       style={{
-        padding: 16,
         height: 'calc(100vh - 60px)',
         overflow: 'hidden',
       }}

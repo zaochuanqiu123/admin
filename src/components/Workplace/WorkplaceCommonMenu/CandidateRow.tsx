@@ -18,8 +18,11 @@ function CandidateRow({
   onAdd: () => void;
 }) {
   const [hovering, setHovering] = React.useState(false);
-  const defaultTextColor = isDarkMode ? 'rgba(255, 255, 255, 0.88)' : '#333';
-  const disabledTextColor = isDarkMode ? 'rgba(255, 255, 255, 0.35)' : '#ccc';
+  const activeColor = 'var(--ant-color-primary)';
+  const defaultTextColor = 'var(--ant-color-text)';
+  const disabledTextColor = isDarkMode
+    ? 'rgba(255, 255, 255, 0.5)'
+    : 'var(--ant-color-text-tertiary)';
 
   const style: React.CSSProperties = {
     display: 'flex',
@@ -32,7 +35,7 @@ function CandidateRow({
     fontSize: 14,
     color:
       hovering && !disabled
-        ? '#005BF8'
+        ? activeColor
         : disabled
           ? disabledTextColor
           : defaultTextColor,
@@ -64,11 +67,7 @@ function CandidateRow({
         <PlusCircleOutlined
           style={{
             fontSize: 12,
-            color: disabled
-              ? disabledTextColor
-              : hovering
-                ? '#005BF8'
-                : 'var(--ant-color-primary)',
+            color: disabled ? disabledTextColor : activeColor,
           }}
         />
       </button>

@@ -15,7 +15,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   getPermContext,
   getRoleVOList,
-  getUserLoginContext,
+  getUserLoginContextResponse,
 } from '@/api/context';
 import {
   getLoginOrgList,
@@ -68,6 +68,13 @@ function getAnyArray(o: any, keys: string[]): any[] {
     if (Array.isArray(v)) return v;
   }
   return [];
+}
+
+function unwrapApiData<T = any>(res: any): T {
+  if (res && typeof res === 'object' && 'data' in res) {
+    return res.data as T;
+  }
+  return res as T;
 }
 
 function flattenOrgList(list: any[]): any[] {
@@ -231,13 +238,24 @@ const Character: FC = () => {
     if (orgCode) {
       setSelectedOrgCode(orgCode);
       try {
-        // 1. 先调用 getUserLoginContext 获取登录上下文
-        const loginContext = await getUserLoginContext(orgCode, {
+        // 1. 先调用 getUserLoginContext 获取登录上下文与后端提示
+        const loginContextRes = await getUserLoginContextResponse(orgCode, {
           skipErrorHandler: true,
         });
+        const loginContext = unwrapApiData<any>(loginContextRes);
 
         // 2. 从 loginContext 中提取 businessList 和默认 businessCode
         const businessList = loginContext?.businessList || [];
+        if (businessList.length === 0) {
+          const backendMessage =
+            loginContextRes?.msg ||
+            loginContextRes?.message ||
+            loginContext?.msg ||
+            loginContext?.message ||
+            '当前门店暂无可用业态';
+          message.warning(String(backendMessage));
+          return;
+        }
         const defaultBusiness = businessList[0];
         const businessCode =
           defaultBusiness?.businessCode || TEMP_BUSINESS_CODE;
@@ -297,7 +315,13 @@ const Character: FC = () => {
           return;
         }
         console.error('getUserLoginContext or getPermContext failed:', error);
-        message.error('获取用户信息失败，请稍后重试');
+        const backendMessage =
+          (error as any)?.info?.errorMessage ||
+          (error as any)?.response?.data?.msg ||
+          (error as any)?.response?.data?.message ||
+          (error as any)?.message ||
+          '获取用户信息失败，请稍后重试';
+        message.error(String(backendMessage));
         setInitialState((s: any) => ({
           ...(s || {}),
           currentOrgCode: orgCode,
