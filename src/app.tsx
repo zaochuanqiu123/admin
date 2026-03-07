@@ -62,6 +62,7 @@ import {
 import { buildIframeRouteWithParams, isIframeRoutePath } from '@/utils/iframe';
 import {
   extractPermContextNodes,
+  findFirstLeafMenuTarget,
   getValidBusinessCode,
   mapPermContextToMenuData,
   TEMP_BUSINESS_CODE,
@@ -182,9 +183,30 @@ function normalizePathname(pathname: string | undefined): string {
   return value.endsWith('/') ? value.slice(0, -1) : value;
 }
 
+function getTargetIdFromSearch(search: string | undefined): string | undefined {
+  const rawSearch = String(search || '');
+  if (!rawSearch) return undefined;
+  const value = new URLSearchParams(
+    rawSearch.startsWith('?') ? rawSearch.slice(1) : rawSearch,
+  ).get('targetId');
+  if (!value) return undefined;
+  const normalized = value.trim();
+  return normalized || undefined;
+}
+
 function isDashboardRoute(pathname: string): boolean {
   const normalized = normalizePathname(pathname);
   return normalized === '/dashboard' || normalized.startsWith('/dashboard/');
+}
+
+function isWorkplaceMenuItem(item: MenuDataItem | undefined): boolean {
+  const normalizedPath = normalizePathname(
+    item?.path ? String(item.path) : undefined,
+  );
+  if (normalizedPath === '/dashboard') return true;
+
+  const menuName = typeof item?.name === 'string' ? item.name.trim() : '';
+  return menuName === '工作台';
 }
 
 class DashboardHomeMenuBoundary extends Component<
@@ -400,10 +422,22 @@ export const layout: RunTimeLayoutConfig = ({
         <div
           style={{ cursor: 'pointer', width: '100%', height: '100%' }}
           onClickCapture={() => {
-            navigateMenu(
-              item.path ? String(item.path) : undefined,
-              (item as any)?.targetId,
-            );
+            const clickedItem = item as MenuDataItem & { targetId?: string };
+            const fallbackPath = clickedItem?.path
+              ? String(clickedItem.path)
+              : undefined;
+            const rawTargetId = clickedItem?.targetId;
+            const fallbackTargetId =
+              rawTargetId === undefined || rawTargetId === null
+                ? undefined
+                : String(rawTargetId);
+            const nextTarget = isWorkplaceMenuItem(clickedItem)
+              ? { path: fallbackPath, targetId: fallbackTargetId }
+              : findFirstLeafMenuTarget(clickedItem, fallbackPath);
+
+            if (!nextTarget?.path) return;
+
+            navigateMenu(nextTarget.path, nextTarget.targetId);
           }}
         >
           {dom}
@@ -610,6 +644,7 @@ export const layout: RunTimeLayoutConfig = ({
     ) => {
       const pathname =
         menuProps?.location?.pathname ?? history.location.pathname;
+      const currentTargetId = getTargetIdFromSearch(history.location.search);
       const isInDashboard = isDashboardRoute(pathname);
       const topMenus = cachedTopMenus.length > 0 ? cachedTopMenus : [];
       const useSplitMenu = topMenus.length > 0;
@@ -623,6 +658,7 @@ export const layout: RunTimeLayoutConfig = ({
                   <OtherMenusSplitMenu
                     topMenus={topMenus}
                     pathname={pathname}
+                    currentTargetId={currentTargetId}
                     onNavigate={navigateMenu}
                   />
                 </DashboardHomeMenuBoundary>
@@ -658,6 +694,7 @@ export const layout: RunTimeLayoutConfig = ({
                   <DashboardHomeSplitMenu
                     topMenus={topMenus}
                     pathname={pathname}
+                    currentTargetId={currentTargetId}
                     onNavigate={navigateMenu}
                   />
                 </DashboardHomeMenuBoundary>

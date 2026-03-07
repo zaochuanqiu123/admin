@@ -16,6 +16,7 @@ import {
   useOutlet,
 } from 'react-router-dom';
 import { ROUTE_TABS_STORAGE_KEY } from '@/api/storage';
+import { isIframeRoutePath } from '@/utils/iframe';
 import routes from '../../../config/routes';
 
 type RouteTabItem = {
@@ -40,9 +41,8 @@ type CacheEntry = {
 
 export const ROUTE_TAB_REFRESH_EVENT = 'pc-admin-refresh-current-tab';
 
-const EXCLUDED_PREFIXES = ['/user', '/micro-app', '/admin'];
+const EXCLUDED_PREFIXES = ['/user', '/micro-app'];
 const FIXED_TAB_PATH = '/dashboard/index';
-const TAGGABLE_ROOTS = ['/dashboard', '/form'];
 
 function normalizePath(pathname: string): string {
   const pathOnly =
@@ -83,6 +83,10 @@ function getModuleRoot(pathname: string): string {
 function isTaggableRoot(pathname: string): boolean {
   const root = getModuleRoot(pathname);
   return TAGGABLE_ROOTS.includes(root);
+}
+
+function isConcreteRoot(root: string): boolean {
+  return !!root && root !== '/' && !root.includes('*') && !root.includes(':');
 }
 
 function escapeRegex(text: string): string {
@@ -167,6 +171,14 @@ function flattenRoutes(routeItems: any[], result: FlatRouteItem[] = []) {
 
 const FLAT_ROUTES = flattenRoutes(routes as any[]);
 
+const TAGGABLE_ROOTS = Array.from(
+  new Set(
+    FLAT_ROUTES.map((item) => getModuleRoot(item.path)).filter(
+      (root) => isConcreteRoot(root) && !EXCLUDED_PREFIXES.includes(root),
+    ),
+  ),
+);
+
 const DEFAULT_REDIRECT_BY_PATH = new Map(
   FLAT_ROUTES.filter((item) => !!item.defaultRedirect).map((item) => [
     normalizePath(item.path),
@@ -211,6 +223,11 @@ function createFixedTab(): RouteTabItem {
 function isPersistableTabPath(pathname: string): boolean {
   const normalized = normalizePath(pathname);
   return isTaggableRoot(normalized) && !isExcludedPath(normalized);
+}
+
+function canCacheTabPath(pathname: string): boolean {
+  const normalized = normalizePath(pathname);
+  return isPersistableTabPath(normalized) && !isIframeRoutePath(normalized);
 }
 
 function sanitizeStoredTabs(raw: unknown): RouteTabItem[] {
@@ -340,7 +357,9 @@ const RouteTabsKeepAlive: React.FC<{
     !isExcludedPath(rawPathname) &&
     !isExcludedPath(pathname);
   const canUseCacheForCurrentRoute =
-    isTaggablePage && !isPathMappedFromRedirect;
+    canCacheTabPath(rawPathname) &&
+    canCacheTabPath(pathname) &&
+    !isPathMappedFromRedirect;
   const suppressCurrentAutoAdd = suppressedPathRef.current === pathname;
 
   const renderedTabs = React.useMemo(() => {

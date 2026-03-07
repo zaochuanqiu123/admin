@@ -34,7 +34,10 @@ const ROUTE_NAME_TO_PATH_MAP = buildRouteNamePathMap(routes as any[]);
 
 function pickTargetId(node: any): string | undefined {
   const raw =
-    node?.pathUrl ?? node?.targetId ?? node?.targetID ?? node?.target_id;
+    node?.tempPathUrlChain ??
+    node?.targetId ??
+    node?.targetID ??
+    node?.target_id;
   if (raw === undefined || raw === null) return undefined;
   const value = String(raw).trim();
   return value || undefined;
@@ -96,13 +99,14 @@ export function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
   const visit = (
     node: any,
     index: number,
+    inheritedPath?: string,
   ): (MenuDataItem & { targetId?: string; sort?: number }) | null => {
     if (node?.permType === 3) {
       return null;
     }
 
     const name = getNodeName(node, index);
-    const path = pickPath(node, name);
+    const path = pickPath(node, name) || inheritedPath;
 
     const childrenSource =
       (Array.isArray(node?.children) && node.children) ||
@@ -111,7 +115,7 @@ export function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
       [];
 
     const children = (childrenSource as any[])
-      .map((child, childIndex) => visit(child, childIndex))
+      .map((child, childIndex) => visit(child, childIndex, path))
       .filter(
         (item): item is MenuDataItem & { targetId?: string; sort?: number } =>
           item !== null,
@@ -235,4 +239,53 @@ export function findPathByTargetId(
 
   const matchPath = match?.path ? String(match.path) : '';
   return matchPath.startsWith('/') ? matchPath : undefined;
+}
+
+type MenuTarget = {
+  path?: string;
+  targetId?: string;
+};
+
+type MenuNodeWithTarget = MenuDataItem & { targetId?: string };
+
+function getMenuChildren(node: MenuDataItem | undefined): MenuNodeWithTarget[] {
+  if (!node || !Array.isArray(node.children) || node.children.length === 0) {
+    return [];
+  }
+  return node.children as MenuNodeWithTarget[];
+}
+
+function getMenuNodePath(node: MenuDataItem | undefined): string | undefined {
+  const pathValue = node?.path ? String(node.path).trim() : '';
+  return pathValue.startsWith('/') ? pathValue : undefined;
+}
+
+function getMenuNodeTargetId(
+  node: MenuDataItem | undefined,
+): string | undefined {
+  const rawTargetId = (node as any)?.targetId;
+  if (rawTargetId === undefined || rawTargetId === null) return undefined;
+  const value = String(rawTargetId);
+  return value || undefined;
+}
+
+export function findFirstLeafMenuTarget(
+  node: MenuDataItem | undefined,
+  inheritedPath?: string,
+): MenuTarget | undefined {
+  if (!node) return undefined;
+  const currentPath = getMenuNodePath(node) || inheritedPath;
+
+  const children = getMenuChildren(node);
+  if (children.length === 0) {
+    if (!currentPath) return undefined;
+    return { path: currentPath, targetId: getMenuNodeTargetId(node) };
+  }
+
+  for (const child of children) {
+    const leafTarget = findFirstLeafMenuTarget(child, currentPath);
+    if (leafTarget?.path) return leafTarget;
+  }
+
+  return undefined;
 }

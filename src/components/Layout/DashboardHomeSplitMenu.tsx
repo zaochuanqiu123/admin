@@ -18,6 +18,7 @@ import React from 'react';
 type DashboardHomeSplitMenuProps = {
   topMenus?: MenuDataItem[];
   pathname: string;
+  currentTargetId?: string;
   onNavigate: (path?: string, targetId?: string) => void;
 };
 
@@ -124,25 +125,41 @@ function hasPathInTree(node: MenuNode, pathname: string): boolean {
   return false;
 }
 
-function findFirstNavigableNode(
-  node: MenuNode | undefined,
-): { path?: string; targetId?: string } | undefined {
-  if (!node) return undefined;
+function hasTargetIdInTree(node: MenuNode, targetId: string): boolean {
   const stack: MenuNode[] = [node];
   const visited = new Set<string>();
   while (stack.length > 0) {
-    const current = stack.shift() as MenuNode;
+    const current = stack.pop() as MenuNode;
     if (visited.has(current.key)) continue;
     visited.add(current.key);
-    if (current.path) {
-      return { path: current.path, targetId: current.targetId };
-    }
+    if (current.targetId && current.targetId === targetId) return true;
     if (current.children && current.children.length > 0) {
       for (const child of current.children) {
         stack.push(child);
       }
     }
   }
+  return false;
+}
+
+function findFirstLeafNavigableNode(
+  node: MenuNode | undefined,
+  inheritedPath?: string,
+): { path?: string; targetId?: string } | undefined {
+  if (!node) return undefined;
+  const currentPath = node.path || inheritedPath;
+
+  const children = node.children || [];
+  if (children.length === 0) {
+    if (!currentPath) return undefined;
+    return { path: currentPath, targetId: node.targetId };
+  }
+
+  for (const child of children) {
+    const leafTarget = findFirstLeafNavigableNode(child, currentPath);
+    if (leafTarget?.path) return leafTarget;
+  }
+
   return undefined;
 }
 
@@ -165,6 +182,7 @@ function collectParentKeys(
 const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
   topMenus,
   pathname,
+  currentTargetId,
   onNavigate,
 }) => {
   const topNodes = React.useMemo(
@@ -179,6 +197,17 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
       if (activeTopKey) setActiveTopKey('');
       return;
     }
+    if (currentTargetId) {
+      const matchedByTarget = topNodes.find((node) =>
+        hasTargetIdInTree(node, currentTargetId),
+      );
+      if (matchedByTarget) {
+        if (matchedByTarget.key !== activeTopKey) {
+          setActiveTopKey(matchedByTarget.key);
+        }
+        return;
+      }
+    }
     const matched = topNodes.find((node) => hasPathInTree(node, pathname));
     if (matched) {
       if (matched.key !== activeTopKey) {
@@ -189,7 +218,7 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
     if (!topNodes.some((node) => node.key === activeTopKey)) {
       setActiveTopKey(topNodes[0].key);
     }
-  }, [activeTopKey, pathname, topNodes]);
+  }, [activeTopKey, currentTargetId, pathname, topNodes]);
 
   const activeTopNode = React.useMemo(() => {
     if (topNodes.length === 0) return undefined;
@@ -206,15 +235,19 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
     const toMenuItem = (
       node: MenuNode,
       parentKey?: string,
+      inheritedPath?: string,
     ): NonNullable<MenuProps['items']>[number] => {
       parentByKey.set(node.key, parentKey);
-      if (node.path) {
-        pathByKey.set(node.key, node.path);
-        targetIdByKey.set(node.key, node.targetId);
+      const resolvedPath = node.path || inheritedPath;
+      if (resolvedPath) {
+        pathByKey.set(node.key, resolvedPath);
       }
+      targetIdByKey.set(node.key, node.targetId);
       const children =
         node.children && node.children.length > 0
-          ? node.children.map((child) => toMenuItem(child, node.key))
+          ? node.children.map((child) =>
+              toMenuItem(child, node.key, resolvedPath),
+            )
           : undefined;
       if (children && children.length > 0) {
         submenuKeys.push(node.key);
@@ -241,6 +274,17 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
   }, [activeTopNode]);
 
   const selectedKeys = React.useMemo(() => {
+    if (currentTargetId) {
+      let matchedByTargetKey = '';
+      menuMeta.targetIdByKey.forEach((nodeTargetId, key) => {
+        if (!nodeTargetId || nodeTargetId !== currentTargetId) return;
+        if (key.length > matchedByTargetKey.length) {
+          matchedByTargetKey = key;
+        }
+      });
+      if (matchedByTargetKey) return [matchedByTargetKey];
+    }
+
     let matchedKey = '';
     let matchedLength = -1;
     menuMeta.pathByKey.forEach((itemPath, key) => {
@@ -251,7 +295,7 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
       matchedKey = key;
     });
     return matchedKey ? [matchedKey] : [];
-  }, [menuMeta.pathByKey, pathname]);
+  }, [currentTargetId, menuMeta.pathByKey, menuMeta.targetIdByKey, pathname]);
 
   React.useEffect(() => {
     if (menuMeta.submenuKeys.length === 0) {
@@ -269,7 +313,11 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
   const handleTopClick = React.useCallback(
     (node: MenuNode) => {
       setActiveTopKey(node.key);
-      const defaultTarget = findFirstNavigableNode(node);
+      if (normalizePath(node.path) === '/dashboard' && node.path) {
+        onNavigate(node.path, node.targetId);
+        return;
+      }
+      const defaultTarget = findFirstLeafNavigableNode(node, node.path);
       if (!defaultTarget?.path) return;
       onNavigate(defaultTarget.path, defaultTarget.targetId);
     },
