@@ -205,10 +205,12 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 }
 
 .dashboard-home-split-menu {
+  position: relative;
   height: 100%;
   display: flex;
   align-items: stretch;
   gap: 8px;
+  overflow: visible;
 }
 
 .dashboard-sider-menu-content.dashboard-sider-menu-content-split .dashboard-home-split-menu {
@@ -219,16 +221,27 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
   height: 100%;
 }
 
-.dashboard-home-split-menu-icons {
-  width: 56px;
+.dashboard-home-split-menu-hover-wrap {
+  position: relative;
+  z-index: 3;
   flex: 0 0 56px;
+  width: 56px;
+  height: 100%;
+  align-self: stretch;
+  overflow: visible;
+}
+
+.dashboard-home-split-menu-icons {
+  width: 100%;
+  flex: none;
+  height: 100%;
   padding: 0 6px;
   border-radius: 10px;
   background: var(--ant-color-bg-container);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 0;
   margin-top: 10px;
   overflow-y: auto;
   overflow-x: hidden;
@@ -244,7 +257,8 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 
 .dashboard-home-split-menu-icon-btn {
   width: 100%;
-  min-height: 40px;
+  height: 45px;
+  min-height: 45px;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -255,7 +269,7 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
   align-items: center;
   justify-content: center;
   gap: 0;
-  padding: 10px 0;
+  padding: 0;
   transition:
     color 0.2s ease,
     border-color 0.2s ease,
@@ -263,7 +277,7 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 }
 
 .dashboard-home-split-menu-icons > .dashboard-home-split-menu-icon-btn:first-of-type {
-  margin-top: 10px !important;
+  margin-top: 0 !important;
 }
 
 .dashboard-home-split-menu-icon-btn:hover {
@@ -285,6 +299,68 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 
 .dashboard-home-split-menu-icon-label {
   display: none;
+}
+
+.dashboard-home-split-menu-hover-panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(100% - 2px);
+  width: 168px;
+  padding: 0;
+  border-radius: 0 16px 16px 0;
+  background: var(--ant-color-bg-container);
+  box-shadow: none;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-8px);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.dashboard-home-split-menu-hover-panel-open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.dashboard-home-split-menu-hover-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 100%;
+  padding: 10px 10px 0;
+}
+
+.dashboard-home-split-menu-hover-panel-list
+  > .dashboard-home-split-menu-hover-panel-item:first-child {
+  margin-top: 0;
+}
+
+.dashboard-home-split-menu-hover-panel-item {
+  width: 100%;
+  height: 45px;
+  min-height: 45px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.72);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.dashboard-home-split-menu-hover-panel-item:hover,
+.dashboard-home-split-menu-hover-panel-item-active {
+  color: var(--ant-color-primary);
+  background: rgba(22, 119, 255, 0.08);
 }
 
 .dashboard-home-split-menu-tree {

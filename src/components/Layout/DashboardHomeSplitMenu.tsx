@@ -190,7 +190,10 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
     [topMenus],
   );
   const [activeTopKey, setActiveTopKey] = React.useState<string>('');
+  const [hoveredTopKey, setHoveredTopKey] = React.useState<string>('');
+  const [hoverPanelOpen, setHoverPanelOpen] = React.useState(false);
   const [openKeys, setOpenKeys] = React.useState<string[]>([]);
+  const closeTimerRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {
     if (topNodes.length === 0) {
@@ -224,6 +227,7 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
     if (topNodes.length === 0) return undefined;
     return topNodes.find((node) => node.key === activeTopKey) || topNodes[0];
   }, [activeTopKey, topNodes]);
+  const displayTopKey = hoveredTopKey || activeTopNode?.key || '';
 
   const menuMeta = React.useMemo(() => {
     const pathByKey = new Map<string, string>();
@@ -334,34 +338,120 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
     [menuMeta.pathByKey, menuMeta.targetIdByKey, onNavigate],
   );
 
+  const clearCloseTimer = React.useCallback(() => {
+    if (closeTimerRef.current === null) return;
+    window.clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = null;
+  }, []);
+
+  const openHoverPanel = React.useCallback(
+    (topKey?: string) => {
+      clearCloseTimer();
+      if (topKey) {
+        setHoveredTopKey(topKey);
+      }
+      setHoverPanelOpen(true);
+    },
+    [clearCloseTimer],
+  );
+
+  const scheduleCloseHoverPanel = React.useCallback(() => {
+    clearCloseTimer();
+    closeTimerRef.current = window.setTimeout(() => {
+      setHoverPanelOpen(false);
+      setHoveredTopKey('');
+      closeTimerRef.current = null;
+    }, 120);
+  }, [clearCloseTimer]);
+
+  React.useEffect(() => {
+    return () => {
+      clearCloseTimer();
+    };
+  }, [clearCloseTimer]);
+
   if (!activeTopNode) {
     return <div className="dashboard-home-split-menu-empty" />;
   }
 
   return (
     <div className="dashboard-home-split-menu">
-      <div className="dashboard-home-split-menu-icons">
-        {topNodes.map((node, index) => {
-          const active = node.key === activeTopNode.key;
-          const icon = FIRST_LEVEL_ICONS[index % FIRST_LEVEL_ICONS.length];
-          return (
-            <button
-              key={node.key}
-              type="button"
-              className={
-                'dashboard-home-split-menu-icon-btn' +
-                (active ? ' dashboard-home-split-menu-icon-btn-active' : '')
-              }
-              aria-label={node.name}
-              onClick={() => handleTopClick(node)}
-            >
-              <span className="dashboard-home-split-menu-icon">{icon}</span>
-              <span className="dashboard-home-split-menu-icon-label">
-                {node.name}
-              </span>
-            </button>
-          );
-        })}
+      <div
+        className="dashboard-home-split-menu-hover-wrap"
+        onMouseEnter={() => openHoverPanel()}
+        onMouseLeave={scheduleCloseHoverPanel}
+      >
+        <div className="dashboard-home-split-menu-icons">
+          {topNodes.map((node, index) => {
+            const active = node.key === displayTopKey;
+            const icon = FIRST_LEVEL_ICONS[index % FIRST_LEVEL_ICONS.length];
+            return (
+              <button
+                key={node.key}
+                type="button"
+                className={
+                  'dashboard-home-split-menu-icon-btn' +
+                  (active ? ' dashboard-home-split-menu-icon-btn-active' : '')
+                }
+                aria-label={node.name}
+                onMouseEnter={() => openHoverPanel(node.key)}
+                onFocus={() => openHoverPanel(node.key)}
+                onClick={() => {
+                  setHoverPanelOpen(false);
+                  setHoveredTopKey('');
+                  handleTopClick(node);
+                }}
+              >
+                <span className="dashboard-home-split-menu-icon">{icon}</span>
+                <span className="dashboard-home-split-menu-icon-label">
+                  {node.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div
+          className={
+            'dashboard-home-split-menu-hover-panel' +
+            (hoverPanelOpen
+              ? ' dashboard-home-split-menu-hover-panel-open'
+              : '')
+          }
+        >
+          <div className="dashboard-home-split-menu-hover-panel-list">
+            {topNodes.map((node) => {
+              const active = node.key === displayTopKey;
+              return (
+                <button
+                  key={node.key}
+                  type="button"
+                  className={
+                    'dashboard-home-split-menu-hover-panel-item' +
+                    (active
+                      ? ' dashboard-home-split-menu-hover-panel-item-active'
+                      : '')
+                  }
+                  onMouseEnter={() => {
+                    clearCloseTimer();
+                    setHoveredTopKey(node.key);
+                  }}
+                  onFocus={() => {
+                    clearCloseTimer();
+                    setHoveredTopKey(node.key);
+                  }}
+                  onClick={() => {
+                    setHoverPanelOpen(false);
+                    setHoveredTopKey('');
+                    handleTopClick(node);
+                  }}
+                >
+                  {node.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       <div className="dashboard-home-split-menu-tree">
