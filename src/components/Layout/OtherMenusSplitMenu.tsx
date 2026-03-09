@@ -43,6 +43,10 @@ const FIRST_LEVEL_ICONS: React.ReactNode[] = [
   <CompassOutlined key="compass" />,
   <SettingOutlined key="setting" />,
 ];
+const OTHER_SPLIT_MENU_ICON_WIDTH = 56;
+const OTHER_SPLIT_MENU_HOVER_WIDTH = 168;
+const OTHER_SPLIT_MENU_PANEL_OVERLAP = 2;
+const OTHER_SPLIT_MENU_FADE_DURATION = 180;
 
 function normalizePath(path: string | undefined): string {
   const noQuery =
@@ -190,7 +194,17 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
     [topMenus],
   );
   const [activeTopKey, setActiveTopKey] = React.useState<string>('');
+  const [hoveredTopKey, setHoveredTopKey] = React.useState<string>('');
+  const [hoverPanelOpen, setHoverPanelOpen] = React.useState(false);
   const [openKeys, setOpenKeys] = React.useState<string[]>([]);
+  const [hoverOpenKeys, setHoverOpenKeys] = React.useState<string[]>([]);
+  const closeTimerRef = React.useRef<number | null>(null);
+  const closeCleanupTimerRef = React.useRef<number | null>(null);
+  const hoverWrapRef = React.useRef<HTMLDivElement | null>(null);
+  const hoverPanelRef = React.useRef<HTMLDivElement | null>(null);
+  const submenuPanelRef = React.useRef<HTMLDivElement | null>(null);
+  const [submenuPanelStyle, setSubmenuPanelStyle] =
+    React.useState<React.CSSProperties>();
 
   React.useEffect(() => {
     if (topNodes.length === 0) {
@@ -224,13 +238,17 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
     if (topNodes.length === 0) return undefined;
     return topNodes.find((node) => node.key === activeTopKey) || topNodes[0];
   }, [activeTopKey, topNodes]);
+  const displayTopKey = hoveredTopKey || activeTopNode?.key || '';
+  const hoverTopNode = React.useMemo(() => {
+    if (topNodes.length === 0) return undefined;
+    return topNodes.find((node) => node.key === displayTopKey) || topNodes[0];
+  }, [displayTopKey, topNodes]);
 
-  const menuMeta = React.useMemo(() => {
+  const buildMenuMeta = React.useCallback((menuSourceNodes: MenuNode[]) => {
     const pathByKey = new Map<string, string>();
     const targetIdByKey = new Map<string, string | undefined>();
     const parentByKey = new Map<string, string | undefined>();
     const submenuKeys: string[] = [];
-    const menuSourceNodes = activeTopNode?.children || [];
 
     const toMenuItem = (
       node: MenuNode,
@@ -264,6 +282,7 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
     const items: MenuProps['items'] = menuSourceNodes.map((node) =>
       toMenuItem(node),
     );
+
     return {
       items,
       pathByKey,
@@ -271,7 +290,14 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
       parentByKey,
       submenuKeys,
     };
-  }, [activeTopNode]);
+  }, []);
+
+  const menuMeta = React.useMemo(() => {
+    return buildMenuMeta(activeTopNode?.children || []);
+  }, [activeTopNode, buildMenuMeta]);
+  const hoverMenuMeta = React.useMemo(() => {
+    return buildMenuMeta(hoverTopNode?.children || []);
+  }, [buildMenuMeta, hoverTopNode]);
 
   const selectedKeys = React.useMemo(() => {
     if (currentTargetId) {
@@ -296,6 +322,34 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
     });
     return matchedKey ? [matchedKey] : [];
   }, [currentTargetId, menuMeta.pathByKey, menuMeta.targetIdByKey, pathname]);
+  const hoverSelectedKeys = React.useMemo(() => {
+    if (currentTargetId) {
+      let matchedByTargetKey = '';
+      hoverMenuMeta.targetIdByKey.forEach((nodeTargetId, key) => {
+        if (!nodeTargetId || nodeTargetId !== currentTargetId) return;
+        if (key.length > matchedByTargetKey.length) {
+          matchedByTargetKey = key;
+        }
+      });
+      if (matchedByTargetKey) return [matchedByTargetKey];
+    }
+
+    let matchedKey = '';
+    let matchedLength = -1;
+    hoverMenuMeta.pathByKey.forEach((itemPath, key) => {
+      if (!isPathMatch(itemPath, pathname)) return;
+      const score = normalizePath(itemPath).length;
+      if (score <= matchedLength) return;
+      matchedLength = score;
+      matchedKey = key;
+    });
+    return matchedKey ? [matchedKey] : [];
+  }, [
+    currentTargetId,
+    hoverMenuMeta.pathByKey,
+    hoverMenuMeta.targetIdByKey,
+    pathname,
+  ]);
 
   React.useEffect(() => {
     if (menuMeta.submenuKeys.length === 0) {
@@ -309,6 +363,28 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
     const parentKeys = collectParentKeys(selectedKeys[0], menuMeta.parentByKey);
     setOpenKeys(Array.from(new Set([...menuMeta.submenuKeys, ...parentKeys])));
   }, [menuMeta.parentByKey, menuMeta.submenuKeys, selectedKeys]);
+  React.useEffect(() => {
+    if (!hoverTopNode) {
+      setHoverOpenKeys([]);
+      return;
+    }
+    if (hoverSelectedKeys.length === 0) {
+      setHoverOpenKeys(hoverMenuMeta.submenuKeys);
+      return;
+    }
+    const parentKeys = collectParentKeys(
+      hoverSelectedKeys[0],
+      hoverMenuMeta.parentByKey,
+    );
+    setHoverOpenKeys(
+      Array.from(new Set([...hoverMenuMeta.submenuKeys, ...parentKeys])),
+    );
+  }, [
+    hoverMenuMeta.parentByKey,
+    hoverMenuMeta.submenuKeys,
+    hoverSelectedKeys,
+    hoverTopNode,
+  ]);
 
   const handleTopClick = React.useCallback(
     (node: MenuNode) => {
@@ -333,6 +409,135 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
     },
     [menuMeta.pathByKey, menuMeta.targetIdByKey, onNavigate],
   );
+  const handleHoverItemClick: MenuProps['onClick'] = React.useCallback(
+    (info: Parameters<NonNullable<MenuProps['onClick']>>[0]) => {
+      const key = String(info.key || '');
+      const path = hoverMenuMeta.pathByKey.get(key);
+      if (!path) return;
+      setHoverPanelOpen(false);
+      setHoveredTopKey('');
+      onNavigate(path, hoverMenuMeta.targetIdByKey.get(key));
+    },
+    [hoverMenuMeta.pathByKey, hoverMenuMeta.targetIdByKey, onNavigate],
+  );
+
+  const clearCloseTimer = React.useCallback(() => {
+    if (closeTimerRef.current === null) return;
+    window.clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = null;
+  }, []);
+
+  const clearCloseCleanupTimer = React.useCallback(() => {
+    if (closeCleanupTimerRef.current === null) return;
+    window.clearTimeout(closeCleanupTimerRef.current);
+    closeCleanupTimerRef.current = null;
+  }, []);
+
+  const openHoverPanels = React.useCallback(
+    (topKey?: string) => {
+      clearCloseTimer();
+      clearCloseCleanupTimer();
+      const nextTopKey =
+        topKey || hoveredTopKey || activeTopNode?.key || topNodes[0]?.key || '';
+      if (nextTopKey) {
+        setHoveredTopKey(nextTopKey);
+      }
+      setHoverPanelOpen(true);
+    },
+    [
+      activeTopNode?.key,
+      clearCloseCleanupTimer,
+      clearCloseTimer,
+      hoveredTopKey,
+      topNodes,
+    ],
+  );
+
+  const scheduleCloseHoverPanels = React.useCallback(() => {
+    clearCloseTimer();
+    clearCloseCleanupTimer();
+    closeTimerRef.current = window.setTimeout(() => {
+      setHoverPanelOpen(false);
+      closeTimerRef.current = null;
+      closeCleanupTimerRef.current = window.setTimeout(() => {
+        setHoveredTopKey('');
+        setHoverOpenKeys([]);
+        setSubmenuPanelStyle(undefined);
+        closeCleanupTimerRef.current = null;
+      }, OTHER_SPLIT_MENU_FADE_DURATION);
+    }, 120);
+  }, [clearCloseCleanupTimer, clearCloseTimer]);
+
+  const isWithinHoverPanels = React.useCallback(
+    (target: EventTarget | null) => {
+      if (!(target instanceof Node)) return false;
+      return Boolean(
+        hoverWrapRef.current?.contains(target) ||
+          hoverPanelRef.current?.contains(target) ||
+          submenuPanelRef.current?.contains(target),
+      );
+    },
+    [],
+  );
+
+  const handleHoverZoneEnter = React.useCallback(() => {
+    clearCloseTimer();
+    clearCloseCleanupTimer();
+  }, [clearCloseCleanupTimer, clearCloseTimer]);
+
+  const handleHoverZoneLeave = React.useCallback(
+    (event: React.MouseEvent<HTMLElement>) => {
+      if (isWithinHoverPanels(event.relatedTarget)) return;
+      scheduleCloseHoverPanels();
+    },
+    [isWithinHoverPanels, scheduleCloseHoverPanels],
+  );
+
+  const syncSubmenuPanelPosition = React.useCallback(() => {
+    const hoverWrapElement = hoverWrapRef.current;
+    if (!hoverWrapElement || hoverMenuMeta.items.length === 0) {
+      return;
+    }
+    const rect = hoverWrapElement.getBoundingClientRect();
+    setSubmenuPanelStyle({
+      top: rect.top,
+      left:
+        rect.left +
+        OTHER_SPLIT_MENU_ICON_WIDTH +
+        OTHER_SPLIT_MENU_HOVER_WIDTH -
+        OTHER_SPLIT_MENU_PANEL_OVERLAP * 2,
+      height: rect.height,
+    });
+  }, [hoverMenuMeta.items.length]);
+
+  React.useLayoutEffect(() => {
+    syncSubmenuPanelPosition();
+  }, [
+    displayTopKey,
+    hoverPanelOpen,
+    hoverMenuMeta.items.length,
+    syncSubmenuPanelPosition,
+  ]);
+
+  React.useEffect(() => {
+    if (!hoverPanelOpen || hoverMenuMeta.items.length === 0) return undefined;
+    const handlePositionSync = () => {
+      syncSubmenuPanelPosition();
+    };
+    window.addEventListener('resize', handlePositionSync);
+    window.addEventListener('scroll', handlePositionSync, true);
+    return () => {
+      window.removeEventListener('resize', handlePositionSync);
+      window.removeEventListener('scroll', handlePositionSync, true);
+    };
+  }, [hoverMenuMeta.items.length, hoverPanelOpen, syncSubmenuPanelPosition]);
+
+  React.useEffect(() => {
+    return () => {
+      clearCloseTimer();
+      clearCloseCleanupTimer();
+    };
+  }, [clearCloseCleanupTimer, clearCloseTimer]);
 
   if (!activeTopNode) {
     return <div className="other-menus-split-menu-empty" />;
@@ -340,28 +545,111 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
 
   return (
     <div className="other-menus-split-menu">
-      <div className="other-menus-split-menu-icons">
-        {topNodes.map((node, index) => {
-          const active = node.key === activeTopNode.key;
-          const icon = FIRST_LEVEL_ICONS[index % FIRST_LEVEL_ICONS.length];
-          return (
-            <button
-              key={node.key}
-              type="button"
-              className={
-                'other-menus-split-menu-icon-btn' +
-                (active ? ' other-menus-split-menu-icon-btn-active' : '')
-              }
-              aria-label={node.name}
-              onClick={() => handleTopClick(node)}
-            >
-              <span className="other-menus-split-menu-icon">{icon}</span>
-              <span className="other-menus-split-menu-icon-label">
+      <div
+        ref={hoverWrapRef}
+        className="other-menus-split-menu-hover-wrap"
+        onMouseEnter={handleHoverZoneEnter}
+        onMouseLeave={handleHoverZoneLeave}
+      >
+        <div className="other-menus-split-menu-icons">
+          {topNodes.map((node, index) => {
+            const active = node.key === displayTopKey;
+            const icon = FIRST_LEVEL_ICONS[index % FIRST_LEVEL_ICONS.length];
+            return (
+              <button
+                key={node.key}
+                type="button"
+                className={
+                  'other-menus-split-menu-icon-btn' +
+                  (active ? ' other-menus-split-menu-icon-btn-active' : '')
+                }
+                aria-label={node.name}
+                onMouseEnter={() => openHoverPanels(node.key)}
+                onFocus={() => openHoverPanels(node.key)}
+                onClick={() => {
+                  setHoverPanelOpen(false);
+                  setHoveredTopKey('');
+                  handleTopClick(node);
+                }}
+              >
+                <span className="other-menus-split-menu-icon">{icon}</span>
+                <span className="other-menus-split-menu-icon-label">
+                  {node.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div
+        ref={hoverPanelRef}
+        className={
+          'other-menus-split-menu-hover-panel' +
+          (hoverPanelOpen ? ' other-menus-split-menu-hover-panel-open' : '')
+        }
+        onMouseEnter={handleHoverZoneEnter}
+        onMouseLeave={handleHoverZoneLeave}
+      >
+        <div className="other-menus-split-menu-hover-panel-list">
+          {topNodes.map((node) => {
+            const active = node.key === displayTopKey;
+            return (
+              <button
+                key={node.key}
+                type="button"
+                className={
+                  'other-menus-split-menu-hover-panel-item' +
+                  (active
+                    ? ' other-menus-split-menu-hover-panel-item-active'
+                    : '')
+                }
+                onMouseEnter={() => {
+                  clearCloseTimer();
+                  setHoveredTopKey(node.key);
+                  setHoverPanelOpen(true);
+                }}
+                onFocus={() => {
+                  clearCloseTimer();
+                  setHoveredTopKey(node.key);
+                  setHoverPanelOpen(true);
+                }}
+                onClick={() => {
+                  setHoverPanelOpen(false);
+                  setHoveredTopKey('');
+                  handleTopClick(node);
+                }}
+              >
                 {node.name}
-              </span>
-            </button>
-          );
-        })}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div
+        ref={submenuPanelRef}
+        style={submenuPanelStyle}
+        className={
+          'other-menus-split-menu-submenu-panel' +
+          (hoverPanelOpen && hoverMenuMeta.items.length > 0
+            ? ' other-menus-split-menu-submenu-panel-open'
+            : '')
+        }
+        onMouseEnter={handleHoverZoneEnter}
+        onMouseLeave={handleHoverZoneLeave}
+      >
+        <Menu
+          mode="inline"
+          items={hoverMenuMeta.items}
+          selectedKeys={hoverSelectedKeys}
+          openKeys={hoverOpenKeys}
+          onOpenChange={(keys) =>
+            setHoverOpenKeys((keys as React.Key[]).map((key) => String(key)))
+          }
+          onClick={handleHoverItemClick}
+          className="other-menus-split-menu-ant other-menus-split-menu-submenu-ant"
+        />
       </div>
 
       <div className="other-menus-split-menu-tree">
