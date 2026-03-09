@@ -479,12 +479,12 @@ const routes = [
   },
 
   // qiankun子应用
-  {
-    name: 'micro-app',
-    icon: 'appstore',
-    path: '/micro-app/*',
-    component: './micro-app',
-  },
+  // {
+  //   name: 'micro-app',
+  //   icon: 'appstore',
+  //   path: '/micro-app/*',
+  //   component: './micro-app',
+  // },
 ];
 
 type RouteItem = {

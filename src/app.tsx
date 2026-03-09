@@ -1,9 +1,4 @@
-import {
-  DownOutlined,
-  MoonOutlined,
-  SmileOutlined,
-  SunOutlined,
-} from '@ant-design/icons';
+import { DownOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons';
 
 import type {
   Settings as LayoutSettings,
@@ -98,33 +93,6 @@ function markThemeSwitching() {
   }, 220);
 }
 
-const STORE_MENU_TEMPLATE: MenuDataItem[] = [
-  {
-    name: '门店信息',
-    icon: <SmileOutlined />,
-    children: [
-      {
-        name: '门店管理',
-        path: '/form/store-manage',
-      },
-      {
-        name: '所属行业',
-        path: '/form/industry',
-      },
-    ],
-  },
-  {
-    name: '商品查询',
-    icon: <SmileOutlined />,
-    children: [
-      {
-        name: '串码查询',
-        path: '/form/sn-query',
-      },
-    ],
-  },
-];
-
 function cloneMenuTree(items: MenuDataItem[]): MenuDataItem[] {
   return items.map((item) => ({
     ...item,
@@ -139,6 +107,22 @@ function getModuleRoot(path: string | undefined): string {
   const pathname = String(path).split('?')[0] || '';
   const root = pathname.split('/').filter(Boolean)[0] || '';
   return root ? `/${root}` : '';
+}
+
+function dedupeMenuTree(items: MenuDataItem[]): MenuDataItem[] {
+  const seen = new Set<string>();
+  return items.filter((item, index) => {
+    const path = normalizePathname(item?.path ? String(item.path) : undefined);
+    const targetId =
+      (item as any)?.targetId === undefined || (item as any)?.targetId === null
+        ? ''
+        : String((item as any).targetId);
+    const name = typeof item?.name === 'string' ? item.name.trim() : '';
+    const key = `${path}__${targetId}__${name || index}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function normalizeStoreModuleMenus(menuItems: MenuDataItem[]): MenuDataItem[] {
@@ -158,12 +142,33 @@ function normalizeStoreModuleMenus(menuItems: MenuDataItem[]): MenuDataItem[] {
   const firstItem = menuItems[firstIndex];
   const removed = new Set(formIndices);
   const nextMenus = menuItems.filter((_, index) => !removed.has(index));
+  const formItems = formIndices
+    .map((index) => menuItems[index])
+    .filter((item): item is MenuDataItem => !!item);
+  const rootMenu = formItems.find(
+    (item) =>
+      normalizePathname(item?.path ? String(item.path) : undefined) === '/form',
+  );
+  const mergedChildren = dedupeMenuTree(
+    formItems.flatMap((item) => {
+      const clonedItem = cloneMenuTree([item])[0];
+      const itemPath = normalizePathname(
+        item?.path ? String(item.path) : undefined,
+      );
+      if (itemPath === '/form') {
+        return Array.isArray(clonedItem?.children)
+          ? (clonedItem.children as MenuDataItem[])
+          : [];
+      }
+      return [clonedItem];
+    }),
+  );
 
   nextMenus.splice(firstIndex, 0, {
-    ...firstItem,
+    ...(rootMenu ? cloneMenuTree([rootMenu])[0] : firstItem),
     name: firstItem?.name || '门店',
     path: '/form',
-    children: cloneMenuTree(STORE_MENU_TEMPLATE),
+    children: mergedChildren.length > 0 ? mergedChildren : undefined,
   });
 
   return nextMenus;
