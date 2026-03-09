@@ -6,7 +6,7 @@ import {
   RightOutlined,
 } from '@ant-design/icons';
 import { history, useLocation } from '@umijs/max';
-import { Button, Dropdown, type MenuProps } from 'antd';
+import { Button, Dropdown, type MenuProps, Tooltip } from 'antd';
 import React from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -811,6 +811,16 @@ const RouteTabsKeepAlive: React.FC<{
         )}
       </div>
       <div className="pc-admin-route-tabs-ops">
+        <Tooltip title="刷新当前页">
+          <Button
+            type="text"
+            shape="circle"
+            className="pc-admin-header-circle-action"
+            icon={<ReloadOutlined />}
+            aria-label="刷新当前页"
+            onClick={handleRefreshCurrentTab}
+          />
+        </Tooltip>
         <Dropdown
           menu={{ items: tabActionItems, onClick: handleTabActionMenuClick }}
           trigger={['click']}

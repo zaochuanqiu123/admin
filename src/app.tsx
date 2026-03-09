@@ -1,7 +1,6 @@
 import {
   DownOutlined,
   MoonOutlined,
-  ReloadOutlined,
   SmileOutlined,
   SunOutlined,
 } from '@ant-design/icons';
@@ -20,7 +19,6 @@ import {
   type MenuProps,
   Modal,
   message,
-  Switch,
   Tooltip,
 } from 'antd';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
@@ -49,9 +47,7 @@ import logoDark from '@/assets/logo-dark.png';
 import DashboardHomeSplitMenu from '@/components/Layout/DashboardHomeSplitMenu';
 import HeaderScrollWatcher from '@/components/Layout/HeaderScrollWatcher';
 import OtherMenusSplitMenu from '@/components/Layout/OtherMenusSplitMenu';
-import RouteTabsKeepAlive, {
-  ROUTE_TAB_REFRESH_EVENT,
-} from '@/components/Layout/RouteTabsKeepAlive';
+import RouteTabsKeepAlive, {} from '@/components/Layout/RouteTabsKeepAlive';
 import WorkplaceCommonMenu from '@/components/Workplace/WorkplaceCommonMenu';
 import { IFRAME_PATHS } from '@/config/iframe.config';
 import {
@@ -567,50 +563,15 @@ export const layout: RunTimeLayoutConfig = ({
       const checked = (initialState?.settings as any)?.navTheme === 'realDark';
 
       return [
-        <Tooltip key="refresh" title="刷新当前页">
+        <Tooltip key="theme" title={checked ? '切换亮色模式' : '切换暗黑模式'}>
           <Button
             type="text"
             shape="circle"
             className="pc-admin-header-circle-action"
-            icon={<ReloadOutlined />}
+            icon={checked ? <MoonOutlined /> : <SunOutlined />}
+            aria-label={checked ? '切换亮色模式' : '切换暗黑模式'}
             onClick={() => {
-              window.dispatchEvent(new Event(ROUTE_TAB_REFRESH_EVENT));
-            }}
-          />
-        </Tooltip>,
-        <Tooltip key="theme" title={checked ? '切换亮色模式' : '切换暗黑模式'}>
-          <Switch
-            checked={checked}
-            className="theme-switch"
-            style={{ marginRight: 20, borderRadius: 999 }}
-            checkedChildren={
-              <span
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '100%',
-                  lineHeight: 1,
-                }}
-              >
-                <MoonOutlined style={{ fontSize: 11, lineHeight: 1 }} />
-              </span>
-            }
-            unCheckedChildren={
-              <span
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '100%',
-                  lineHeight: 1,
-                }}
-              >
-                <SunOutlined style={{ fontSize: 11, lineHeight: 1 }} />
-              </span>
-            }
-            onChange={(nextChecked) => {
-              const nextNavTheme = nextChecked ? 'realDark' : 'light';
+              const nextNavTheme = checked ? 'light' : 'realDark';
               markThemeSwitching();
               setInitialState((preInitialState) => ({
                 ...preInitialState,

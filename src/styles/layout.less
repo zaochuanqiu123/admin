@@ -220,8 +220,8 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 }
 
 .dashboard-home-split-menu-icons {
-  width: 76px;
-  flex: 0 0 76px;
+  width: 56px;
+  flex: 0 0 56px;
   padding: 0 6px;
   border-radius: 10px;
   background: var(--ant-color-bg-container);
@@ -236,25 +236,26 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 
 .dashboard-sider-menu-content.dashboard-sider-menu-content-split .dashboard-home-split-menu-icons {
   .mixin-white-card();
-  padding: 10px 6px 10px 10px;
+  padding: 10px 4px 10px 8px;
   margin-top: 0;
-  border-radius:  16px 0 0 16px;
+  background: var(--ant-color-bg-container);
+  border-radius: 16px 0 0 16px;
 }
 
 .dashboard-home-split-menu-icon-btn {
   width: 100%;
-  min-height: 52px;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  background: #fafbff;
+  min-height: 40px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: #6f7690;
   cursor: pointer;
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  padding: 5px 3px;
+  gap: 0;
+  padding: 10px 0;
   transition:
     color 0.2s ease,
     border-color 0.2s ease,
@@ -267,14 +268,14 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 
 .dashboard-home-split-menu-icon-btn:hover {
   color: #2f64f8;
-  border-color: #cddcff;
-  background: #edf4ff;
+  border-color: transparent;
+  background: transparent;
 }
 
 .dashboard-home-split-menu-icon-btn-active {
   color: #1f5bff;
-  border-color: #b5ccff;
-  background: #e8f1ff;
+  border-color: transparent;
+  background: transparent;
 }
 
 .dashboard-home-split-menu-icon {
@@ -283,13 +284,7 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 }
 
 .dashboard-home-split-menu-icon-label {
-  width: 100%;
-  font-size: 12px;
-  line-height: 1.2;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: none;
 }
 
 .dashboard-home-split-menu-tree {
@@ -408,8 +403,8 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 }
 
 .other-menus-split-menu-icons {
-  width: 76px;
-  flex: 0 0 76px;
+  width: 56px;
+  flex: 0 0 56px;
   padding: 0 6px;
   border-radius: 10px;
   background: var(--ant-color-bg-container);
@@ -423,18 +418,18 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 
 .other-menus-split-menu-icon-btn {
   width: 100%;
-  min-height: 52px;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  background: #fafbff;
+  min-height: 40px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: #6f7690;
   cursor: pointer;
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  padding: 5px 3px;
+  gap: 0;
+  padding: 10px 0;
   transition:
     color 0.2s ease,
     border-color 0.2s ease,
@@ -443,14 +438,14 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 
 .other-menus-split-menu-icon-btn:hover {
   color: #2f64f8;
-  border-color: #cddcff;
-  background: #edf4ff;
+  border-color: transparent;
+  background: transparent;
 }
 
 .other-menus-split-menu-icon-btn-active {
   color: #1f5bff;
-  border-color: #b5ccff;
-  background: #e8f1ff;
+  border-color: transparent;
+  background: transparent;
 }
 
 .other-menus-split-menu-icon {
@@ -459,13 +454,7 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 }
 
 .other-menus-split-menu-icon-label {
-  width: 100%;
-  font-size: 12px;
-  line-height: 1.2;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: none;
 }
 
 .other-menus-split-menu-tree {
@@ -590,9 +579,9 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 }
 
 .plain-sider-split-content .dashboard-home-split-menu-icons {
-  background: transparent;
-  border-radius: 0;
-  padding: 0px 8px;
+  background: var(--ant-color-bg-container);
+  border-radius: 16px 0 0 16px;
+  padding: 0 4px 0 8px;
 }
 
 .plain-sider-split-content .dashboard-home-split-menu-tree {
@@ -608,9 +597,9 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 
 .plain-sider-split-content .other-menus-split-menu-icons {
   .mixin-white-card();
-  padding: 10px 6px 10px 10px;
+  padding: 10px 4px 10px 8px;
+  background: var(--ant-color-bg-container);
   border-radius: 16px 0 0 16px;
-  
 }
 
 .plain-sider-split-content .other-menus-split-menu-tree {
@@ -1049,6 +1038,7 @@ body.theme-black-mode .business-switch-pill {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
+  gap: 8px;
 }
 
 .pc-admin-route-tabs-bar.pc-admin-route-tabs-bar-empty {
