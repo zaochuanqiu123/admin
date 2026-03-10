@@ -40,16 +40,20 @@ import {
 } from '@/api/storage';
 import logoDark from '@/assets/logo-dark.png';
 import DashboardHomeSplitMenu from '@/components/Layout/DashboardHomeSplitMenu';
-import HeaderScrollWatcher from '@/components/Layout/HeaderScrollWatcher';
 import OtherMenusSplitMenu from '@/components/Layout/OtherMenusSplitMenu';
-import RouteTabsKeepAlive, {} from '@/components/Layout/RouteTabsKeepAlive';
+import RouteTabsKeepAlive from '@/components/Layout/RouteTabsKeepAlive';
 import WorkplaceCommonMenu from '@/components/Workplace/WorkplaceCommonMenu';
 import { IFRAME_PATHS } from '@/config/iframe.config';
+import { DEFAULT_COMMON_ACTIONS } from '@/config/menu.config';
 import {
   clearPostLoginRedirect,
   redirectToLogin,
   setPostLoginRedirect,
 } from '@/utils/auth-expired';
+import {
+  readCommonActionsFromStorage,
+  writeCommonActionsToStorage,
+} from '@/utils/commonActions.storage';
 import { buildIframeRouteWithParams, isIframeRoutePath } from '@/utils/iframe';
 import {
   extractPermContextNodes,
@@ -246,6 +250,8 @@ export async function getInitialState(): Promise<{
   permContextMenu?: MenuDataItem[];
   businessList?: any[];
   currentBusinessCode?: string;
+  commonActions?: any[];
+  setCommonActions?: (actions: any[]) => void;
 }> {
   const fetchPermMenu = async (businessCode?: string) => {
     try {
@@ -357,6 +363,36 @@ export const layout: RunTimeLayoutConfig = ({
   }
 
   let cachedTopMenus: MenuDataItem[] = [];
+
+  // 常用数据管理
+  const storageKey = `workplace_common_actions_${
+    initialState?.currentUser?.name ?? 'guest'
+  }`;
+
+  const loadCommonActions = () => {
+    if (typeof window === 'undefined') return DEFAULT_COMMON_ACTIONS;
+    const stored = readCommonActionsFromStorage(storageKey);
+    return stored || DEFAULT_COMMON_ACTIONS;
+  };
+
+  const saveCommonActions = (actions: any[]) => {
+    if (typeof window === 'undefined') return;
+    writeCommonActionsToStorage(storageKey, actions);
+    setInitialState((s: any) => ({
+      ...s,
+      commonActions: actions,
+    }));
+  };
+
+  // 初始化常用数据
+  if (!initialState?.commonActions) {
+    const actions = loadCommonActions();
+    setInitialState((s: any) => ({
+      ...s,
+      commonActions: actions,
+      setCommonActions: saveCommonActions,
+    }));
+  }
 
   const buildTopMenus = (
     menuData: MenuDataItem[] | undefined,
@@ -643,10 +679,17 @@ export const layout: RunTimeLayoutConfig = ({
         initialState?.currentUser?.name ?? 'guest'
       }`;
 
+      const commonActions = initialState?.commonActions || [];
+      const setCommonActions = initialState?.setCommonActions || (() => {});
+
       return (
         <div className="dashboard-sider">
           <div className="dashboard-sider-common">
-            <WorkplaceCommonMenu storageKey={storageKey} />
+            <WorkplaceCommonMenu
+              storageKey={storageKey}
+              commonActions={commonActions}
+              setCommonActions={setCommonActions}
+            />
           </div>
 
           <div
@@ -662,6 +705,7 @@ export const layout: RunTimeLayoutConfig = ({
                     pathname={pathname}
                     currentTargetId={currentTargetId}
                     onNavigate={navigateMenu}
+                    commonActions={commonActions}
                   />
                 </DashboardHomeMenuBoundary>
               ) : (
@@ -894,7 +938,6 @@ export const layout: RunTimeLayoutConfig = ({
 
       return (
         <>
-          <HeaderScrollWatcher />
           <RouteTabsKeepAlive themeCacheKey={keepAliveThemeKey}>
             {children}
           </RouteTabsKeepAlive>

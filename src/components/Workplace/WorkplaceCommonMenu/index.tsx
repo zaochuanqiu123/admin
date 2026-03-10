@@ -1,8 +1,4 @@
-import {
-  AppstoreOutlined,
-  CloseOutlined,
-  MenuOutlined,
-} from '@ant-design/icons';
+import { CloseOutlined, UserOutlined } from '@ant-design/icons';
 import type { UniqueIdentifier } from '@dnd-kit/core';
 import {
   closestCenter,
@@ -19,42 +15,48 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { history, useModel } from '@umijs/max';
-import { Button, Drawer, message, Space, Typography, theme } from 'antd';
+import { useModel } from '@umijs/max';
+import {
+  Avatar,
+  Button,
+  Drawer,
+  message,
+  Space,
+  Typography,
+  theme,
+} from 'antd';
 import React, { useEffect } from 'react';
 import {
   COMMON_ACTION_MAX,
-  COMMON_ACTION_PREVIEW_COUNT,
   COMMON_GROUPS,
   type CommonAction,
   type CommonGroup,
   DEFAULT_COMMON_ACTIONS,
 } from '@/config/menu.config';
 import {
-  readCommonActionsFromStorage,
   readGroupOrderFromStorage,
-  writeCommonActionsToStorage,
   writeGroupOrderToStorage,
 } from '@/utils/commonActions.storage';
-import { buildIframeRouteWithParams, isIframeRoutePath } from '@/utils/iframe';
 import WorkplaceCommonTopRouteTabs from '../WorkplaceCommonTopRouteTabs';
 import CandidateRow from './CandidateRow';
 import CommonChip from './CommonChip';
 import GroupRow from './GroupRow';
 import SubGroupRow from './SubGroupRow';
 
-const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
-  storageKey,
-}) => {
+const OPEN_COMMON_ACTIONS_DRAWER_EVENT = 'pc-admin-open-common-actions-drawer';
+const DEMO_AVATAR_SRC =
+  'https://api.dicebear.com/7.x/miniavs/svg?seed=antd-yangkun';
+
+const WorkplaceCommonMenu: React.FC<{
+  storageKey: string;
+  commonActions: CommonAction[];
+  setCommonActions: (actions: CommonAction[]) => void;
+}> = ({ storageKey, commonActions, setCommonActions }) => {
   const { initialState } = useModel('@@initialState');
   const { token } = theme.useToken();
   const [open, setOpen] = React.useState(false);
-  const [savedList, setSavedList] = React.useState<CommonAction[]>(
-    DEFAULT_COMMON_ACTIONS,
-  );
-  const [draftList, setDraftList] = React.useState<CommonAction[]>(
-    DEFAULT_COMMON_ACTIONS,
-  );
+  const [draftList, setDraftList] =
+    React.useState<CommonAction[]>(commonActions);
   const [activeId, setActiveId] = React.useState<UniqueIdentifier | null>(null);
   const [savedGroupOrder, setSavedGroupOrder] = React.useState<string[]>(
     COMMON_GROUPS.map((g) => g.id),
@@ -71,7 +73,6 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
   const isDarkMode = (initialState?.settings as any)?.navTheme === 'realDark';
   const drawerSurfaceBg = isDarkMode ? token.colorBgLayout : '#E7EDFB';
   const drawerPanelBg = isDarkMode ? token.colorBgContainer : '#FFFFFF';
-  const drawerPanelMutedBg = isDarkMode ? token.colorBgElevated : '#F3F6FC';
   const drawerNestedPanelBg = isDarkMode ? token.colorBgElevated : '#E7EDFB';
   const drawerBorderColor = isDarkMode ? token.colorBorderSecondary : '#D6DEEA';
   const drawerTextPrimary = token.colorText;
@@ -83,17 +84,13 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const stored = readCommonActionsFromStorage(storageKey);
-    if (stored) {
-      setSavedList(stored);
-      setDraftList(stored);
-    }
+    setDraftList(commonActions);
 
     const defaultOrder = COMMON_GROUPS.map((g) => g.id);
     const groupOrder = readGroupOrderFromStorage(storageKey, defaultOrder);
     setSavedGroupOrder(groupOrder);
     setDraftGroupOrder(groupOrder);
-  }, [storageKey]);
+  }, [storageKey, commonActions]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -125,12 +122,25 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
     };
   }, []);
 
-  const openDrawer = (e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    setDraftList(savedList.map((x) => ({ ...x })));
+  const openDrawer = React.useCallback(() => {
+    setDraftList(commonActions.map((x) => ({ ...x })));
     setDraftGroupOrder(savedGroupOrder.map((x) => x));
     setOpen(true);
-  };
+  }, [commonActions, savedGroupOrder]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleOpenDrawer = () => {
+      openDrawer();
+    };
+    window.addEventListener(OPEN_COMMON_ACTIONS_DRAWER_EVENT, handleOpenDrawer);
+    return () => {
+      window.removeEventListener(
+        OPEN_COMMON_ACTIONS_DRAWER_EVENT,
+        handleOpenDrawer,
+      );
+    };
+  }, [openDrawer]);
 
   const restoreDefault = () => {
     setDraftList(DEFAULT_COMMON_ACTIONS.map((x) => ({ ...x })));
@@ -138,13 +148,12 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
 
   const cancelEdit = () => {
     setOpen(false);
-    setDraftList(savedList.map((x) => ({ ...x })));
+    setDraftList(commonActions.map((x) => ({ ...x })));
     setDraftGroupOrder(savedGroupOrder.map((x) => x));
   };
 
   const confirmEdit = () => {
-    setSavedList(draftList.map((x) => ({ ...x })));
-    writeCommonActionsToStorage(storageKey, draftList);
+    setCommonActions(draftList.map((x) => ({ ...x })));
     setSavedGroupOrder(draftGroupOrder.map((x) => x));
     writeGroupOrderToStorage(storageKey, draftGroupOrder);
     setOpen(false);
@@ -197,7 +206,6 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
     }
   };
 
-  const previewList = savedList.slice(0, COMMON_ACTION_PREVIEW_COUNT);
   const draftIds = draftList.map((x) => x.id);
   const { setNodeRef: setSelectedDroppableRef } = useDroppable({
     id: 'selected' as UniqueIdentifier,
@@ -227,70 +235,40 @@ const WorkplaceCommonMenu: React.FC<{ storageKey: string }> = ({
     activeGroup?.children?.find((x) => x.id === activeSubGroupId) ??
     activeGroup?.children?.[0];
 
-  const navigateToAction = React.useCallback(
-    (path: string) => {
-      if (!path) return;
-      const nextPath = isIframeRoutePath(path)
-        ? buildIframeRouteWithParams(path, initialState?.permContextMenu)
-        : path;
-      history.push(nextPath);
-    },
-    [initialState?.permContextMenu],
-  );
+  // 获取时间段问候语
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 6) return '凌晨好';
+    if (hour < 9) return '早上好';
+    if (hour < 12) return '上午好';
+    if (hour < 14) return '中午好';
+    if (hour < 18) return '下午好';
+    if (hour < 22) return '晚上好';
+    return '夜深了';
+  };
 
   return (
     <>
       <div className="workplace-common pc-admin-workplace-common">
-        <div className="workplace-common-card">
-          <button
-            type="button"
-            className="ant-menu-submenu-title workplace-common-header"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              width: '100%',
-              background: 'transparent',
-              border: 0,
-              padding: 0,
-              textAlign: 'left',
-              cursor: 'default',
-            }}
-          >
-            <span className="ant-menu-item-icon">
-              <AppstoreOutlined />
-            </span>
-            <span className="ant-menu-title-content">常用</span>
-            <MenuOutlined
-              className="workplace-common-header-extra"
-              onClick={(e) => {
-                e.stopPropagation();
-                openDrawer(e as any);
-              }}
+        <div className="workplace-common-card workplace-user-info-card">
+          <div className="workplace-user-info-content">
+            <Avatar
+              size={48}
+              icon={<UserOutlined />}
+              src={DEMO_AVATAR_SRC}
+              className="workplace-user-avatar"
             />
-          </button>
-          <div
-            className="ant-menu-sub ant-menu-inline workplace-common-actions"
-            role="menu"
-          >
-            {previewList.map((a) => (
-              <div
-                key={a.id}
-                className="ant-menu-item"
-                role="menuitem"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    navigateToAction(a.path);
-                  }
-                }}
-                onClick={() => {
-                  navigateToAction(a.path);
-                }}
-              >
-                <span className="ant-menu-title-content">{a.title}</span>
+            <div className="workplace-user-text">
+              <div className="workplace-user-greeting">
+                {getGreeting()}！尊敬的杨坤
               </div>
-            ))}
+              <div className="workplace-user-ukey-block">
+                <div className="workplace-user-ukey-serial">
+                  U盾序号 283****738
+                </div>
+                <div className="workplace-user-ukey-action">财务提交</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

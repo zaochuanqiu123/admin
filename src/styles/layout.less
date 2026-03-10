@@ -6,6 +6,24 @@
   display: block !important;
 }
 
+/* 页面背景：基于业务定制的柔和多层渐变（仅亮色模式） */
+body:not(.theme-black-mode) {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(236, 210, 244, 0.38) 0%, rgba(236, 210, 244, 0.2) 24%, rgba(236, 210, 244, 0) 48%),
+    radial-gradient(circle at 22% 72%, rgba(198, 235, 255, 0.36) 0%, rgba(198, 235, 255, 0.18) 24%, rgba(198, 235, 255, 0) 48%),
+    radial-gradient(circle at 72% 22%, rgba(210, 241, 248, 0.34) 0%, rgba(210, 241, 248, 0.16) 24%, rgba(210, 241, 248, 0) 48%),
+    linear-gradient(135deg, #edf2fb 0%, #e7edf8 35%, #e8edf7 65%, #eceff6 100%) !important;
+}
+
+body:not(.theme-black-mode) .ant-pro-layout,
+body:not(.theme-black-mode) .ant-layout,
+body:not(.theme-black-mode) .ant-pro-layout .ant-pro-layout-container,
+body:not(.theme-black-mode) .ant-pro-layout .ant-pro-layout-content,
+body:not(.theme-black-mode) .dashboard-index-page {
+  background: transparent !important;
+  background-image: none !important;
+}
+
 /* 2. 清除浮动 (解决点击收起时卡住的 Bug) */
 .pc-admin-sider-real-menu .ant-layout-sider:not(.ant-layout-sider-collapsed) .ant-menu-sub.ant-menu-inline:not(.ant-menu-hidden) {
   // justify-content: flex-start;
@@ -911,26 +929,38 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 
 /* Header 容器高度（部分版本需要用 CSS 再兜底一次） */
 .ant-pro-layout .ant-pro-layout-header {
+  /* 60px：固定头部高度 */
   height: 60px !important;
+  /* 60px：让单行文字在头部内垂直居中 */
   line-height: 60px !important;
-  border-bottom: 0 !important;
-  box-shadow: none !important;
-  background: transparent !important;
-}
-
-/* 页面滚动后：回到 ProLayout 默认毛玻璃（rgba(255,255,255,0.6) + blur(8px)） */
-body.header-scrolled .ant-pro-layout .ant-pro-layout-header {
-  background-color: rgba(255, 255, 255, 0.6) !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
+  /* 0.16：底部分割线可见但不抢眼 */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16) !important;
+  /* 阴影 4/14/0.05：轻微浮层感，避免太厚重 */
+  box-shadow: 0 4px 14px rgba(20, 36, 66, 0.05) !important;
+  /* 0.18：玻璃底色透明度（越小越透） */
+  background: rgba(255, 255, 255, 0.18) !important;
+  /* 同上：兼容部分组件只读取 background-color */
+  background-color: rgba(255, 255, 255, 0.18) !important;
+  /* blur(10px)：毛玻璃模糊强度；saturate(125%)：背景色彩轻微增强 */
+  -webkit-backdrop-filter: blur(10px) saturate(125%);
+  /* 标准写法，和 webkit 保持一致 */
+  backdrop-filter: blur(10px) saturate(125%);
 }
 
 /* 兜底：部分场景分割线在 ant-layout-header 上 */
 .ant-layout-header {
-  border-bottom: 0 !important;
-  box-shadow: none !important;
+  /* 0.16：头部下边界的轻分割 */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16) !important;
+  /* 4/14/0.05：与主头部保持同样轻阴影 */
+  box-shadow: 0 4px 14px rgba(20, 36, 66, 0.05) !important;
+  /* 0.18：兜底头部透明底色 */
+  background: rgba(255, 255, 255, 0.18) !important;
+  /* 同步 background-color，避免样式覆盖差异 */
+  background-color: rgba(255, 255, 255, 0.18) !important;
+  /* blur(10px) + saturate(125%)：恢复到上一版玻璃参数 */
+  -webkit-backdrop-filter: blur(10px) saturate(125%);
+  /* 标准写法 */
+  backdrop-filter: blur(10px) saturate(125%);
 }
 
 /* 顶部横向菜单：菜单项高度/行高改为 60 */
@@ -959,10 +989,18 @@ body.header-scrolled .ant-pro-layout .ant-pro-layout-header {
 .ant-pro-top-nav-header-main,
 .ant-pro-top-nav-header-menu,
 .ant-pro-top-nav-header-menu .ant-menu-horizontal {
+  /* 60px：顶部导航区总高度 */
   height: 60px !important;
+  /* 60px：菜单项文字垂直居中 */
   line-height: 60px !important;
+  /* 60px：防止某些组件被压缩 */
   min-height: 60px !important;
+  /* 16px：顶部菜单字号 */
   font-size: 16px !important;
+  /* 0.16：导航层背景更透（比 header 主层更轻） */
+  background: rgba(255, 255, 255, 0.16) !important;
+  /* 同步 background-color，保证一致性 */
+  background-color: rgba(255, 255, 255, 0.16) !important;
 }
 
 .ant-pro-top-nav-header-menu .ant-menu-item .ant-menu-title-content {
@@ -1081,6 +1119,126 @@ body.theme-black-mode .business-switch-pill {
 /* 子菜单容器背景色（仅影响菜单区域，不影响常用区域） */
 .dashboard-sider-menu .ant-menu-sub.ant-menu-inline {
   background: var(--ant-color-bg-container) !important;
+}
+
+/* 用户信息卡片样式 */
+.workplace-user-info-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px !important;
+  position: relative;
+  min-height: 140px;
+}
+
+.workplace-user-info-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  width: 100%;
+}
+
+.workplace-user-avatar {
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+
+.workplace-user-text {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.workplace-user-greeting {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.88);
+  line-height: 1.4;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.workplace-user-ukey-block {
+  width: 100%;
+  max-width: 250px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.workplace-user-ukey-serial {
+  font-size: 14px;
+  line-height: 20px;
+  color: rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+.workplace-user-ukey-action {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  line-height: 18px;
+  color: #1d4ed8;
+  flex-shrink: 0;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.dashboard-common-actions-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dashboard-common-actions-drawer-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  appearance: none;
+  font: inherit;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  color: rgba(0, 0, 0, 0.72);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dashboard-common-actions-drawer-trigger:hover {
+  color: #1d4ed8;
+  background: rgba(29, 78, 216, 0.1);
+}
+
+/* 我的常用数据折叠组样式 */
+.dashboard-home-split-menu-ant .ant-menu-submenu[data-menu-id*="common-actions"] > .ant-menu-submenu-title {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.dashboard-home-split-menu-ant .ant-menu-submenu[data-menu-id*="common-actions"] .ant-menu-item-icon {
+  display: inline-flex !important;
+  color: #faad14;
+}
+
+.dashboard-home-split-menu-ant .ant-menu-submenu[data-menu-id*="common-actions"] > .ant-menu-submenu-title .ant-menu-title-content {
+  color: rgba(0, 0, 0, 0.88);
+  font-weight: 500;
 }
 
 /* 子菜单 hover/选中：不要有任何背景块，只改文字颜色 */

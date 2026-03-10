@@ -5,6 +5,7 @@ import {
   DatabaseOutlined,
   FileTextOutlined,
   HomeOutlined,
+  MenuOutlined,
   SettingOutlined,
   ShopOutlined,
   TagsOutlined,
@@ -14,12 +15,14 @@ import {
 import type { MenuDataItem } from '@ant-design/pro-components';
 import { Menu, type MenuProps } from 'antd';
 import React from 'react';
+import type { CommonAction } from '@/config/menu.config';
 
 type DashboardHomeSplitMenuProps = {
   topMenus?: MenuDataItem[];
   pathname: string;
   currentTargetId?: string;
   onNavigate: (path?: string, targetId?: string) => void;
+  commonActions?: CommonAction[];
 };
 
 type MenuNode = {
@@ -29,6 +32,8 @@ type MenuNode = {
   targetId?: string;
   children?: MenuNode[];
 };
+
+const OPEN_COMMON_ACTIONS_DRAWER_EVENT = 'pc-admin-open-common-actions-drawer';
 
 const FIRST_LEVEL_ICONS: React.ReactNode[] = [
   <HomeOutlined key="home" />,
@@ -184,6 +189,7 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
   pathname,
   currentTargetId,
   onNavigate,
+  commonActions = [],
 }) => {
   const topNodes = React.useMemo(
     () => buildNodes(topMenus, 'top', new WeakSet<object>()),
@@ -268,6 +274,58 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
     const items: MenuProps['items'] = menuSourceNodes.map((node) =>
       toMenuItem(node),
     );
+
+    // 添加"我的常用数据"折叠组
+    if (commonActions.length > 0) {
+      const commonActionsKey = 'common-actions-group';
+      submenuKeys.push(commonActionsKey);
+
+      const commonChildren: NonNullable<MenuProps['items']>[number][] =
+        commonActions.map((action, index) => {
+          const childKey = `common-action-${action.id}-${index}`;
+          pathByKey.set(childKey, action.path);
+          parentByKey.set(childKey, commonActionsKey);
+          return {
+            key: childKey,
+            label: action.title,
+            icon: undefined,
+          };
+        });
+
+      items.push({
+        key: commonActionsKey,
+        label: (
+          <span className="dashboard-common-actions-title">
+            <button
+              type="button"
+              className="dashboard-common-actions-drawer-trigger"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                window.dispatchEvent(
+                  new Event(OPEN_COMMON_ACTIONS_DRAWER_EVENT),
+                );
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
+                event.stopPropagation();
+                window.dispatchEvent(
+                  new Event(OPEN_COMMON_ACTIONS_DRAWER_EVENT),
+                );
+              }}
+              aria-label="打开常用数据编辑抽屉"
+            >
+              <MenuOutlined />
+            </button>
+            <span>常用数据</span>
+          </span>
+        ),
+        icon: undefined,
+        children: commonChildren,
+      });
+    }
+
     return {
       items,
       pathByKey,
@@ -275,7 +333,7 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
       parentByKey,
       submenuKeys,
     };
-  }, [activeTopNode]);
+  }, [activeTopNode, commonActions]);
 
   const selectedKeys = React.useMemo(() => {
     if (currentTargetId) {
