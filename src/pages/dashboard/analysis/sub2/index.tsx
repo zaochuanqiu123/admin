@@ -22,7 +22,7 @@ import React from 'react';
 const Page: React.FC = () => {
   type Channel = '全部' | '小程序' | 'App' | 'PC';
   type Store = '全部' | '旗舰店' | '浦东店' | '虹桥店';
-  type TicketStatus = '待处理' | '处理中' | '已解决';
+  type TicketStatus = '待处理' | '处理中111' | '已解决';
 
   type TicketRow = {
     id: string;
