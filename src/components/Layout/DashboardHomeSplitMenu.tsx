@@ -435,7 +435,10 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
   return (
     <div className="dashboard-home-split-menu">
       <div
-        className="dashboard-home-split-menu-hover-wrap"
+        className={
+          'dashboard-home-split-menu-hover-wrap' +
+          (hoverPanelOpen ? ' dashboard-home-split-menu-hover-wrap-open' : '')
+        }
         onMouseEnter={() => openHoverPanel()}
         onMouseLeave={scheduleCloseHoverPanel}
       >
@@ -467,48 +470,6 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
               </button>
             );
           })}
-        </div>
-
-        <div
-          className={
-            'dashboard-home-split-menu-hover-panel' +
-            (hoverPanelOpen
-              ? ' dashboard-home-split-menu-hover-panel-open'
-              : '')
-          }
-        >
-          <div className="dashboard-home-split-menu-hover-panel-list">
-            {topNodes.map((node) => {
-              const active = node.key === displayTopKey;
-              return (
-                <button
-                  key={node.key}
-                  type="button"
-                  className={
-                    'dashboard-home-split-menu-hover-panel-item' +
-                    (active
-                      ? ' dashboard-home-split-menu-hover-panel-item-active'
-                      : '')
-                  }
-                  onMouseEnter={() => {
-                    clearCloseTimer();
-                    setHoveredTopKey(node.key);
-                  }}
-                  onFocus={() => {
-                    clearCloseTimer();
-                    setHoveredTopKey(node.key);
-                  }}
-                  onClick={() => {
-                    setHoverPanelOpen(false);
-                    setHoveredTopKey('');
-                    handleTopClick(node);
-                  }}
-                >
-                  {node.name}
-                </button>
-              );
-            })}
-          </div>
         </div>
       </div>
 
