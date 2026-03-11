@@ -195,9 +195,6 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
   const [hoverListOpen, setHoverListOpen] = React.useState(false);
   const [openKeys, setOpenKeys] = React.useState<string[]>([]);
   const [hoverOpenKeys, setHoverOpenKeys] = React.useState<string[]>([]);
-  const [submenuPanelStyle, setSubmenuPanelStyle] =
-    React.useState<React.CSSProperties>({});
-  const shellRef = React.useRef<HTMLDivElement | null>(null);
   const closeTimerRef = React.useRef<number | null>(null);
   const closeCleanupTimerRef = React.useRef<number | null>(null);
 
@@ -483,66 +480,6 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
     scheduleCloseHoverPanels();
   }, [scheduleCloseHoverPanels]);
 
-  const syncSubmenuPanelStyle = React.useCallback(() => {
-    const shell = shellRef.current;
-    if (!shell) return;
-
-    const styleHost =
-      (shell.closest('.other-menus-split-menu') as HTMLElement | null) || shell;
-    const style = window.getComputedStyle(styleHost);
-    const openWidth =
-      Number.parseFloat(
-        style.getPropertyValue('--other-split-menu-open-width'),
-      ) || shell.getBoundingClientRect().width;
-    const overlap =
-      Number.parseFloat(
-        style.getPropertyValue('--other-split-menu-panel-overlap'),
-      ) || 0;
-    const submenuWidth =
-      Number.parseFloat(
-        style.getPropertyValue('--other-split-menu-submenu-width'),
-      ) || 200;
-
-    const rect = shell.getBoundingClientRect();
-    const nextStyle: React.CSSProperties = {
-      top: Math.round(rect.top),
-      left: Math.round(rect.left + openWidth - overlap),
-      height: Math.round(rect.height),
-      width: Math.round(submenuWidth),
-    };
-
-    setSubmenuPanelStyle((prev) => {
-      if (
-        prev.top === nextStyle.top &&
-        prev.left === nextStyle.left &&
-        prev.height === nextStyle.height &&
-        prev.width === nextStyle.width
-      ) {
-        return prev;
-      }
-      return nextStyle;
-    });
-  }, []);
-
-  React.useEffect(() => {
-    if (!hoverListOpen || hoverMenuMeta.items.length === 0) return;
-
-    syncSubmenuPanelStyle();
-    let rafId = 0;
-    const scheduleSync = () => {
-      window.cancelAnimationFrame(rafId);
-      rafId = window.requestAnimationFrame(syncSubmenuPanelStyle);
-    };
-
-    window.addEventListener('resize', scheduleSync);
-    window.addEventListener('scroll', scheduleSync, true);
-    return () => {
-      window.cancelAnimationFrame(rafId);
-      window.removeEventListener('resize', scheduleSync);
-      window.removeEventListener('scroll', scheduleSync, true);
-    };
-  }, [hoverListOpen, hoverMenuMeta.items.length, syncSubmenuPanelStyle]);
-
   React.useEffect(() => {
     return () => {
       clearCloseTimer();
@@ -557,7 +494,6 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
   return (
     <div className="other-menus-split-menu">
       <div
-        ref={shellRef}
         className={
           'other-menus-split-menu-shell' +
           (hoverListOpen ? ' other-menus-split-menu-shell-open' : '')
@@ -609,7 +545,6 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
               ? ' other-menus-split-menu-submenu-panel-open'
               : '')
           }
-          style={submenuPanelStyle}
           onMouseEnter={handleHoverZoneEnter}
           onMouseLeave={handleHoverZoneLeave}
         >
