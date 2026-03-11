@@ -111,7 +111,7 @@ const Page: React.FC = () => {
       },
     },
     {
-      title: '周同比',
+      title: '周同比123123',
       dataIndex: 'wow',
       key: 'wow',
       align: 'right',

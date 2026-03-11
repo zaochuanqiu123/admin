@@ -567,7 +567,7 @@ body .ant-layout-sider .ant-layout-sider-children {
   );
   --other-split-menu-shell-open-width: var(--other-split-menu-open-width);
   --other-split-menu-item-height: 44px;
-  --other-split-menu-icon-text-gap: -1px;
+  --other-split-menu-icon-text-gap: -2px;
   position: relative;
   height: 100%;
   display: flex;
@@ -651,17 +651,22 @@ body .ant-layout-sider .ant-layout-sider-children {
 
 .other-menus-split-menu-icon-btn:hover {
   color: #2f64f8;
-  background: rgba(22, 119, 255, 0.08);
+  background: transparent;
 }
 
 .other-menus-split-menu-icon-btn-active {
   color: #1f5bff;
-  background: rgba(22, 119, 255, 0.08);
+  background: transparent;
 }
 
 .other-menus-split-menu-list-open .other-menus-split-menu-icon-btn {
   grid-template-columns: var(--other-split-menu-icon-content-width)
     var(--other-split-menu-label-width);
+}
+
+.other-menus-split-menu-list-open .other-menus-split-menu-icon-btn:hover,
+.other-menus-split-menu-list-open .other-menus-split-menu-icon-btn-active {
+  background: rgba(22, 119, 255, 0.08);
 }
 
 .other-menus-split-menu-item-icon {
