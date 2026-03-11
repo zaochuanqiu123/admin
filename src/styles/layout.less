@@ -59,6 +59,15 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
   overflow: visible !important;
 }
 
+/* 分栏和非分栏都允许侧栏子层向右浮出（用于 split 二级菜单浮层） */
+body .ant-pro-sider .ant-layout-sider-children {
+  overflow: visible !important;
+}
+
+body .ant-layout-sider .ant-layout-sider-children {
+  overflow: visible !important;
+}
+
 .pc-admin-workplace-common .workplace-common-card {
   .mixin-white-card();
 }
@@ -494,16 +503,25 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 }
 
 .other-menus-split-menu {
-  --other-split-menu-icon-width: 56px;
-  --other-split-menu-label-width: 70px;
-  --other-split-menu-panel-overlap: 2px;
-  --other-split-menu-open-width: calc(
-    var(--other-split-menu-icon-width) + var(--other-split-menu-label-width)
+  --other-split-menu-icon-width: 52px;
+  --other-split-menu-label-width: 42px;
+  --other-split-menu-list-padding-x: 6px;
+  --other-split-menu-icon-content-width: calc(
+    var(--other-split-menu-icon-width) - var(--other-split-menu-list-padding-x) * 2
   );
-  --other-split-menu-item-height: 45px;
-  --other-split-menu-panel-top-padding: 10px;
+  --other-split-menu-panel-overlap: 2px;
+  --other-split-menu-submenu-width: 200px;
+  --other-split-menu-open-width: calc(
+    var(--other-split-menu-icon-content-width) +
+      var(--other-split-menu-label-width) +
+      var(--other-split-menu-icon-text-gap) +
+      var(--other-split-menu-list-padding-x) * 2
+  );
+  --other-split-menu-shell-open-width: var(--other-split-menu-open-width);
+  --other-split-menu-item-height: 44px;
+  --other-split-menu-panel-top-padding: 8px;
   --other-split-menu-icon-text-gap: 0px;
-  --other-split-menu-expanded-icon-width: 34px;
+  --other-split-menu-expanded-icon-width: 26px;
   position: relative;
   height: 100%;
   display: flex;
@@ -522,19 +540,31 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
   flex: 0 0 var(--other-split-menu-icon-width);
   width: var(--other-split-menu-icon-width);
   height: 100%;
+  display: flex;
+  align-items: stretch;
   overflow: visible;
+  border-radius: 16px 0 0 16px;
+  background: var(--ant-color-bg-container);
+  transition:
+    width 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: width;
+}
+
+.other-menus-split-menu-shell-open {
+  flex-basis: var(--other-split-menu-shell-open-width);
+  width: var(--other-split-menu-shell-open-width);
 }
 
 .other-menus-split-menu-list {
-  position: absolute;
-  top: 0;
-  left: 0;
+  position: relative;
+  flex: 0 0 var(--other-split-menu-icon-width);
   width: var(--other-split-menu-icon-width);
   height: 100%;
   box-sizing: border-box;
-  padding: var(--other-split-menu-panel-top-padding) 8px;
+  padding: var(--other-split-menu-panel-top-padding)
+    var(--other-split-menu-list-padding-x);
   border-radius: 16px 0 0 16px;
-  background: var(--ant-color-bg-container);
+  background: transparent;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -547,7 +577,11 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 }
 
 .other-menus-split-menu-list-open {
+  flex-basis: var(--other-split-menu-open-width);
   width: var(--other-split-menu-open-width);
+  overflow-x: visible;
+  position: relative;
+  z-index: 43;
 }
 
 .other-menus-split-menu-icon-btn {
@@ -580,6 +614,16 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 
 .other-menus-split-menu-list-open .other-menus-split-menu-icon-btn {
   justify-content: flex-start;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.other-menus-split-menu-list:not(.other-menus-split-menu-list-open) .other-menus-split-menu-icon-btn {
+  display: grid;
+  place-items: center;
+  justify-content: initial;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .other-menus-split-menu-item-icon {
@@ -594,11 +638,12 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 }
 
 .other-menus-split-menu-item-label {
-  flex: 0 0 0;
+  flex: 1 1 0;
   width: 0;
   min-width: 0;
   margin-left: 0;
   padding-right: 0;
+  text-align: left;
   opacity: 0;
   transform: translateX(-4px);
   font-size: 14px;
@@ -613,9 +658,10 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 }
 
 .other-menus-split-menu-list-open .other-menus-split-menu-item-label {
-  flex: 1;
-  width: auto;
-  padding-right: 8px;
+  flex: 0 0 var(--other-split-menu-label-width);
+  width: var(--other-split-menu-label-width);
+  max-width: var(--other-split-menu-label-width);
+  padding-right: 0;
   margin-left: var(--other-split-menu-icon-text-gap);
   opacity: 1;
   transform: translateX(0);
@@ -624,26 +670,31 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 }
 
 .other-menus-split-menu-list-open .other-menus-split-menu-item-icon {
-  margin-left: 6px;
+  flex-basis: var(--other-split-menu-icon-content-width);
+  width: var(--other-split-menu-icon-content-width);
+  margin-left: 0;
+  justify-content: center;
 }
 
 .other-menus-split-menu-submenu-panel {
   position: fixed;
+  z-index: 120;
   top: 0;
-  bottom: auto;
   left: 0;
-  z-index: 42;
-  width: 200px;
-  min-height: 0;
+  bottom: auto;
+  flex: none;
+  width: var(--other-split-menu-submenu-width);
+  height: 0;
   padding: var(--other-split-menu-panel-top-padding) 0;
   border-radius: 0 16px 16px 0;
-  background: #f5f5f6;
+  background: #fff;
+  border-left: 1px solid rgba(0, 0, 0, 0.04);
   box-shadow: none;
   overflow-y: auto;
   overflow-x: hidden;
   opacity: 0;
   pointer-events: none;
-  transform: translateX(-8px);
+  transform: translateX(-10px);
   transition:
     opacity 0.18s ease,
     transform 0.18s ease;
@@ -655,7 +706,7 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 .other-menus-split-menu-submenu-panel
   .other-menus-split-menu-submenu-ant
   .ant-menu-sub.ant-menu-inline {
-  background: #f5f5f6 !important;
+  background: #fff !important;
 }
 
 .other-menus-split-menu-submenu-panel-open {
@@ -668,6 +719,8 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
   flex: 1;
   min-width: 0;
   min-height: 0;
+  position: relative;
+  z-index: 1;
   border-radius: 10px;
   background: var(--ant-color-bg-container);
   overflow: auto;
@@ -726,6 +779,7 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 .other-menus-split-menu-ant .ant-menu-submenu-title .ant-menu-title-content {
   max-width: none !important;
   margin-left: 0 !important;
+  text-align: left;
 }
 
 .other-menus-split-menu-ant .ant-menu-item-selected,
@@ -770,6 +824,8 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
 .plain-sider-menu.plain-sider-menu-split {
   padding: 0 !important;
   overflow: visible;
+  position: relative;
+  z-index: 60;
 }
 
 .plain-sider-split-content {
@@ -777,6 +833,7 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
   min-height: 0;
   position: relative;
   overflow: visible;
+  z-index: 60;
   padding: 0;
   background: transparent;
   border-radius: 0;
@@ -805,11 +862,20 @@ body .ant-pro-sider-mix .ant-layout-sider-children {
   overflow: visible;
 }
 
-.plain-sider-split-content .other-menus-split-menu-list {
+.plain-sider-split-content .other-menus-split-menu-shell {
   .mixin-white-card();
-  padding: 10px 8px;
   background: var(--ant-color-bg-container);
   border-radius: 16px 0 0 16px;
+}
+
+.plain-sider-split-content .other-menus-split-menu-list {
+  padding: 10px 8px;
+  background: transparent;
+  border-radius: 0;
+}
+
+.plain-sider-split-content .other-menus-split-menu-submenu-panel {
+  background: var(--ant-color-bg-container);
 }
 
 .plain-sider-split-content .other-menus-split-menu-tree {
