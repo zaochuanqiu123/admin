@@ -630,59 +630,61 @@ const DashboardIndexPage: React.FC = () => {
         </div>
 
         <aside className="dashboard-index-side">
-          <section className="dashboard-local-card dashboard-local-card--gradient">
-            <div className="dashboard-card-head">
-              <div className="dashboard-card-title">
-                挚伴科技（上海）有限公司
+          <div className="dashboard-org-card-stack">
+            <section className="dashboard-local-card dashboard-local-card--gradient">
+              <div className="dashboard-card-head">
+                <div className="dashboard-card-title">
+                  挚伴科技（上海）有限公司
+                </div>
               </div>
-            </div>
 
-            <div className="dashboard-org-actions u-flex-between">
-              <button type="button" className="dashboard-btn-lifetime">
-                终身
-              </button>
-              <button
-                type="button"
-                className="dashboard-btn-shop u-inline-flex-center"
-              >
-                <span className="dashboard-btn-shop-icon u-inline-flex-middle">
-                  ♬
-                </span>
-                私域商城
-              </button>
-            </div>
-
-            <div className="dashboard-org-top u-flex-col">
-              <div className="dashboard-org-line u-flex-between">
-                <span>到期时间</span>
-                <span>2124-09-11</span>
+              <div className="dashboard-org-actions u-flex-between">
+                <button type="button" className="dashboard-btn-lifetime">
+                  终身
+                </button>
+                <button
+                  type="button"
+                  className="dashboard-btn-shop u-inline-flex-center"
+                >
+                  <span className="dashboard-btn-shop-icon u-inline-flex-middle">
+                    ♬
+                  </span>
+                  私域商城
+                </button>
               </div>
-              <div className="dashboard-org-line u-flex-between">
-                <span>剩余天数</span>
-                <span>35993</span>
+
+              <div className="dashboard-org-top u-flex-col">
+                <div className="dashboard-org-line u-flex-between">
+                  <span>到期时间</span>
+                  <span>2124-09-11</span>
+                </div>
+                <div className="dashboard-org-line u-flex-between">
+                  <span>剩余天数</span>
+                  <span>35993</span>
+                </div>
               </div>
-            </div>
+            </section>
 
-            <div className="dashboard-org-divider" />
-
-            <div className="dashboard-org-block">
-              <div className="dashboard-org-block-head u-flex-between">
-                <span>门店数量</span>
-                <button type="button">管理</button>
+            <section className="dashboard-local-card dashboard-org-card-bottom">
+              <div className="dashboard-org-block">
+                <div className="dashboard-org-block-head u-flex-between">
+                  <span>门店数量</span>
+                  <button type="button">管理</button>
+                </div>
+                <div className="dashboard-org-block-value">10 / 10</div>
               </div>
-              <div className="dashboard-org-block-value">10 / 10</div>
-            </div>
 
-            <div className="dashboard-org-divider" />
+              <div className="dashboard-org-divider" />
 
-            <div className="dashboard-org-block">
-              <div className="dashboard-org-block-head u-flex-between">
-                <span>插件数量</span>
-                <button type="button">详情</button>
+              <div className="dashboard-org-block">
+                <div className="dashboard-org-block-head u-flex-between">
+                  <span>插件数量</span>
+                  <button type="button">详情</button>
+                </div>
+                <div className="dashboard-org-block-value">40 / 41</div>
               </div>
-              <div className="dashboard-org-block-value">40 / 41</div>
-            </div>
-          </section>
+            </section>
+          </div>
 
           <section className="dashboard-local-card">
             <div className="dashboard-card-head">

@@ -504,8 +504,8 @@ body .ant-layout-sider .ant-layout-sider-children {
 
 .other-menus-split-menu {
   --other-split-menu-icon-width: 52px;
-  --other-split-menu-label-width: 42px;
-  --other-split-menu-list-padding-x: 6px;
+  --other-split-menu-label-width: 58px;
+  --other-split-menu-list-padding-x: -1px;
   --other-split-menu-icon-content-width: calc(
     var(--other-split-menu-icon-width) - var(--other-split-menu-list-padding-x) * 2
   );
@@ -519,9 +519,7 @@ body .ant-layout-sider .ant-layout-sider-children {
   );
   --other-split-menu-shell-open-width: var(--other-split-menu-open-width);
   --other-split-menu-item-height: 44px;
-  --other-split-menu-panel-top-padding: 8px;
-  --other-split-menu-icon-text-gap: 0px;
-  --other-split-menu-expanded-icon-width: 26px;
+  --other-split-menu-icon-text-gap: -1px;
   position: relative;
   height: 100%;
   display: flex;
@@ -593,9 +591,10 @@ body .ant-layout-sider .ant-layout-sider-children {
   background: transparent;
   color: rgba(0, 0, 0, 0.72);
   cursor: pointer;
-  display: flex;
+  display: grid;
+  grid-template-columns: var(--other-split-menu-icon-content-width) 0;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 0;
   transition:
     color 0.2s ease,
@@ -613,22 +612,12 @@ body .ant-layout-sider .ant-layout-sider-children {
 }
 
 .other-menus-split-menu-list-open .other-menus-split-menu-icon-btn {
-  justify-content: flex-start;
-  padding-left: 0;
-  padding-right: 0;
-}
-
-.other-menus-split-menu-list:not(.other-menus-split-menu-list-open) .other-menus-split-menu-icon-btn {
-  display: grid;
-  place-items: center;
-  justify-content: initial;
-  padding-left: 0;
-  padding-right: 0;
+  grid-template-columns: var(--other-split-menu-icon-content-width)
+    var(--other-split-menu-label-width);
 }
 
 .other-menus-split-menu-item-icon {
-  flex: 0 0 var(--other-split-menu-expanded-icon-width);
-  width: var(--other-split-menu-expanded-icon-width);
+  width: var(--other-split-menu-icon-content-width);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -669,13 +658,6 @@ body .ant-layout-sider .ant-layout-sider-children {
   transition-delay: 0.04s;
 }
 
-.other-menus-split-menu-list-open .other-menus-split-menu-item-icon {
-  flex-basis: var(--other-split-menu-icon-content-width);
-  width: var(--other-split-menu-icon-content-width);
-  margin-left: 0;
-  justify-content: center;
-}
-
 .other-menus-split-menu-submenu-panel {
   position: fixed;
   z-index: 120;
@@ -685,7 +667,7 @@ body .ant-layout-sider .ant-layout-sider-children {
   flex: none;
   width: var(--other-split-menu-submenu-width);
   height: 0;
-  padding: var(--other-split-menu-panel-top-padding) 0;
+  padding: 10px 0 0;
   border-radius: 0 16px 16px 0;
   background: #fff;
   border-left: 1px solid rgba(0, 0, 0, 0.04);
@@ -869,7 +851,6 @@ body .ant-layout-sider .ant-layout-sider-children {
 }
 
 .plain-sider-split-content .other-menus-split-menu-list {
-  padding: 10px 8px;
   background: transparent;
   border-radius: 0;
 }

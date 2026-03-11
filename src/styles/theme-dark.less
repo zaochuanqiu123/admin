@@ -58,6 +58,15 @@ body.theme-black-mode .plain-sider-menu-content {
   border: 1px solid var(--pc-dark-border) !important;
 }
 
+/* sub 页面内容区与首页保持同一黑底，不再使用灰色卡片底 */
+body.theme-black-mode .pc-admin-subpage-wrap > * {
+  background: var(--pc-dark-bg-page) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
 body.theme-black-mode .dashboard-home-split-menu-icons,
 body.theme-black-mode .other-menus-split-menu-icons,
 body.theme-black-mode .other-menus-split-menu-tree,
@@ -131,6 +140,26 @@ body.theme-black-mode .other-menus-split-menu-submenu-panel {
   border-left-color: var(--pc-dark-border) !important;
 }
 
+/* 非首页分栏：展开二级菜单内部面板统一暗黑底，覆盖基础白底规则 */
+body.theme-black-mode
+  .other-menus-split-menu-submenu-panel
+  .other-menus-split-menu-submenu-ant.ant-menu,
+body.theme-black-mode
+  .other-menus-split-menu-submenu-panel
+  .other-menus-split-menu-submenu-ant
+  .ant-menu-sub.ant-menu-inline,
+body.theme-black-mode
+  .other-menus-split-menu-submenu-panel
+  .other-menus-split-menu-submenu-ant
+  .ant-menu-submenu,
+body.theme-black-mode
+  .other-menus-split-menu-submenu-panel
+  .other-menus-split-menu-submenu-ant
+  .ant-menu-item {
+  background: var(--pc-dark-bg-surface) !important;
+  background-color: var(--pc-dark-bg-surface) !important;
+}
+
 body.theme-black-mode .other-menus-split-menu-hover-panel-item {
   color: var(--pc-dark-text-secondary) !important;
 }
@@ -151,10 +180,7 @@ body.theme-black-mode .workplace-user-greeting {
   color: var(--pc-dark-text) !important;
 }
 
-body.theme-black-mode .workplace-user-ukey-block {
-  background: rgba(35, 50, 76, 0.72) !important;
-  border: 1px solid #334766 !important;
-}
+
 
 body.theme-black-mode .workplace-user-ukey-serial {
   color: rgba(255, 255, 255, 0.82) !important;
