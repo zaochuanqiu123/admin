@@ -220,7 +220,7 @@ body .ant-layout-sider .ant-layout-sider-children > div {
 .dashboard-sider-menu-content.dashboard-sider-menu-content-split {
   padding: 0 !important;
   background: transparent !important;
-  border-radius: 0 !important;
+  // border-radius: 0 !important;
 }
 
 .dashboard-sider-menu > .ant-menu,
@@ -1078,8 +1078,8 @@ body .ant-layout-sider .ant-layout-sider-children > div {
   line-height: 60px !important;
   /* 0.16：底部分割线可见但不抢眼 */
   border-bottom: 1px solid rgba(255, 255, 255, 0.16) !important;
-  /* 阴影 4/14/0.05：轻微浮层感，避免太厚重 */
-  box-shadow: 0 4px 14px rgba(20, 36, 66, 0.05) !important;
+  /* 去掉底部突起感，仅保留分割线 */
+  box-shadow: none !important;
   /* 0.18：玻璃底色透明度（越小越透） */
   background: rgba(255, 255, 255, 0.18) !important;
   /* 同上：兼容部分组件只读取 background-color */
@@ -1094,8 +1094,8 @@ body .ant-layout-sider .ant-layout-sider-children > div {
 .ant-layout-header {
   /* 0.16：头部下边界的轻分割 */
   border-bottom: 1px solid rgba(255, 255, 255, 0.16) !important;
-  /* 4/14/0.05：与主头部保持同样轻阴影 */
-  box-shadow: 0 4px 14px rgba(20, 36, 66, 0.05) !important;
+  /* 去掉底部突起感，仅保留分割线 */
+  box-shadow: none !important;
   /* 0.18：兜底头部透明底色 */
   background: rgba(255, 255, 255, 0.18) !important;
   /* 同步 background-color，避免样式覆盖差异 */

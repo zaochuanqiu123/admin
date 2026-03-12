@@ -1,4 +1,9 @@
-import { DownOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons';
+import {
+  DownOutlined,
+  MoonOutlined,
+  SunOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
 
 import type {
   Settings as LayoutSettings,
@@ -9,6 +14,7 @@ import { SettingDrawer } from '@ant-design/pro-components';
 import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
 import { history } from '@umijs/max';
 import {
+  Avatar,
   Button,
   Dropdown,
   type MenuProps,
@@ -17,7 +23,7 @@ import {
   Tooltip,
 } from 'antd';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { AvatarName, NoticeBell } from '@/components';
+import { NoticeBell } from '@/components';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
 import '@ant-design/v5-patch-for-react-19';
@@ -68,6 +74,8 @@ const isDev = process.env.NODE_ENV === 'development' || process.env.CI;
 const loginPath = '/user/login';
 const devBypassAuth =
   typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
+const HEADER_USER_AVATAR_SRC =
+  'https://api.dicebear.com/7.x/miniavs/svg?seed=antd-yangkun';
 let logoutInFlight: Promise<void> | null = null;
 
 const apiBase = typeof __API_BASE__ !== 'undefined' ? __API_BASE__ : undefined;
@@ -726,9 +734,9 @@ export const layout: RunTimeLayoutConfig = ({
     },
 
     avatarProps: {
-      src: (initialState?.currentUser?.avatar || undefined) as any,
-      title: <AvatarName />,
-      render: (_, avatarChildren) => {
+      src: HEADER_USER_AVATAR_SRC,
+      title: undefined,
+      render: () => {
         const clearWorkplaceCache = () => {
           try {
             const keys: string[] = [];
@@ -857,10 +865,12 @@ export const layout: RunTimeLayoutConfig = ({
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
-                height: 48,
-                padding: '0 16px',
+                justifyContent: 'center',
+                gap: 6,
+                height: 40,
+                padding: '0 8px',
                 margin: 16,
-                borderRadius: 6,
+                borderRadius: 999,
                 transition: 'background-color 0.2s',
               }}
               onMouseEnter={(e) => {
@@ -872,7 +882,17 @@ export const layout: RunTimeLayoutConfig = ({
                   'transparent';
               }}
             >
-              {avatarChildren}
+              <Avatar
+                size={30}
+                src={HEADER_USER_AVATAR_SRC}
+                icon={<UserOutlined />}
+              />
+              <DownOutlined
+                style={{
+                  fontSize: 10,
+                  color: 'var(--ant-color-text-tertiary)',
+                }}
+              />
             </span>
           </Dropdown>
         );
