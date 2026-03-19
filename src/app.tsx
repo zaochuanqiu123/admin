@@ -137,55 +137,6 @@ function dedupeMenuTree(items: MenuDataItem[]): MenuDataItem[] {
   });
 }
 
-function normalizeStoreModuleMenus(menuItems: MenuDataItem[]): MenuDataItem[] {
-  if (!Array.isArray(menuItems) || menuItems.length === 0) return menuItems;
-
-  const formIndices = menuItems
-    .map((item, index) =>
-      getModuleRoot(item?.path ? String(item.path) : undefined) === '/form'
-        ? index
-        : -1,
-    )
-    .filter((index) => index >= 0);
-
-  if (formIndices.length === 0) return menuItems;
-
-  const firstIndex = formIndices[0];
-  const firstItem = menuItems[firstIndex];
-  const removed = new Set(formIndices);
-  const nextMenus = menuItems.filter((_, index) => !removed.has(index));
-  const formItems = formIndices
-    .map((index) => menuItems[index])
-    .filter((item): item is MenuDataItem => !!item);
-  const rootMenu = formItems.find(
-    (item) =>
-      normalizePathname(item?.path ? String(item.path) : undefined) === '/form',
-  );
-  const mergedChildren = dedupeMenuTree(
-    formItems.flatMap((item) => {
-      const clonedItem = cloneMenuTree([item])[0];
-      const itemPath = normalizePathname(
-        item?.path ? String(item.path) : undefined,
-      );
-      if (itemPath === '/form') {
-        return Array.isArray(clonedItem?.children)
-          ? (clonedItem.children as MenuDataItem[])
-          : [];
-      }
-      return [clonedItem];
-    }),
-  );
-
-  nextMenus.splice(firstIndex, 0, {
-    ...(rootMenu ? cloneMenuTree([rootMenu])[0] : firstItem),
-    name: firstItem?.name || '门店',
-    path: '/form',
-    children: mergedChildren.length > 0 ? mergedChildren : undefined,
-  });
-
-  return nextMenus;
-}
-
 function normalizePathname(pathname: string | undefined): string {
   const value =
     String(pathname || '')
@@ -425,10 +376,7 @@ export const layout: RunTimeLayoutConfig = ({
           return path !== '/dashboard' && path !== '/dashboard/index';
         },
       );
-      const normalizedPermContextMenu = normalizeStoreModuleMenus(
-        visiblePermContextMenu,
-      );
-      return [dashboardMenu, ...normalizedPermContextMenu];
+      return [dashboardMenu, ...visiblePermContextMenu];
     }
 
     return [dashboardMenu];

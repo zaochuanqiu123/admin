@@ -184,6 +184,22 @@ function collectParentKeys(
   return result;
 }
 
+function getMenuKeyDepth(
+  key: string,
+  parentByKey: Map<string, string | undefined>,
+): number {
+  if (!key) return 0;
+  let depth = 0;
+  let cursor: string | undefined = key;
+  const visited = new Set<string>();
+  while (cursor && !visited.has(cursor)) {
+    visited.add(cursor);
+    depth += 1;
+    cursor = parentByKey.get(cursor);
+  }
+  return depth;
+}
+
 const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
   topMenus,
   pathname,
@@ -338,10 +354,17 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
   const selectedKeys = React.useMemo(() => {
     if (currentTargetId) {
       let matchedByTargetKey = '';
+      let matchedByTargetDepth = -1;
       menuMeta.targetIdByKey.forEach((nodeTargetId, key) => {
         if (!nodeTargetId || nodeTargetId !== currentTargetId) return;
-        if (key.length > matchedByTargetKey.length) {
+        const depth = getMenuKeyDepth(key, menuMeta.parentByKey);
+        if (
+          depth > matchedByTargetDepth ||
+          (depth === matchedByTargetDepth &&
+            key.length > matchedByTargetKey.length)
+        ) {
           matchedByTargetKey = key;
+          matchedByTargetDepth = depth;
         }
       });
       if (matchedByTargetKey) return [matchedByTargetKey];
@@ -349,15 +372,29 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
 
     let matchedKey = '';
     let matchedLength = -1;
+    let matchedDepth = -1;
     menuMeta.pathByKey.forEach((itemPath, key) => {
       if (!isPathMatch(itemPath, pathname)) return;
       const score = normalizePath(itemPath).length;
-      if (score <= matchedLength) return;
+      const depth = getMenuKeyDepth(key, menuMeta.parentByKey);
+      if (
+        score < matchedLength ||
+        (score === matchedLength && depth <= matchedDepth)
+      ) {
+        return;
+      }
       matchedLength = score;
       matchedKey = key;
+      matchedDepth = depth;
     });
     return matchedKey ? [matchedKey] : [];
-  }, [currentTargetId, menuMeta.pathByKey, menuMeta.targetIdByKey, pathname]);
+  }, [
+    currentTargetId,
+    menuMeta.parentByKey,
+    menuMeta.pathByKey,
+    menuMeta.targetIdByKey,
+    pathname,
+  ]);
 
   React.useEffect(() => {
     if (menuMeta.submenuKeys.length === 0) {
