@@ -34,10 +34,7 @@ const ROUTE_NAME_TO_PATH_MAP = buildRouteNamePathMap(routes as any[]);
 
 function pickTargetId(node: any): string | undefined {
   const raw =
-    node?.tempPathUrlChain ??
-    node?.targetId ??
-    node?.targetID ??
-    node?.target_id;
+    node?.pathUrl ?? node?.targetId ?? node?.targetID ?? node?.target_id;
   if (raw === undefined || raw === null) return undefined;
   const value = String(raw).trim();
   return value || undefined;
