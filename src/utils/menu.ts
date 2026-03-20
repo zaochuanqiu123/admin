@@ -32,6 +32,10 @@ function buildRouteNamePathMap(routeList: any[]): Record<string, string> {
 
 const ROUTE_NAME_TO_PATH_MAP = buildRouteNamePathMap(routes as any[]);
 
+const LOCAL_MENU_PATH_OVERRIDES: Record<string, string> = {
+  角色权限: '/set/role-permission',
+};
+
 function pickTargetId(node: any): string | undefined {
   const raw =
     node?.pathUrl ?? node?.targetId ?? node?.targetID ?? node?.target_id;
@@ -41,6 +45,11 @@ function pickTargetId(node: any): string | undefined {
 }
 
 function pickPath(node: any, menuName: string): string | undefined {
+  const overridePath = LOCAL_MENU_PATH_OVERRIDES[menuName];
+  if (overridePath) {
+    return overridePath;
+  }
+
   const backendPath = String(
     node?.path ??
       node?.url ??
@@ -178,21 +187,44 @@ function normalizePath(path: string | undefined): string {
 
 function flattenMenuData(
   items: MenuDataItem[] | undefined,
-): (MenuDataItem & { targetId?: string })[] {
+): (MenuDataItem & { targetId?: string; depth?: number })[] {
   if (!items || items.length === 0) return [];
-  const result: (MenuDataItem & { targetId?: string })[] = [];
+  const result: (MenuDataItem & { targetId?: string; depth?: number })[] = [];
 
-  const walk = (nodes: MenuDataItem[]) => {
+  const walk = (nodes: MenuDataItem[], depth: number) => {
     for (const node of nodes) {
-      result.push(node as MenuDataItem & { targetId?: string });
+      result.push({
+        ...(node as MenuDataItem & { targetId?: string }),
+        depth,
+      });
       if (Array.isArray(node?.children) && node.children.length > 0) {
-        walk(node.children);
+        walk(node.children, depth + 1);
       }
     }
   };
 
-  walk(items);
+  walk(items, 0);
   return result;
+}
+
+function pickBestTargetIdCandidate(
+  items: (MenuDataItem & { targetId?: string; depth?: number })[],
+  targetPath: string,
+): string | undefined {
+  const candidates = items.filter((item) => {
+    const itemPath = normalizePath(item?.path as string | undefined);
+    return itemPath === targetPath && item?.targetId;
+  });
+
+  if (candidates.length === 0) return undefined;
+
+  candidates.sort((a, b) => {
+    const depthA = Number(a.depth ?? Number.MAX_SAFE_INTEGER);
+    const depthB = Number(b.depth ?? Number.MAX_SAFE_INTEGER);
+    return depthA - depthB;
+  });
+
+  return candidates[0]?.targetId ? String(candidates[0].targetId) : undefined;
 }
 
 export function findTargetIdByPath(
@@ -202,21 +234,46 @@ export function findTargetIdByPath(
   const normalizedPath = normalizePath(path);
   if (!normalizedPath) return undefined;
 
-  const flatMenus = flattenMenuData(menuData);
-  const exact = flatMenus.find((item) => {
-    const itemPath = normalizePath(item?.path as string | undefined);
-    return itemPath === normalizedPath && item?.targetId;
-  });
-  if (exact?.targetId) return String(exact.targetId);
-
   const moduleRoot = `/${normalizedPath.split('/').filter(Boolean)[0] || ''}`;
+  const topLevelModuleNode =
+    Array.isArray(menuData) && moduleRoot && moduleRoot !== '/'
+      ? (menuData.find((item) => {
+          const itemPath = normalizePath(item?.path as string | undefined);
+          return itemPath === moduleRoot;
+        }) as MenuNodeWithTarget | undefined)
+      : undefined;
+
+  if (topLevelModuleNode) {
+    const branchMenus = flattenMenuData([topLevelModuleNode]);
+    const branchExactTargetId = pickBestTargetIdCandidate(
+      branchMenus,
+      normalizedPath,
+    );
+    if (branchExactTargetId) return branchExactTargetId;
+
+    const branchRootTargetId = pickBestTargetIdCandidate(
+      branchMenus,
+      moduleRoot,
+    );
+    if (branchRootTargetId) return branchRootTargetId;
+
+    const branchFirstLeafTarget = findFirstLeafMenuTarget(
+      topLevelModuleNode,
+      getMenuNodePath(topLevelModuleNode),
+    );
+    if (branchFirstLeafTarget?.targetId) {
+      return branchFirstLeafTarget.targetId;
+    }
+  }
+
+  const flatMenus = flattenMenuData(menuData);
+  const exactTargetId = pickBestTargetIdCandidate(flatMenus, normalizedPath);
+  if (exactTargetId) return exactTargetId;
+
   if (!moduleRoot || moduleRoot === '/') return undefined;
 
-  const rootMatch = flatMenus.find((item) => {
-    const itemPath = normalizePath(item?.path as string | undefined);
-    return itemPath === moduleRoot && item?.targetId;
-  });
-  if (rootMatch?.targetId) return String(rootMatch.targetId);
+  const rootTargetId = pickBestTargetIdCandidate(flatMenus, moduleRoot);
+  if (rootTargetId) return rootTargetId;
 
   return undefined;
 }

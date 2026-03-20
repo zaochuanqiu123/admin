@@ -162,7 +162,7 @@ export default defineConfig({
    */
   layout: {
     locale: true,
-    title: 'Ant Design',
+    title: '随付达',
     ...defaultSettings,
   },
 

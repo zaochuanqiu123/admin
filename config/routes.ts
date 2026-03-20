@@ -460,6 +460,11 @@ const routes = [
     component: './finance',
   },
   {
+    name: '角色权限',
+    path: '/set/role-permission',
+    component: './set/role-permission',
+  },
+  {
     name: '设置',
     path: '/set',
     component: './set',

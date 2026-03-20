@@ -143,6 +143,30 @@ function hasTargetIdInTree(node: MenuNode, targetId: string): boolean {
   return false;
 }
 
+function getBestPathMatchScoreInTree(node: MenuNode, pathname: string): number {
+  let bestScore = -1;
+  const stack: MenuNode[] = [node];
+  const visited = new Set<string>();
+
+  while (stack.length > 0) {
+    const current = stack.pop() as MenuNode;
+    if (visited.has(current.key)) continue;
+    visited.add(current.key);
+
+    if (current.path && isPathMatch(current.path, pathname)) {
+      bestScore = Math.max(bestScore, normalizePath(current.path).length);
+    }
+
+    if (current.children && current.children.length > 0) {
+      for (const child of current.children) {
+        stack.push(child);
+      }
+    }
+  }
+
+  return bestScore;
+}
+
 function findFirstLeafNavigableNode(
   node: MenuNode | undefined,
   inheritedPath?: string,
@@ -230,10 +254,19 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
         return;
       }
     }
-    const matched = topNodes.find((node) => hasPathInTree(node, pathname));
-    if (matched) {
-      if (matched.key !== activeTopKey) {
-        setActiveTopKey(matched.key);
+    const matched = topNodes.reduce<
+      { node: MenuNode; score: number } | undefined
+    >((best, node) => {
+      const score = getBestPathMatchScoreInTree(node, pathname);
+      if (score < 0) return best;
+      if (!best || score > best.score) {
+        return { node, score };
+      }
+      return best;
+    }, undefined);
+    if (matched?.node) {
+      if (matched.node.key !== activeTopKey) {
+        setActiveTopKey(matched.node.key);
       }
       return;
     }

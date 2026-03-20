@@ -114,6 +114,66 @@ function cloneMenuTree(items: MenuDataItem[]): MenuDataItem[] {
   }));
 }
 
+function patchSettingsLocalMenus(items: MenuDataItem[]): MenuDataItem[] {
+  const nextItems = cloneMenuTree(items);
+  const settingsNode = nextItems.find(
+    (item) =>
+      normalizePathname(item?.path ? String(item.path) : undefined) === '/set',
+  ) as (MenuDataItem & { targetId?: string }) | undefined;
+
+  if (!settingsNode) return nextItems;
+
+  let matched = false;
+  const patchChildren = (
+    children: MenuDataItem[] | undefined,
+  ): MenuDataItem[] | undefined => {
+    if (!Array.isArray(children) || children.length === 0) return children;
+
+    return children.map((child) => {
+      const nextChild = {
+        ...child,
+        children: patchChildren(
+          Array.isArray(child?.children)
+            ? (child.children as MenuDataItem[])
+            : undefined,
+        ),
+      } as MenuDataItem & { targetId?: string };
+
+      const childName =
+        typeof nextChild?.name === 'string' ? nextChild.name.trim() : '';
+      if (childName === '角色权限') {
+        nextChild.path = '/set/role-permission';
+        matched = true;
+      }
+
+      return nextChild;
+    });
+  };
+
+  const patchedChildren = patchChildren(
+    Array.isArray(settingsNode.children)
+      ? (settingsNode.children as MenuDataItem[])
+      : [],
+  );
+
+  if (!matched) {
+    const existingChildren = Array.isArray(patchedChildren)
+      ? patchedChildren
+      : [];
+    settingsNode.children = [
+      ...existingChildren,
+      {
+        name: '角色权限',
+        path: '/set/role-permission',
+      } as MenuDataItem,
+    ];
+    return nextItems;
+  }
+
+  settingsNode.children = patchedChildren;
+  return nextItems;
+}
+
 function getModuleRoot(path: string | undefined): string {
   if (!path) return '';
   const pathname = String(path).split('?')[0] || '';
@@ -370,12 +430,12 @@ export const layout: RunTimeLayoutConfig = ({
       initialState?.permContextMenu &&
       initialState.permContextMenu.length > 0
     ) {
-      const visiblePermContextMenu = initialState.permContextMenu.filter(
-        (item) => {
-          const path = String(item?.path || '');
-          return path !== '/dashboard' && path !== '/dashboard/index';
-        },
-      );
+      const visiblePermContextMenu = patchSettingsLocalMenus(
+        initialState.permContextMenu,
+      ).filter((item) => {
+        const path = String(item?.path || '');
+        return path !== '/dashboard' && path !== '/dashboard/index';
+      });
       return [dashboardMenu, ...visiblePermContextMenu];
     }
 

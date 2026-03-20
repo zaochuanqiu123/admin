@@ -5,7 +5,6 @@ import type { ProLayoutProps } from '@ant-design/pro-components';
  */
 const Settings: ProLayoutProps & {
   pwa?: boolean;
-  logo?: string;
 } = {
   navTheme: 'light',
   colorPrimary: '#1890ff',
@@ -14,7 +13,6 @@ const Settings: ProLayoutProps & {
   fixedHeader: false,
   fixSiderbar: true,
   pwa: true,
-  logo: 'https://gw.alipayobjects.com/zos/rmsportal/KDpgvguMpGfqaHPjicRK.svg',
   siderWidth: 239,
   token: {
     sider: {
