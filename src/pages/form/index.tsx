@@ -185,7 +185,11 @@ const StorePage: React.FC = () => {
           <div className="overview-main-row u-flex-between">
             <div className="overview-value">{stores.length}</div>
             <div className="overview-actions u-flex-center">
-              <Button shape="round" className="overview-ghost-btn">
+              <Button
+                shape="round"
+                className="overview-ghost-btn"
+                onClick={() => history.push('/form/store-manage/qr-template')}
+              >
                 门店收款码
               </Button>
               <Dropdown
@@ -216,7 +220,7 @@ const StorePage: React.FC = () => {
         </div>
         <div className="overview-card middle u-flex-col u-justify-between">
           <div className="overview-title u-flex-center">
-            小程序绑定门店{' '}
+            二维码绑定管理{' '}
             <span className="new-badge u-inline-flex-middle">NEW</span>
           </div>
           <div className="overview-middle-row u-flex u-justify-between">
@@ -229,6 +233,7 @@ const StorePage: React.FC = () => {
               type="primary"
               shape="round"
               className="overview-primary-btn"
+              onClick={() => history.push('/form/store-manage/qr-code')}
             >
               管理绑定
             </Button>

@@ -4,6 +4,22 @@
 
 ---
 
+### 4.6 新增/添加主按钮统一规则
+
+1. 页面里凡是“新增 / 添加 / 创建”这类主操作按钮，默认统一对齐 `src/pages/set/role-permission/index.less` 里的 `.role-permission-create-btn.ant-btn` 视觉样式。
+2. 禁止在业务页面里各自再写一套新增按钮样式；如果页面里已经存在同类按钮，优先直接复用统一类名或统一封装。
+3. 统一样式基线：
+   - `height: 40px`
+   - `padding: 0 22px`
+   - `border: none`
+   - `border-radius: 999px`
+   - `background: var(--ant-color-primary)`
+   - `box-shadow: none`
+   - `font-weight: 500`
+   - `hover/focus` 使用 `var(--ant-color-primary-hover, var(--ant-color-primary))`
+4. 如果是页面主按钮，但文案不是“新增/添加/创建”，只有在视觉层级与该按钮一致时才允许复用这套样式。
+5. 后续如果同类按钮继续增多，优先抽离成公共类或公共组件，不允许继续复制粘贴样式。
+
 ## 0) Stack / 技术栈
 
 - React 19 + Ant Design 5 + @ant-design/pro-components
@@ -82,6 +98,7 @@ src/
 3. 高频 flex 布局调用 `.mixin-flex-center()` 或 `.mixin-flex-between()`
 4. 需要 `!important` 时先问自己：能否用 `body .xxx` 提权？能否改 `defaultSettings.ts` token？
 5. 暗黑模式适配在 `theme-dark.less` 里统一处理，用 `body.theme-black-mode` 前缀
+6. 保持风格统一 比如 ![alt text](image.png) 图片这种都要按照图片这种风格 来实现 全部关于这块的都要统一。
 
 ### 4.5 验收标准
 

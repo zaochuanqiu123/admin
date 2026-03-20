@@ -36,6 +36,21 @@
   justify-content: space-between;
 }
 
+.mixin-page-create-btn() {
+  height: 40px;
+  padding: 0 22px;
+  border: none;
+  border-radius: 999px;
+  background: var(--ant-color-primary);
+  box-shadow: none;
+  font-weight: 500;
+
+  &:hover,
+  &:focus {
+    background: var(--ant-color-primary-hover, var(--ant-color-primary));
+  }
+}
+
 /* Atomic classes used directly in JSX className where needed. */
 .u-flex {
   display: flex;

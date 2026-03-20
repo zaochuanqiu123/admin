@@ -169,6 +169,18 @@ const routes = [
         hideInMenu: true,
       },
       {
+        name: '二维码模板',
+        path: '/form/store-manage/qr-template',
+        component: './form/store-qr-template/index',
+        hideInMenu: true,
+      },
+      {
+        name: '收款码列表',
+        path: '/form/store-manage/qr-code',
+        component: './form/store-qr-code/index',
+        hideInMenu: true,
+      },
+      {
         name: '所属行业',
         path: '/form/industry',
         component: './form/industry/index',
