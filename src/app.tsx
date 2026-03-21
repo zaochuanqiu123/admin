@@ -1,9 +1,4 @@
-import {
-  DownOutlined,
-  MoonOutlined,
-  SunOutlined,
-  UserOutlined,
-} from '@ant-design/icons';
+import { DownOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons';
 
 import type {
   Settings as LayoutSettings,
@@ -13,17 +8,10 @@ import { SettingDrawer } from '@ant-design/pro-components';
 
 import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
 import { history } from '@umijs/max';
-import {
-  Avatar,
-  Button,
-  Dropdown,
-  type MenuProps,
-  Modal,
-  message,
-  Tooltip,
-} from 'antd';
+import { Avatar, Button, Dropdown, Modal, message, Tooltip } from 'antd';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { NoticeBell } from '@/components';
+import HeaderIdentityDropdown from '@/components/HeaderIdentityDropdown';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
 import '@ant-design/v5-patch-for-react-19';
@@ -69,7 +57,6 @@ import {
   TEMP_BUSINESS_CODE,
 } from '@/utils/menu';
 import {
-  clearStoreScopedStorage,
   clearWorkplaceCommonActionsCache,
   resetStoreScopedInitialState,
 } from '@/utils/store-switch';
@@ -713,7 +700,6 @@ export const layout: RunTimeLayoutConfig = ({
       src: HEADER_USER_AVATAR_SRC,
       title: undefined,
       render: () => {
-        // 退出登录处理函数
         const handleLogout = async () => {
           if (logoutInFlight) {
             await logoutInFlight;
@@ -770,78 +756,13 @@ export const layout: RunTimeLayoutConfig = ({
           }
         };
 
-        const handleOpenProfileCenter = () => {
-          history.push('/dashboard/settings');
-        };
-
-        const handleSwitchStore = () => {
-          clearStoreScopedStorage();
-          clearPostLoginRedirect();
-          Modal.destroyAll();
-          setInitialState((s) => resetStoreScopedInitialState(s));
-          history.replace('/user/character');
-        };
-
-        // 下拉菜单配置
-        const userMenuItems: MenuProps['items'] = [
-          {
-            key: 'profile-center',
-            label: '个人中心',
-            onClick: handleOpenProfileCenter,
-          },
-          {
-            key: 'switch-store',
-            label: '切换门店',
-            onClick: handleSwitchStore,
-          },
-          {
-            key: 'logout',
-            label: '退出登录',
-            onClick: handleLogout,
-          },
-        ];
-
         return (
-          <Dropdown
-            menu={{ items: userMenuItems }}
-            placement="bottomRight"
-            trigger={['hover']}
-          >
-            <span
-              style={{
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                height: 40,
-                padding: '0 8px',
-                margin: 16,
-                borderRadius: 999,
-                transition: 'background-color 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLSpanElement).style.backgroundColor =
-                  'rgba(0, 0, 0, 0.04)';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLSpanElement).style.backgroundColor =
-                  'transparent';
-              }}
-            >
-              <Avatar
-                size={30}
-                src={HEADER_USER_AVATAR_SRC}
-                icon={<UserOutlined />}
-              />
-              <DownOutlined
-                style={{
-                  fontSize: 10,
-                  color: 'var(--ant-color-text-tertiary)',
-                }}
-              />
-            </span>
-          </Dropdown>
+          <HeaderIdentityDropdown
+            currentOrgCode={initialState?.currentOrgCode}
+            currentUser={initialState?.currentUser}
+            onLogout={handleLogout}
+            setInitialState={setInitialState as any}
+          />
         );
       },
     },
