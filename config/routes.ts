@@ -61,91 +61,13 @@ const routes = [
         path: '/dashboard/index',
         name: '首页',
         component: './dashboard/index',
-        hideInMenu: true,
       },
-      {
-        name: '数据概览',
-        icon: 'smile',
-        path: '/dashboard/analysis',
-        routes: [
-          {
-            path: '/dashboard/analysis',
-            redirect: '/dashboard/analysis/index',
-          },
-          {
-            name: '概览首页',
-            path: '/dashboard/analysis/index',
-            component: './dashboard/analysis/index',
-          },
-          {
-            name: '指标概念',
-            path: '/dashboard/analysis/sub1',
-            component: './dashboard/analysis/sub1',
-          },
-          {
-            name: '工单查询',
-            path: '/dashboard/analysis/sub2',
-            component: './dashboard/analysis/sub2',
-          },
-        ],
-      },
+
       {
         path: '/dashboard/settings',
         name: 'settings',
         component: './dashboard/settings',
         hideInMenu: true,
-      },
-      {
-        name: '商品数据',
-        icon: 'smile',
-        path: '/dashboard/monitor',
-        routes: [
-          {
-            path: '/dashboard/monitor',
-            redirect: '/dashboard/monitor/index',
-          },
-          {
-            name: '监控首页',
-            path: '/dashboard/monitor/index',
-            component: './dashboard/monitor/index',
-          },
-          {
-            name: '处理告警',
-            path: '/dashboard/monitor/sub1',
-            component: './dashboard/monitor/sub1',
-          },
-          {
-            name: '链路巡检',
-            path: '/dashboard/monitor/sub2',
-            component: './dashboard/monitor/sub2',
-          },
-        ],
-      },
-      {
-        name: '表单模块',
-        icon: 'smile',
-        path: '/dashboard/fromcj',
-        routes: [
-          {
-            path: '/dashboard/fromcj',
-            redirect: '/dashboard/fromcj/index',
-          },
-          {
-            name: '表单分析',
-            path: '/dashboard/fromcj/index',
-            component: './dashboard/fromcj/index',
-          },
-          {
-            name: '基础表单',
-            path: '/dashboard/fromcj/fromcj2',
-            component: './dashboard/fromcj/fromcj2',
-          },
-          {
-            name: '高级表单',
-            path: '/dashboard/fromcj/fromcj3',
-            component: './dashboard/fromcj/fromcj3',
-          },
-        ],
       },
     ],
   },
@@ -161,23 +83,12 @@ const routes = [
         name: '门店管理',
         path: '/form/store-manage',
         component: './form/index',
+        backendPathUrls: ['/Retail/Store/store'],
       },
       {
         name: '添加门店',
         path: '/form/store-manage/create-single',
         component: './form/store-create/index',
-        hideInMenu: true,
-      },
-      {
-        name: '二维码模板',
-        path: '/form/store-manage/qr-template',
-        component: './form/store-qr-template/index',
-        hideInMenu: true,
-      },
-      {
-        name: '收款码列表',
-        path: '/form/store-manage/qr-code',
-        component: './form/store-qr-code/index',
         hideInMenu: true,
       },
       {
@@ -196,270 +107,41 @@ const routes = [
     name: '商品',
     path: '/list',
     component: './list',
-    // routes: [
-    //   {
-    //     path: '/list/search',
-    //     name: 'search-list',
-    //     icon: 'table',
-    //     component: './list/search',
-    //     routes: [
-    //       {
-    //         path: '/list/search',
-    //         redirect: '/list/search/articles',
-    //       },
-    //       {
-    //         name: 'articles',
-    //         icon: 'smile',
-    //         path: '/list/search/articles',
-    //         component: './list/search/articles',
-    //       },
-    //       {
-    //         name: 'projects',
-    //         icon: 'smile',
-    //         path: '/list/search/projects',
-    //         component: './list/search/projects',
-    //       },
-    //       {
-    //         name: 'applications',
-    //         icon: 'smile',
-    //         path: '/list/search/applications',
-    //         component: './list/search/applications',
-    //       },
-    //     ],
-    //   },
-    //   {
-    //     path: '/list',
-    //     redirect: '/list/table-list',
-    //   },
-    //   {
-    //     name: 'table-list',
-    //     icon: 'smile',
-    //     path: '/list/table-list',
-    //     routes: [
-    //       {
-    //         path: '/list/table-list',
-    //         redirect: '/list/table-list/sub1',
-    //       },
-    //       {
-    //         name: '子菜单一',
-    //         path: '/list/table-list/sub1',
-    //         component: './table-list/sub1',
-    //       },
-    //       {
-    //         name: '子菜单二',
-    //         path: '/list/table-list/sub2',
-    //         component: './table-list/sub2',
-    //       },
-    //     ],
-    //   },
-    //   {
-    //     name: 'basic-list',
-    //     icon: 'smile',
-    //     path: '/list/basic-list',
-    //     routes: [
-    //       {
-    //         path: '/list/basic-list',
-    //         redirect: '/list/basic-list/sub1',
-    //       },
-    //       {
-    //         name: '子菜单一',
-    //         path: '/list/basic-list/sub1',
-    //         component: './list/basic-list/sub1',
-    //       },
-    //       {
-    //         name: '子菜单二',
-    //         path: '/list/basic-list/sub2',
-    //         component: './list/basic-list/sub2',
-    //       },
-    //     ],
-    //   },
-    //   {
-    //     name: 'card-list',
-    //     icon: 'smile',
-    //     path: '/list/card-list',
-    //     routes: [
-    //       {
-    //         path: '/list/card-list',
-    //         redirect: '/list/card-list/sub1',
-    //       },
-    //       {
-    //         name: '子菜单一',
-    //         path: '/list/card-list/sub1',
-    //         component: './list/card-list/sub1',
-    //       },
-    //       {
-    //         name: '子菜单二',
-    //         path: '/list/card-list/sub2',
-    //         component: './list/card-list/sub2',
-    //       },
-    //     ],
-    //   },
-    // ],
+  },
+  {
+    name: '应用',
+    path: '/app',
+    component: './iframe-view',
+  },
+  {
+    name: '设备',
+    path: '/device',
+    component: './iframe-view',
+  },
+  {
+    name: '权限',
+    path: '/permission',
+    component: './iframe-view',
+  },
+  {
+    name: '仓储',
+    path: '/warehouse',
+    component: './iframe-view',
   },
   {
     path: '/profile',
     name: '进销存',
     component: './profile',
-    // routes: [
-    //   {
-    //     path: '/profile',
-    //     redirect: '/profile/basic',
-    //   },
-    //   {
-    //     name: 'basic',
-    //     icon: 'smile',
-    //     path: '/profile/basic',
-    //     routes: [
-    //       {
-    //         path: '/profile/basic',
-    //         redirect: '/profile/basic/sub1',
-    //       },
-    //       {
-    //         name: '子菜单一',
-    //         path: '/profile/basic/sub1',
-    //         component: './profile/basic/sub1',
-    //       },
-    //       {
-    //         name: '子菜单二',
-    //         path: '/profile/basic/sub2',
-    //         component: './profile/basic/sub2',
-    //       },
-    //     ],
-    //   },
-    //   {
-    //     name: 'advanced',
-    //     icon: 'smile',
-    //     path: '/profile/advanced',
-    //     routes: [
-    //       {
-    //         path: '/profile/advanced',
-    //         redirect: '/profile/advanced/sub1',
-    //       },
-    //       {
-    //         name: '子菜单一',
-    //         path: '/profile/advanced/sub1',
-    //         component: './profile/advanced/sub1',
-    //       },
-    //       {
-    //         name: '子菜单二',
-    //         path: '/profile/advanced/sub2',
-    //         component: './profile/advanced/sub2',
-    //       },
-    //     ],
-    //   },
-    // ],
   },
   {
     name: '订单',
     path: '/result',
     component: './result',
-    // routes: [
-    //   {
-    //     path: '/result',
-    //     redirect: '/result/success',
-    //   },
-    //   {
-    //     name: 'success',
-    //     icon: 'smile',
-    //     path: '/result/success',
-    //     component: './result/success',
-    //   },
-    //   {
-    //     name: 'fail',
-    //     icon: 'smile',
-    //     path: '/result/fail',
-    //     routes: [
-    //       {
-    //         path: '/result/fail',
-    //         redirect: '/result/fail/sub1',
-    //       },
-    //       {
-    //         name: '子菜单一',
-    //         path: '/result/fail/sub1',
-    //         component: './result/fail/sub1',
-    //       },
-    //       {
-    //         name: '子菜单二',
-    //         path: '/result/fail/sub2',
-    //         component: './result/fail/sub2',
-    //       },
-    //     ],
-    //   },
-    // ],
   },
   {
     name: '会员',
     path: '/exception',
     component: './exception',
-    // routes: [
-    //   {
-    //     path: '/exception',
-    //     redirect: '/exception/403',
-    //   },
-    //   {
-    //     name: '403',
-    //     icon: 'smile',
-    //     path: '/exception/403',
-    //     routes: [
-    //       {
-    //         path: '/exception/403',
-    //         redirect: '/exception/403/sub1',
-    //       },
-    //       {
-    //         name: '子菜单一',
-    //         path: '/exception/403/sub1',
-    //         component: './exception/403/sub1',
-    //       },
-    //       {
-    //         name: '子菜单二',
-    //         path: '/exception/403/sub2',
-    //         component: './exception/403/sub2',
-    //       },
-    //     ],
-    //   },
-    //   {
-    //     name: '404',
-    //     icon: 'smile',
-    //     path: '/exception/404',
-    //     routes: [
-    //       {
-    //         path: '/exception/404',
-    //         redirect: '/exception/404/sub1',
-    //       },
-    //       {
-    //         name: '子菜单一',
-    //         path: '/exception/404/sub1',
-    //         component: './exception/404/sub1',
-    //       },
-    //       {
-    //         name: '子菜单二',
-    //         path: '/exception/404/sub2',
-    //         component: './exception/404/sub2',
-    //       },
-    //     ],
-    //   },
-    //   {
-    //     name: '500',
-    //     icon: 'smile',
-    //     path: '/exception/500',
-    //     routes: [
-    //       {
-    //         path: '/exception/500',
-    //         redirect: '/exception/500/sub1',
-    //       },
-    //       {
-    //         name: '子菜单一',
-    //         path: '/exception/500/sub1',
-    //         component: './exception/500/sub1',
-    //       },
-    //       {
-    //         name: '子菜单二',
-    //         path: '/exception/500/sub2',
-    //         component: './exception/500/sub2',
-    //       },
-    //     ],
-    //   },
-    // ],
   },
   {
     name: '数据',
@@ -472,9 +154,26 @@ const routes = [
     component: './finance',
   },
   {
-    name: '角色权限',
-    path: '/set/role-permission',
+    name: '角色列表',
+    path: '/permission/role-list',
     component: './set/role-permission',
+    backendPathUrls: ['/Admin/AdminRoles/index/Admin/AdminRoles/getRoles'],
+  },
+  {
+    name: '二维码模板',
+    path: '/platform/qr-template',
+    component: './form/store-qr-template/index',
+    hideInMenu: true,
+  },
+  {
+    name: '二维码列表',
+    path: '/platform/qr-code',
+    component: './form/store-qr-code/index',
+    hideInMenu: true,
+  },
+  {
+    path: '/set/role-permission',
+    redirect: '/permission/role-list',
   },
   {
     name: '设置',
@@ -488,11 +187,6 @@ const routes = [
   {
     component: '404',
     path: '/*',
-  },
-  {
-    path: '/admin',
-    name: '应用',
-    component: './iframe-view', // 指向刚才写的 iframe 组件
   },
 
   // qiankun子应用

@@ -16,12 +16,17 @@ import type { MenuDataItem } from '@ant-design/pro-components';
 import { Menu, type MenuProps } from 'antd';
 import React from 'react';
 import type { CommonAction } from '@/config/menu.config';
+import {
+  isMenuHoverAutoOpenSuppressed,
+  resumeMenuHoverAutoOpen,
+  suppressMenuHoverAutoOpen,
+} from '@/utils/menuHover';
 
 type DashboardHomeSplitMenuProps = {
   topMenus?: MenuDataItem[];
   pathname: string;
   currentTargetId?: string;
-  onNavigate: (path?: string, targetId?: string) => void;
+  onNavigate: (path?: string, targetId?: string, sourceSystem?: number) => void;
   commonActions?: CommonAction[];
 };
 
@@ -30,6 +35,7 @@ type MenuNode = {
   name: string;
   path?: string;
   targetId?: string;
+  sourceSystem?: number;
   children?: MenuNode[];
 };
 
@@ -99,6 +105,7 @@ function buildNodes(
     if (!rawName && children.length === 0) return;
 
     const targetId = (item as any)?.targetId;
+    const sourceSystem = Number((item as any)?.sourceSystem);
     result.push({
       key: nodeKey,
       name: itemName,
@@ -107,6 +114,7 @@ function buildNodes(
         targetId === undefined || targetId === null
           ? undefined
           : String(targetId),
+      sourceSystem: Number.isFinite(sourceSystem) ? sourceSystem : undefined,
       children: children.length > 0 ? children : undefined,
     });
   });
@@ -174,18 +182,31 @@ function getBestPathMatchScoreInTree(node: MenuNode, pathname: string): number {
 function findFirstLeafNavigableNode(
   node: MenuNode | undefined,
   inheritedPath?: string,
-): { path?: string; targetId?: string } | undefined {
+  inheritedTargetId?: string,
+  inheritedSourceSystem?: number,
+): { path?: string; targetId?: string; sourceSystem?: number } | undefined {
   if (!node) return undefined;
   const currentPath = node.path || inheritedPath;
+  const currentTargetId = node.targetId || inheritedTargetId;
+  const currentSourceSystem = node.sourceSystem ?? inheritedSourceSystem;
 
   const children = node.children || [];
   if (children.length === 0) {
     if (!currentPath) return undefined;
-    return { path: currentPath, targetId: node.targetId };
+    return {
+      path: currentPath,
+      targetId: currentTargetId,
+      sourceSystem: currentSourceSystem,
+    };
   }
 
   for (const child of children) {
-    const leafTarget = findFirstLeafNavigableNode(child, currentPath);
+    const leafTarget = findFirstLeafNavigableNode(
+      child,
+      currentPath,
+      currentTargetId,
+      currentSourceSystem,
+    );
     if (leafTarget?.path) return leafTarget;
   }
 
@@ -222,6 +243,14 @@ function getMenuKeyDepth(
     cursor = parentByKey.get(cursor);
   }
   return depth;
+}
+
+function getMenuSourceNodes(node: MenuNode | undefined): MenuNode[] {
+  if (!node) return [];
+  if (node.children && node.children.length > 0) {
+    return node.children;
+  }
+  return [node];
 }
 
 const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
@@ -287,9 +316,10 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
   const menuMeta = React.useMemo(() => {
     const pathByKey = new Map<string, string>();
     const targetIdByKey = new Map<string, string | undefined>();
+    const sourceSystemByKey = new Map<string, number | undefined>();
     const parentByKey = new Map<string, string | undefined>();
     const submenuKeys: string[] = [];
-    const menuSourceNodes = activeTopNode?.children || [];
+    const menuSourceNodes = getMenuSourceNodes(activeTopNode);
 
     const toMenuItem = (
       node: MenuNode,
@@ -302,6 +332,7 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
         pathByKey.set(node.key, resolvedPath);
       }
       targetIdByKey.set(node.key, node.targetId);
+      sourceSystemByKey.set(node.key, node.sourceSystem);
       const children =
         node.children && node.children.length > 0
           ? node.children.map((child) =>
@@ -379,6 +410,7 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
       items,
       pathByKey,
       targetIdByKey,
+      sourceSystemByKey,
       parentByKey,
       submenuKeys,
     };
@@ -445,13 +477,24 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
   const handleTopClick = React.useCallback(
     (node: MenuNode) => {
       setActiveTopKey(node.key);
-      if (normalizePath(node.path) === '/dashboard' && node.path) {
-        onNavigate(node.path, node.targetId);
+      const defaultTarget = findFirstLeafNavigableNode(
+        node,
+        node.path,
+        node.targetId,
+        node.sourceSystem,
+      );
+      if (defaultTarget?.path) {
+        suppressMenuHoverAutoOpen();
+        onNavigate(
+          defaultTarget.path,
+          defaultTarget.targetId,
+          defaultTarget.sourceSystem,
+        );
         return;
       }
-      const defaultTarget = findFirstLeafNavigableNode(node, node.path);
-      if (!defaultTarget?.path) return;
-      onNavigate(defaultTarget.path, defaultTarget.targetId);
+      if (!node.path) return;
+      suppressMenuHoverAutoOpen();
+      onNavigate(node.path, node.targetId, node.sourceSystem);
     },
     [onNavigate],
   );
@@ -461,9 +504,19 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
       const key = String(info.key || '');
       const path = menuMeta.pathByKey.get(key);
       if (!path) return;
-      onNavigate(path, menuMeta.targetIdByKey.get(key));
+      suppressMenuHoverAutoOpen();
+      onNavigate(
+        path,
+        menuMeta.targetIdByKey.get(key),
+        menuMeta.sourceSystemByKey.get(key),
+      );
     },
-    [menuMeta.pathByKey, menuMeta.targetIdByKey, onNavigate],
+    [
+      menuMeta.pathByKey,
+      menuMeta.sourceSystemByKey,
+      menuMeta.targetIdByKey,
+      onNavigate,
+    ],
   );
 
   const clearCloseTimer = React.useCallback(() => {
@@ -481,6 +534,19 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
       setHoverPanelOpen(true);
     },
     [clearCloseTimer],
+  );
+
+  const openHoverPanelByIntent = React.useCallback(
+    (topKey?: string, fromPointerMove = false) => {
+      if (fromPointerMove) {
+        resumeMenuHoverAutoOpen();
+      }
+      if (isMenuHoverAutoOpenSuppressed()) {
+        return;
+      }
+      openHoverPanel(topKey);
+    },
+    [openHoverPanel],
   );
 
   const scheduleCloseHoverPanel = React.useCallback(() => {
@@ -509,7 +575,7 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
           'dashboard-home-split-menu-hover-wrap' +
           (hoverPanelOpen ? ' dashboard-home-split-menu-hover-wrap-open' : '')
         }
-        onMouseEnter={() => openHoverPanel()}
+        onMouseEnter={clearCloseTimer}
         onMouseLeave={scheduleCloseHoverPanel}
       >
         <div className="dashboard-home-split-menu-icons">
@@ -525,8 +591,12 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
                   (active ? ' dashboard-home-split-menu-icon-btn-active' : '')
                 }
                 aria-label={node.name}
-                onMouseEnter={() => openHoverPanel(node.key)}
-                onFocus={() => openHoverPanel(node.key)}
+                onMouseEnter={() => openHoverPanelByIntent(node.key)}
+                onMouseMove={() => openHoverPanelByIntent(node.key, true)}
+                onFocus={() => {
+                  resumeMenuHoverAutoOpen();
+                  openHoverPanel(node.key);
+                }}
                 onClick={() => {
                   setHoverPanelOpen(false);
                   setHoveredTopKey('');

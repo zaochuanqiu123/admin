@@ -8,7 +8,7 @@ import React, {
   useState,
 } from 'react';
 import { getToken } from '@/api/storage';
-import { findPathByTargetId, findTargetIdByPath } from '@/utils/menu';
+import { findPathByTargetId } from '@/utils/menu';
 
 export type MicroIframeMessage = {
   type: string;
@@ -64,13 +64,8 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
     const query = new URLSearchParams(location.search);
     const targetIdFromQuery = query.get(idParamKey);
     if (targetIdFromQuery) return targetIdFromQuery;
-    return findTargetIdByPath(initialState?.permContextMenu, location.pathname);
-  }, [
-    idParamKey,
-    initialState?.permContextMenu,
-    location.pathname,
-    location.search,
-  ]);
+    return undefined;
+  }, [idParamKey, location.search]);
 
   useEffect(() => {
     const query = new URLSearchParams(location.search);

@@ -18,13 +18,13 @@ import {
   getUserLoginContextResponse,
 } from '@/api/context';
 import {
+  clearSelectedOrgCode,
   getLoginOrgList,
   setBusinessList,
   setCurrentBusinessCode,
   setSelectedOrgCode,
 } from '@/api/storage';
 import CharacterTv from '@/assets/character.png';
-import { IFRAME_PATHS } from '@/config/iframe.config';
 import {
   clearPostLoginRedirect,
   consumeLoginPendingIdentity,
@@ -35,10 +35,15 @@ import {
 import { buildIframeRouteWithParams } from '@/utils/iframe';
 import {
   extractPermContextNodes,
+  findPathByTargetId,
   mapPermContextToMenuData,
   TEMP_BUSINESS_CODE,
 } from '@/utils/menu';
 import { getAllowedTopPaths } from '@/utils/route.utils';
+import {
+  clearStoreScopedStorage,
+  resetStoreScopedInitialState,
+} from '@/utils/store-switch';
 import './index.less';
 
 type StoreType = 'all' | 'merchant' | 'store';
@@ -236,6 +241,8 @@ const Character: FC = () => {
     const requestedRedirect =
       getRedirectFromSearch() || getPostLoginRedirect() || undefined;
     if (orgCode) {
+      clearStoreScopedStorage();
+      setInitialState((s: any) => resetStoreScopedInitialState(s));
       setSelectedOrgCode(orgCode);
       try {
         // 1. 先调用 getUserLoginContext 获取登录上下文与后端提示
@@ -253,6 +260,7 @@ const Character: FC = () => {
             loginContext?.msg ||
             loginContext?.message ||
             '当前门店暂无可用业态';
+          clearSelectedOrgCode();
           message.warning(String(backendMessage));
           return;
         }
@@ -270,10 +278,7 @@ const Character: FC = () => {
         });
         const permNodes = extractPermContextNodes(permRes);
         const permContextMenu = mapPermContextToMenuData(permNodes);
-        const defaultPath = buildIframeRouteWithParams(
-          '/dashboard/index',
-          permContextMenu.length > 0 ? permContextMenu : undefined,
-        );
+        const defaultPath = buildIframeRouteWithParams('/dashboard/index');
         nextPath = defaultPath;
 
         const redirectPath = normalizeRedirectPath(requestedRedirect);
@@ -285,14 +290,23 @@ const Character: FC = () => {
           const isDashboard =
             targetPathname === '/dashboard' ||
             targetPathname.startsWith('/dashboard/');
+          const redirectTargetId = new URLSearchParams(
+            String(redirectPath).split('?')[1] || '',
+          ).get('targetId');
+          const hasLegacyIframeAccess =
+            !!redirectTargetId &&
+            !!findPathByTargetId(
+              permContextMenu.length > 0 ? permContextMenu : undefined,
+              redirectTargetId,
+            );
           const allowedTopPaths = getAllowedTopPaths(
             permContextMenu.length > 0 ? permContextMenu : undefined,
           );
-          const isIframeModule = IFRAME_PATHS.some((p) => moduleRoot === p);
           if (
             isDashboard ||
-            !isIframeModule ||
-            allowedTopPaths.has(moduleRoot)
+            (redirectTargetId
+              ? hasLegacyIframeAccess
+              : allowedTopPaths.has(moduleRoot))
           ) {
             nextPath = redirectPath;
           } else {
@@ -322,11 +336,8 @@ const Character: FC = () => {
           (error as any)?.message ||
           '获取用户信息失败，请稍后重试';
         message.error(String(backendMessage));
-        setInitialState((s: any) => ({
-          ...(s || {}),
-          currentOrgCode: orgCode,
-          loginContext: undefined,
-        }));
+        clearSelectedOrgCode();
+        setInitialState((s: any) => resetStoreScopedInitialState(s));
         return;
       }
     }

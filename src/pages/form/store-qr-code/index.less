@@ -78,17 +78,25 @@
     padding: 6px;
     overflow: hidden;
     border-radius: 12px;
-    background: var(--ant-color-fill-quaternary);
+      background: var(--ant-color-fill-quaternary);
   }
 
-  .qr-code-preview-image,
-  .qr-code-preview-box > img {
+  .qr-code-preview-box img {
     display: block;
     width: auto;
     height: 100%;
     max-width: 132px;
     object-fit: contain;
-    cursor: zoom-in;
+  }
+
+  .qr-code-preview-image,
+  .qr-code-preview-image .ant-image,
+  .qr-code-preview-image .ant-image-img {
+    display: block;
+    width: auto;
+    height: 100%;
+    max-width: 132px;
+    object-fit: contain;
   }
 
   .qr-code-preview-box-placeholder span {

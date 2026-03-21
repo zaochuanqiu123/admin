@@ -1,21 +1,34 @@
-import { PlusOutlined } from '@ant-design/icons';
+import {
+  DeleteOutlined,
+  PlusOutlined,
+  UploadOutlined,
+} from '@ant-design/icons';
+import type { UploadProps } from 'antd';
 import {
   Button,
+  ColorPicker,
   DatePicker,
   Drawer,
   Empty,
   Form,
   Image,
   Input,
+  InputNumber,
+  Modal,
   message,
+  QRCode,
   Select,
+  Slider,
   Space,
+  Spin,
+  Switch,
   Table,
+  Upload,
 } from 'antd';
 import type { RangePickerProps } from 'antd/es/date-picker';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import dayjs from 'dayjs';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   getQrCodeTemplatePageQuery,
   type QrCodeTemplateRecord,
@@ -26,13 +39,102 @@ const { RangePicker } = DatePicker;
 
 type QueryFilters = {
   name: string;
-  brandName?: string;
   state?: string;
   showSn?: string;
   createTimeRange?: RangePickerProps['value'];
 };
 
+type EditorSelection = 'qrcode' | 'codeText' | null;
+
+type EditorStateModel = {
+  canvasWidth: number;
+  canvasHeight: number;
+  backgroundImage: string | null;
+  qrcode: {
+    x: number;
+    y: number;
+    size: number;
+  };
+  codeText: {
+    offsetY: number;
+    fontSize: number;
+    color: string;
+  };
+  showCodeText: boolean;
+};
+
+type DragState = {
+  type: 'qrcode' | 'qrcodeResize' | 'codeText';
+  startX: number;
+  startY: number;
+  initialX: number;
+  initialY: number;
+  initialSize?: number;
+};
+
+type CropDraft = {
+  sourceUrl: string;
+  naturalWidth: number;
+  naturalHeight: number;
+  zoom: number;
+  offsetX: number;
+  offsetY: number;
+};
+
 const DEFAULT_PAGE_SIZE = 10;
+const MAX_CANVAS_WIDTH = 500;
+const MAX_CANVAS_HEIGHT = 600;
+
+const DEFAULT_EDITOR_STATE: EditorStateModel = {
+  canvasWidth: 320,
+  canvasHeight: 420,
+  backgroundImage: null,
+  qrcode: {
+    x: 88,
+    y: 112,
+    size: 144,
+  },
+  codeText: {
+    offsetY: 14,
+    fontSize: 16,
+    color: '#1f2837',
+  },
+  showCodeText: true,
+};
+
+function clamp(value: number, min: number, max: number) {
+  if (Number.isNaN(value)) return min;
+  return Math.min(Math.max(value, min), max);
+}
+
+function clampCodeTextOffset(
+  nextOffset: number,
+  nextState: Pick<EditorStateModel, 'canvasHeight' | 'qrcode' | 'codeText'>,
+) {
+  const minOffset = -Math.max(0, nextState.qrcode.size - 24);
+  const rawMaxOffset =
+    nextState.canvasHeight -
+    (nextState.qrcode.y + nextState.qrcode.size) -
+    nextState.codeText.fontSize -
+    10;
+  const maxOffset = Math.max(minOffset, rawMaxOffset);
+  return clamp(nextOffset, minOffset, maxOffset);
+}
+
+function loadImage(url: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new window.Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('load image failed'));
+    image.src = url;
+  });
+}
+
+function revokeObjectUrl(url?: string | null) {
+  if (url && url.startsWith('blob:')) {
+    URL.revokeObjectURL(url);
+  }
+}
 
 function getShowSnLabel(record: QrCodeTemplateRecord) {
   return Number(record?.qrCodeSnConfig?.isShow) === 1 ? '显示' : '隐藏';
@@ -44,31 +146,12 @@ function getStateLabel(state?: number) {
   return '未知';
 }
 
-function getBrandName(record: QrCodeTemplateRecord) {
-  const rawValue =
-    record?.brandName ||
-    (record as any)?.belongBrandName ||
-    (record as any)?.brand ||
-    (record as any)?.brandLabel;
-  return String(rawValue || '').trim();
-}
-
-function getIsDefaultValue(record: QrCodeTemplateRecord) {
-  const rawValue =
-    record?.isDefault ?? record?.defaultFlag ?? (record as any)?.isDefaultFlag;
-  return Number(rawValue) === 1 ? 1 : 0;
-}
-
-function getIsDefaultLabel(record: QrCodeTemplateRecord) {
-  return getIsDefaultValue(record) === 1 ? '默认' : '否';
-}
-
 function buildPreviewImage(record: QrCodeTemplateRecord) {
   return String(record?.prevImageUrl || record?.prevImage || '').trim();
 }
 
 function showPendingEditorMessage() {
-  message.info('添加模板和编辑模板暂不接入，等你确认改写内容后再补。');
+  message.info('编辑模板接口待接入，当前先完成添加模板抽屉页面。');
 }
 
 const QrTemplateListPage: React.FC = () => {
@@ -79,16 +162,27 @@ const QrTemplateListPage: React.FC = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState('');
   const [drawerForm] = Form.useForm();
+  const [editorState, setEditorState] =
+    useState<EditorStateModel>(DEFAULT_EDITOR_STATE);
+  const [selection, setSelection] = useState<EditorSelection>(null);
+  const [dragState, setDragState] = useState<DragState | null>(null);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [cropDraft, setCropDraft] = useState<CropDraft | null>(null);
+  const [cropLoading, setCropLoading] = useState(false);
+  const [cropDragState, setCropDragState] = useState<{
+    startX: number;
+    startY: number;
+    initialX: number;
+    initialY: number;
+  } | null>(null);
   const [draftFilters, setDraftFilters] = useState<QueryFilters>({
     name: '',
-    brandName: undefined,
     state: undefined,
     showSn: undefined,
     createTimeRange: undefined,
   });
   const [filters, setFilters] = useState<QueryFilters>({
     name: '',
-    brandName: undefined,
     state: undefined,
     showSn: undefined,
     createTimeRange: undefined,
@@ -99,19 +193,155 @@ const QrTemplateListPage: React.FC = () => {
     showSizeChanger: true,
     showTotal: (total) => `共 ${total} 条`,
   });
+  const backgroundObjectUrlRef = useRef<string | null>(null);
+  const backgroundSourceObjectUrlRef = useRef<string | null>(null);
 
   const current = pagination.current || 1;
   const pageSize = pagination.pageSize || DEFAULT_PAGE_SIZE;
 
-  const brandOptions = useMemo(() => {
-    const brandMap = new Map<string, { label: string; value: string }>();
-    records.forEach((record) => {
-      const brandName = getBrandName(record);
-      if (!brandName) return;
-      brandMap.set(brandName, { label: brandName, value: brandName });
-    });
-    return Array.from(brandMap.values());
-  }, [records]);
+  const releaseBackgroundResources = useCallback(() => {
+    revokeObjectUrl(backgroundObjectUrlRef.current);
+    backgroundObjectUrlRef.current = null;
+    revokeObjectUrl(backgroundSourceObjectUrlRef.current);
+    backgroundSourceObjectUrlRef.current = null;
+  }, []);
+
+  const clearBackgroundPreview = useCallback(() => {
+    releaseBackgroundResources();
+    setEditorState((prev) => ({
+      ...prev,
+      backgroundImage: null,
+    }));
+    setCropDraft(null);
+  }, [releaseBackgroundResources]);
+
+  const resetEditorState = useCallback(() => {
+    releaseBackgroundResources();
+    setEditorState(DEFAULT_EDITOR_STATE);
+    setSelection(null);
+    setDragState(null);
+    setCropDraft(null);
+    setCropModalOpen(false);
+    setCropDragState(null);
+  }, [releaseBackgroundResources]);
+
+  useEffect(() => {
+    return () => {
+      revokeObjectUrl(backgroundObjectUrlRef.current);
+      revokeObjectUrl(backgroundSourceObjectUrlRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!dragState) return;
+
+    const handleMouseMove = (event: MouseEvent) => {
+      if (dragState.type === 'qrcode') {
+        const deltaX = event.clientX - dragState.startX;
+        const deltaY = event.clientY - dragState.startY;
+
+        setEditorState((prev) => {
+          const maxX = Math.max(0, prev.canvasWidth - prev.qrcode.size);
+          const maxY = Math.max(0, prev.canvasHeight - prev.qrcode.size);
+
+          return {
+            ...prev,
+            qrcode: {
+              ...prev.qrcode,
+              x: clamp(dragState.initialX + deltaX, 0, maxX),
+              y: clamp(dragState.initialY + deltaY, 0, maxY),
+            },
+          };
+        });
+        return;
+      }
+
+      if (dragState.type === 'qrcodeResize') {
+        const delta = Math.max(
+          event.clientX - dragState.startX,
+          event.clientY - dragState.startY,
+        );
+
+        setEditorState((prev) => {
+          const maxSize = Math.min(
+            prev.canvasWidth - prev.qrcode.x,
+            prev.canvasHeight - prev.qrcode.y,
+          );
+          const size = clamp(
+            Number(dragState.initialSize || prev.qrcode.size) + delta,
+            72,
+            maxSize,
+          );
+          const nextQrcode = {
+            ...prev.qrcode,
+            size,
+          };
+
+          return {
+            ...prev,
+            qrcode: nextQrcode,
+            codeText: {
+              ...prev.codeText,
+              offsetY: clampCodeTextOffset(prev.codeText.offsetY, {
+                canvasHeight: prev.canvasHeight,
+                qrcode: nextQrcode,
+                codeText: prev.codeText,
+              }),
+            },
+          };
+        });
+        return;
+      }
+
+      const deltaY = event.clientY - dragState.startY;
+      setEditorState((prev) => ({
+        ...prev,
+        codeText: {
+          ...prev.codeText,
+          offsetY: clampCodeTextOffset(dragState.initialY + deltaY, prev),
+        },
+      }));
+    };
+
+    const handleMouseUp = () => {
+      setDragState(null);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [dragState]);
+
+  useEffect(() => {
+    if (!cropDragState) return;
+
+    const handleMouseMove = (event: MouseEvent) => {
+      setCropDraft((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          offsetX:
+            cropDragState.initialX + (event.clientX - cropDragState.startX),
+          offsetY:
+            cropDragState.initialY + (event.clientY - cropDragState.startY),
+        };
+      });
+    };
+
+    const handleMouseUp = () => {
+      setCropDragState(null);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [cropDragState]);
 
   const loadTemplates = useCallback(async () => {
     setLoading(true);
@@ -139,11 +369,6 @@ const QrTemplateListPage: React.FC = () => {
 
   const filteredRecords = useMemo(() => {
     return records.filter((record) => {
-      const nextBrandName = String(filters.brandName || '').trim();
-      if (nextBrandName && getBrandName(record) !== nextBrandName) {
-        return false;
-      }
-
       if (filters.state !== undefined && filters.state !== '') {
         if (String(Number(record?.state ?? 0)) !== String(filters.state)) {
           return false;
@@ -173,13 +398,7 @@ const QrTemplateListPage: React.FC = () => {
 
       return true;
     });
-  }, [
-    filters.brandName,
-    filters.createTimeRange,
-    filters.showSn,
-    filters.state,
-    records,
-  ]);
+  }, [filters.createTimeRange, filters.showSn, filters.state, records]);
 
   const columns = useMemo<ColumnsType<QrCodeTemplateRecord>>(
     () => [
@@ -298,7 +517,6 @@ const QrTemplateListPage: React.FC = () => {
   const handleReset = () => {
     const nextFilters: QueryFilters = {
       name: '',
-      brandName: undefined,
       state: undefined,
       showSn: undefined,
       createTimeRange: undefined,
@@ -312,10 +530,7 @@ const QrTemplateListPage: React.FC = () => {
   };
 
   const filteredTotal =
-    filters.brandName ||
-    filters.state ||
-    filters.showSn ||
-    filters.createTimeRange
+    filters.state || filters.showSn || filters.createTimeRange
       ? filteredRecords.length
       : serverTotal;
 
@@ -323,42 +538,239 @@ const QrTemplateListPage: React.FC = () => {
     drawerForm.setFieldsValue({
       name: '',
       state: 1,
-      showSn: '1',
+      isDefault: false,
+      showSn: true,
       remark: '',
     });
+    resetEditorState();
     setDrawerOpen(true);
+  };
+
+  const handleCanvasWidthChange = (value: number | null) => {
+    setEditorState((prev) => {
+      const canvasWidth = clamp(Number(value || 0), 120, MAX_CANVAS_WIDTH);
+      const nextSize = clamp(
+        prev.qrcode.size,
+        72,
+        Math.min(canvasWidth, prev.canvasHeight),
+      );
+
+      return {
+        ...prev,
+        canvasWidth,
+        qrcode: {
+          ...prev.qrcode,
+          size: nextSize,
+          x: clamp(prev.qrcode.x, 0, Math.max(0, canvasWidth - nextSize)),
+          y: clamp(prev.qrcode.y, 0, Math.max(0, prev.canvasHeight - nextSize)),
+        },
+      };
+    });
+  };
+
+  const handleCanvasHeightChange = (value: number | null) => {
+    setEditorState((prev) => {
+      const canvasHeight = clamp(Number(value || 0), 120, MAX_CANVAS_HEIGHT);
+      const nextSize = clamp(
+        prev.qrcode.size,
+        72,
+        Math.min(prev.canvasWidth, canvasHeight),
+      );
+      const nextQrcode = {
+        ...prev.qrcode,
+        size: nextSize,
+        x: clamp(prev.qrcode.x, 0, Math.max(0, prev.canvasWidth - nextSize)),
+        y: clamp(prev.qrcode.y, 0, Math.max(0, canvasHeight - nextSize)),
+      };
+
+      return {
+        ...prev,
+        canvasHeight,
+        qrcode: nextQrcode,
+        codeText: {
+          ...prev.codeText,
+          offsetY: clampCodeTextOffset(prev.codeText.offsetY, {
+            canvasHeight,
+            qrcode: nextQrcode,
+            codeText: prev.codeText,
+          }),
+        },
+      };
+    });
+  };
+
+  const handleShowCodeTextChange = (checked: boolean) => {
+    setEditorState((prev) => ({
+      ...prev,
+      showCodeText: checked,
+    }));
+
+    if (!checked && selection === 'codeText') {
+      setSelection('qrcode');
+    }
+  };
+
+  const handleCodeTextFontSizeChange = (value: number | null) => {
+    setEditorState((prev) => {
+      const nextCodeText = {
+        ...prev.codeText,
+        fontSize: clamp(Number(value || 0), 12, 36),
+      };
+
+      return {
+        ...prev,
+        codeText: {
+          ...nextCodeText,
+          offsetY: clampCodeTextOffset(nextCodeText.offsetY, {
+            canvasHeight: prev.canvasHeight,
+            qrcode: prev.qrcode,
+            codeText: nextCodeText,
+          }),
+        },
+      };
+    });
+  };
+
+  const handleCodeTextColorChange = (color: string) => {
+    setEditorState((prev) => ({
+      ...prev,
+      codeText: {
+        ...prev.codeText,
+        color,
+      },
+    }));
+  };
+
+  const backgroundUploadProps: UploadProps = {
+    accept: 'image/*',
+    showUploadList: false,
+    beforeUpload: async (file) => {
+      revokeObjectUrl(backgroundSourceObjectUrlRef.current);
+
+      const sourceUrl = URL.createObjectURL(file);
+      backgroundSourceObjectUrlRef.current = sourceUrl;
+
+      try {
+        const image = await loadImage(sourceUrl);
+        setCropDraft({
+          sourceUrl,
+          naturalWidth: image.naturalWidth,
+          naturalHeight: image.naturalHeight,
+          zoom: 1,
+          offsetX: 0,
+          offsetY: 0,
+        });
+        setCropModalOpen(true);
+      } catch (error) {
+        console.error('load background image failed:', error);
+        message.error('图片读取失败，请重试');
+        revokeObjectUrl(sourceUrl);
+        backgroundSourceObjectUrlRef.current = null;
+      }
+
+      return false;
+    },
+  };
+
+  const handleCropConfirm = async () => {
+    if (!cropDraft) return;
+
+    setCropLoading(true);
+    try {
+      const image = await loadImage(cropDraft.sourceUrl);
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = editorState.canvasWidth;
+      exportCanvas.height = editorState.canvasHeight;
+      const context = exportCanvas.getContext('2d');
+      if (!context) throw new Error('canvas context unavailable');
+
+      const previewWidth = 420;
+      const previewHeight = Math.round(
+        previewWidth * (editorState.canvasHeight / editorState.canvasWidth),
+      );
+      const baseScale = Math.max(
+        previewWidth / cropDraft.naturalWidth,
+        previewHeight / cropDraft.naturalHeight,
+      );
+      const totalScale = baseScale * cropDraft.zoom;
+      const imageDrawWidth = cropDraft.naturalWidth * totalScale;
+      const imageDrawHeight = cropDraft.naturalHeight * totalScale;
+      const previewLeft =
+        (previewWidth - imageDrawWidth) / 2 + cropDraft.offsetX;
+      const previewTop =
+        (previewHeight - imageDrawHeight) / 2 + cropDraft.offsetY;
+      const ratioX = editorState.canvasWidth / previewWidth;
+      const ratioY = editorState.canvasHeight / previewHeight;
+
+      context.drawImage(
+        image,
+        previewLeft * ratioX,
+        previewTop * ratioY,
+        imageDrawWidth * ratioX,
+        imageDrawHeight * ratioY,
+      );
+
+      const dataUrl = exportCanvas.toDataURL('image/png');
+      revokeObjectUrl(backgroundObjectUrlRef.current);
+      backgroundObjectUrlRef.current = dataUrl;
+      setEditorState((prev) => ({
+        ...prev,
+        backgroundImage: dataUrl,
+      }));
+      setCropModalOpen(false);
+      setCropDragState(null);
+      message.success('背景图裁剪完成');
+    } catch (error) {
+      console.error('crop background image failed:', error);
+      message.error('背景图裁剪失败，请重试');
+    } finally {
+      setCropLoading(false);
+    }
   };
 
   const handleDrawerSubmit = async () => {
     try {
       await drawerForm.validateFields();
-      message.info('添加模板抽屉已接好，保存接口等你确认后再补。');
-      setDrawerOpen(false);
+      message.success('模板编辑抽屉已接好，保存接口待接入。');
     } catch (error: any) {
       if (error?.errorFields) return;
     }
   };
 
+  const activeSelection =
+    selection === 'codeText'
+      ? editorState.showCodeText
+        ? 'codeText'
+        : null
+      : selection === 'qrcode'
+        ? 'qrcode'
+        : null;
+
+  const codeTextTop =
+    editorState.qrcode.y +
+    editorState.qrcode.size +
+    editorState.codeText.offsetY;
+  const cropPreviewWidth = 420;
+  const cropPreviewHeight = Math.round(
+    cropPreviewWidth * (editorState.canvasHeight / editorState.canvasWidth),
+  );
+  const cropBaseScale = cropDraft
+    ? Math.max(
+        cropPreviewWidth / cropDraft.naturalWidth,
+        cropPreviewHeight / cropDraft.naturalHeight,
+      )
+    : 1;
+  const cropImageWidth = cropDraft
+    ? cropDraft.naturalWidth * cropBaseScale * cropDraft.zoom
+    : 0;
+  const cropImageHeight = cropDraft
+    ? cropDraft.naturalHeight * cropBaseScale * cropDraft.zoom
+    : 0;
+
   return (
     <div className="qr-template-page">
       <div className="content-card qr-template-filter-card">
         <div className="filter-grid">
-          <div className="field">
-            <span className="field-label">所属品牌</span>
-            <Select
-              allowClear
-              placeholder="请选择"
-              value={draftFilters.brandName}
-              options={brandOptions}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  brandName: value,
-                }));
-              }}
-            />
-          </div>
-
           <div className="field">
             <span className="field-label">模板名称</span>
             <Input
@@ -447,7 +859,7 @@ const QrTemplateListPage: React.FC = () => {
             添加模板
           </Button>
           <div className="qr-template-toolbar-note">
-            当前列表基于模板名称走远程分页，其他筛选按已返回记录过滤。
+            当前列表基于模板名称走远程分页，状态/显示编号/创建时间按当前页结果过滤。
           </div>
         </div>
 
@@ -476,10 +888,20 @@ const QrTemplateListPage: React.FC = () => {
 
       <Drawer
         title="添加模板"
-        width={520}
+        width={1040}
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        destroyOnClose
+        placement="right"
+        onClose={() => {
+          setDrawerOpen(false);
+          setDragState(null);
+        }}
         className="qr-template-drawer"
+        styles={{
+          body: {
+            padding: 16,
+          },
+        }}
         footer={
           <Space>
             <Button onClick={() => setDrawerOpen(false)}>取消</Button>
@@ -489,45 +911,336 @@ const QrTemplateListPage: React.FC = () => {
           </Space>
         }
       >
-        <Form form={drawerForm} layout="vertical">
-          <Form.Item
-            label="模板名称"
-            name="name"
-            rules={[{ required: true, message: '请输入模板名称' }]}
-          >
-            <Input placeholder="请输入模板名称" maxLength={30} />
-          </Form.Item>
-          <Form.Item
-            label="状态"
-            name="state"
-            rules={[{ required: true, message: '请选择状态' }]}
-          >
-            <Select
-              placeholder="请选择状态"
-              options={[
-                { label: '启用', value: 1 },
-                { label: '禁用', value: 0 },
-              ]}
-            />
-          </Form.Item>
-          <Form.Item
-            label="显示编号"
-            name="showSn"
-            rules={[{ required: true, message: '请选择显示编号' }]}
-          >
-            <Select
-              placeholder="请选择"
-              options={[
-                { label: '显示', value: '1' },
-                { label: '隐藏', value: '0' },
-              ]}
-            />
-          </Form.Item>
-          <Form.Item label="备注" name="remark">
-            <Input.TextArea rows={4} placeholder="请输入备注" maxLength={200} />
-          </Form.Item>
-        </Form>
+        <div className="qr-template-editor-layout">
+          <div className="qr-template-editor-sidebar">
+            <Form form={drawerForm} layout="vertical">
+              <div className="qr-template-editor-card">
+                <div className="qr-template-editor-card-title">基础信息</div>
+                <Form.Item
+                  label="模板名称"
+                  name="name"
+                  rules={[{ required: true, message: '请输入模板名称' }]}
+                >
+                  <Input placeholder="请输入模板名称" maxLength={30} />
+                </Form.Item>
+                <Form.Item
+                  label="状态"
+                  name="state"
+                  rules={[{ required: true, message: '请选择状态' }]}
+                >
+                  <Select
+                    placeholder="请选择状态"
+                    options={[
+                      { label: '启用', value: 1 },
+                      { label: '禁用', value: 0 },
+                    ]}
+                  />
+                </Form.Item>
+                <Form.Item
+                  label="显示编码"
+                  name="showSn"
+                  valuePropName="checked"
+                >
+                  <Switch
+                    checkedChildren="显示"
+                    unCheckedChildren="隐藏"
+                    onChange={handleShowCodeTextChange}
+                  />
+                </Form.Item>
+                <div className="qr-template-editor-grid">
+                  <div className="qr-template-editor-control">
+                    <span className="qr-template-editor-label">编码字号</span>
+                    <InputNumber
+                      min={12}
+                      max={36}
+                      addonAfter="px"
+                      disabled={!editorState.showCodeText}
+                      value={editorState.codeText.fontSize}
+                      onChange={handleCodeTextFontSizeChange}
+                    />
+                  </div>
+                  <div className="qr-template-editor-control">
+                    <span className="qr-template-editor-label">编码颜色</span>
+                    <div className="qr-template-editor-color-control">
+                      <ColorPicker
+                        disabled={!editorState.showCodeText}
+                        value={editorState.codeText.color}
+                        showText
+                        onChange={(_, hex) => {
+                          handleCodeTextColorChange(hex);
+                        }}
+                      />
+                      <div
+                        className="qr-template-editor-color-preview"
+                        style={{ backgroundColor: editorState.codeText.color }}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <Form.Item label="备注" name="remark">
+                  <Input.TextArea
+                    rows={4}
+                    placeholder="请输入备注"
+                    maxLength={200}
+                  />
+                </Form.Item>
+              </div>
+            </Form>
+
+            <div className="qr-template-editor-card">
+              <div className="qr-template-editor-card-title">画布设置</div>
+              <div className="qr-template-editor-grid">
+                <div className="qr-template-editor-control">
+                  <span className="qr-template-editor-label">画布宽度</span>
+                  <InputNumber
+                    min={120}
+                    max={MAX_CANVAS_WIDTH}
+                    addonAfter="px"
+                    value={editorState.canvasWidth}
+                    onChange={handleCanvasWidthChange}
+                  />
+                </div>
+                <div className="qr-template-editor-control">
+                  <span className="qr-template-editor-label">画布高度</span>
+                  <InputNumber
+                    min={120}
+                    max={MAX_CANVAS_HEIGHT}
+                    addonAfter="px"
+                    value={editorState.canvasHeight}
+                    onChange={handleCanvasHeightChange}
+                  />
+                </div>
+              </div>
+              <div className="qr-template-editor-limit-note">
+                当前先限制为宽 {MAX_CANVAS_WIDTH}px、高 {MAX_CANVAS_HEIGHT}px。
+              </div>
+              <div className="qr-template-editor-actions">
+                <Upload {...backgroundUploadProps}>
+                  <Button icon={<UploadOutlined />}>
+                    {editorState.backgroundImage
+                      ? '重新上传背景图'
+                      : '上传背景图'}
+                  </Button>
+                </Upload>
+                <Button
+                  icon={<DeleteOutlined />}
+                  disabled={!editorState.backgroundImage}
+                  onClick={clearBackgroundPreview}
+                >
+                  删除背景图
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="qr-template-editor-preview-pane">
+            <div className="qr-template-editor-preview-header">
+              <div>
+                <div className="qr-template-editor-preview-title">画布预览</div>
+                <div className="qr-template-editor-preview-desc">
+                  二维码支持拖拽和等比缩放，编码仅支持纵向拖动。
+                </div>
+              </div>
+            </div>
+
+            <div className="qr-template-canvas-shell">
+              <div className="qr-template-canvas-stage">
+                <div
+                  className="qr-template-canvas"
+                  style={{
+                    width: editorState.canvasWidth,
+                    height: editorState.canvasHeight,
+                  }}
+                  onMouseDown={() => {
+                    setSelection(null);
+                  }}
+                >
+                  {editorState.backgroundImage ? (
+                    <img
+                      src={editorState.backgroundImage}
+                      alt="背景图预览"
+                      className="qr-template-canvas-background"
+                    />
+                  ) : null}
+                  {!editorState.backgroundImage ? (
+                    <div className="qr-template-canvas-empty">
+                      <span>上传背景图后在这里预览</span>
+                    </div>
+                  ) : null}
+
+                  <div
+                    className={`qr-template-canvas-qrcode ${
+                      activeSelection === 'qrcode' ? 'is-active' : ''
+                    }`}
+                    style={{
+                      left: editorState.qrcode.x,
+                      top: editorState.qrcode.y,
+                      width: editorState.qrcode.size,
+                      height: editorState.qrcode.size,
+                    }}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setSelection('qrcode');
+                      setDragState({
+                        type: 'qrcode',
+                        startX: event.clientX,
+                        startY: event.clientY,
+                        initialX: editorState.qrcode.x,
+                        initialY: editorState.qrcode.y,
+                      });
+                    }}
+                  >
+                    <QRCode
+                      value="https://demo.suifida.local/pay/template-preview"
+                      size={Math.max(72, editorState.qrcode.size - 14)}
+                      bordered={false}
+                    />
+                    {activeSelection === 'qrcode' ? (
+                      <div
+                        className="qr-template-canvas-qrcode-handle"
+                        onMouseDown={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setSelection('qrcode');
+                          setDragState({
+                            type: 'qrcodeResize',
+                            startX: event.clientX,
+                            startY: event.clientY,
+                            initialX: editorState.qrcode.x,
+                            initialY: editorState.qrcode.y,
+                            initialSize: editorState.qrcode.size,
+                          });
+                        }}
+                      />
+                    ) : null}
+                  </div>
+
+                  {editorState.showCodeText ? (
+                    <div
+                      className={`qr-template-canvas-code-text ${
+                        activeSelection === 'codeText' ? 'is-active' : ''
+                      }`}
+                      style={{
+                        left: editorState.qrcode.x,
+                        top: codeTextTop,
+                        width: editorState.qrcode.size,
+                        color: editorState.codeText.color,
+                        fontSize: editorState.codeText.fontSize,
+                      }}
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setSelection('codeText');
+                        setDragState({
+                          type: 'codeText',
+                          startX: event.clientX,
+                          startY: event.clientY,
+                          initialX: editorState.qrcode.x,
+                          initialY: editorState.codeText.offsetY,
+                        });
+                      }}
+                    >
+                      NO. 20260320
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </Drawer>
+
+      <Modal
+        title="裁剪背景图"
+        open={cropModalOpen}
+        width={560}
+        destroyOnClose
+        maskClosable={false}
+        className="qr-template-crop-modal"
+        confirmLoading={cropLoading}
+        onCancel={() => {
+          setCropModalOpen(false);
+          setCropDragState(null);
+        }}
+        onOk={() => {
+          void handleCropConfirm();
+        }}
+        okText="确定"
+        cancelText="取消"
+      >
+        <div className="qr-template-crop-panel">
+          <div className="qr-template-crop-hint">
+            选中图片后可拖动位置，并通过缩放控制裁剪范围。确认后再应用到画布。
+          </div>
+          <div
+            className="qr-template-crop-stage"
+            style={{
+              width: cropPreviewWidth,
+              height: cropPreviewHeight,
+            }}
+          >
+            {cropDraft ? (
+              <div
+                className="qr-template-crop-viewport"
+                style={{
+                  width: cropPreviewWidth,
+                  height: cropPreviewHeight,
+                }}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  setCropDragState({
+                    startX: event.clientX,
+                    startY: event.clientY,
+                    initialX: cropDraft.offsetX,
+                    initialY: cropDraft.offsetY,
+                  });
+                }}
+              >
+                <img
+                  src={cropDraft.sourceUrl}
+                  alt="待裁剪背景图"
+                  className="qr-template-crop-image"
+                  style={{
+                    width: cropImageWidth,
+                    height: cropImageHeight,
+                    marginLeft: -cropImageWidth / 2,
+                    marginTop: -cropImageHeight / 2,
+                    transform: `translate(${cropDraft.offsetX}px, ${cropDraft.offsetY}px)`,
+                  }}
+                />
+                <div className="qr-template-crop-frame" />
+              </div>
+            ) : (
+              <div className="qr-template-crop-empty">
+                <Spin size="large" />
+              </div>
+            )}
+          </div>
+          <div className="qr-template-crop-toolbar">
+            <span className="qr-template-crop-toolbar-label">缩放</span>
+            <Slider
+              min={1}
+              max={3}
+              step={0.05}
+              value={cropDraft?.zoom ?? 1}
+              onChange={(value) => {
+                setCropDraft((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        zoom: Number(value),
+                      }
+                    : prev,
+                );
+              }}
+            />
+            <span className="qr-template-crop-toolbar-value">
+              {`${((cropDraft?.zoom ?? 1) * 100).toFixed(0)}%`}
+            </span>
+          </div>
+        </div>
+      </Modal>
 
       <Image
         preview={{

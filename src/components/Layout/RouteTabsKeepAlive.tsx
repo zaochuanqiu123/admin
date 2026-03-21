@@ -5,6 +5,7 @@ import {
   ReloadOutlined,
   RightOutlined,
 } from '@ant-design/icons';
+import type { MenuDataItem } from '@ant-design/pro-components';
 import { history, useLocation } from '@umijs/max';
 import { Button, Dropdown, type MenuProps, Tooltip } from 'antd';
 import React from 'react';
@@ -16,7 +17,7 @@ import {
   useOutlet,
 } from 'react-router-dom';
 import { ROUTE_TABS_STORAGE_KEY } from '@/api/storage';
-import { isIframeRoutePath } from '@/utils/iframe';
+import { resolveMenuTitle } from '@/utils/menu';
 import routes from '../../../config/routes';
 
 type RouteTabItem = {
@@ -225,9 +226,26 @@ function isPersistableTabPath(pathname: string): boolean {
   return isTaggableRoot(normalized) && !isExcludedPath(normalized);
 }
 
-function canCacheTabPath(pathname: string): boolean {
+function hasLegacyIframeTarget(search: string | undefined): boolean {
+  if (!search) return false;
+  const params = new URLSearchParams(
+    String(search).startsWith('?') ? String(search).slice(1) : String(search),
+  );
+  return !!String(params.get('targetId') || '').trim();
+}
+
+function getTargetIdFromSearch(search: string | undefined): string | undefined {
+  if (!search) return undefined;
+  const params = new URLSearchParams(
+    String(search).startsWith('?') ? String(search).slice(1) : String(search),
+  );
+  const targetId = String(params.get('targetId') || '').trim();
+  return targetId || undefined;
+}
+
+function canCacheTabPath(pathname: string, search?: string): boolean {
   const normalized = normalizePath(pathname);
-  return isPersistableTabPath(normalized) && !isIframeRoutePath(normalized);
+  return isPersistableTabPath(normalized) && !hasLegacyIframeTarget(search);
 }
 
 function sanitizeStoredTabs(raw: unknown): RouteTabItem[] {
@@ -255,7 +273,10 @@ function sanitizeStoredTabs(raw: unknown): RouteTabItem[] {
     restored.push({
       key: normalized,
       path: normalized,
-      title: resolveTabTitle(normalized),
+      title:
+        typeof item?.title === 'string' && item.title.trim()
+          ? item.title.trim()
+          : resolveTabTitle(normalized),
     });
   });
 
@@ -277,7 +298,8 @@ function readTabsFromStorage(): RouteTabItem[] {
 const RouteTabsKeepAlive: React.FC<{
   children: React.ReactNode;
   themeCacheKey?: string;
-}> = ({ children, themeCacheKey }) => {
+  menuData?: MenuDataItem[];
+}> = ({ children, themeCacheKey, menuData }) => {
   const outlet = useOutlet();
   const activeNode = outlet ?? children;
   const locationContextValue = React.useContext(UNSAFE_LocationContext);
@@ -286,6 +308,10 @@ const RouteTabsKeepAlive: React.FC<{
   const location = useLocation();
   const rawPathname = normalizePath(location.pathname);
   const pathname = resolveTagPath(rawPathname);
+  const currentTargetId = getTargetIdFromSearch(location.search);
+  const activeTabTitle =
+    resolveMenuTitle(menuData, pathname, currentTargetId) ||
+    resolveTabTitle(pathname);
   const isPathMappedFromRedirect = rawPathname !== pathname;
   const [tabs, setTabs] = React.useState<RouteTabItem[]>(() =>
     readTabsFromStorage(),
@@ -341,7 +367,7 @@ const RouteTabsKeepAlive: React.FC<{
         persistTabs.push({
           key: normalized,
           path: normalized,
-          title: resolveTabTitle(normalized),
+          title: tab.title || resolveTabTitle(normalized),
         });
       });
 
@@ -357,8 +383,8 @@ const RouteTabsKeepAlive: React.FC<{
     !isExcludedPath(rawPathname) &&
     !isExcludedPath(pathname);
   const canUseCacheForCurrentRoute =
-    canCacheTabPath(rawPathname) &&
-    canCacheTabPath(pathname) &&
+    canCacheTabPath(rawPathname, location.search) &&
+    canCacheTabPath(pathname, location.search) &&
     !isPathMappedFromRedirect;
   const suppressCurrentAutoAdd = suppressedPathRef.current === pathname;
 
@@ -373,13 +399,14 @@ const RouteTabsKeepAlive: React.FC<{
       {
         key: pathname,
         path: pathname,
-        title: resolveTabTitle(pathname),
+        title: activeTabTitle,
       },
     ];
   }, [
     isPathMappedFromRedirect,
     isTaggablePage,
     pathname,
+    activeTabTitle,
     suppressCurrentAutoAdd,
     tabs,
   ]);
@@ -448,11 +475,26 @@ const RouteTabsKeepAlive: React.FC<{
         {
           key: pathname,
           path: pathname,
-          title: resolveTabTitle(pathname),
+          title: activeTabTitle,
         },
       ];
     });
-  }, [isPathMappedFromRedirect, isTaggablePage, pathname]);
+  }, [activeTabTitle, isPathMappedFromRedirect, isTaggablePage, pathname]);
+
+  React.useEffect(() => {
+    if (!isTaggablePage) return;
+    setTabs((prev) => {
+      const index = prev.findIndex((tab) => tab.key === pathname);
+      if (index < 0) return prev;
+      if (prev[index]?.title === activeTabTitle) return prev;
+      const next = [...prev];
+      next[index] = {
+        ...next[index],
+        title: activeTabTitle,
+      };
+      return next;
+    });
+  }, [activeTabTitle, isTaggablePage, pathname]);
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;

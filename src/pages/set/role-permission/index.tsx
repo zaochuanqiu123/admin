@@ -420,7 +420,7 @@ const RolePermissionPage: React.FC = () => {
       </div>
 
       <div className="role-permission-content-card">
-        <div className="role-permission-section-title">角色权限</div>
+        <div className="role-permission-section-title">角色列表</div>
         <div className="role-permission-toolbar">
           <div className="role-permission-toolbar-left">
             <span className="field-label">角色名称</span>

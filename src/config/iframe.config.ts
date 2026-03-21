@@ -1,14 +1,5 @@
 /**
  * iframe 页面路径配置
- * 这些路径的页面会以 iframe 方式加载
+ * 老系统统一走固定 iframe 壳页面
  */
-export const IFRAME_PATHS = [
-  '/admin',
-  '/account',
-  '/list',
-  '/profile',
-  '/exception',
-  '/result',
-  '/set',
-  '/finance',
-];
+export const LEGACY_IFRAME_ROUTE_PATH = '/admin';

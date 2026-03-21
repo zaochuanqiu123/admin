@@ -4,8 +4,19 @@ import routes from '../../config/routes';
 
 export const TEMP_BUSINESS_CODE = 'DEFAULT';
 
-function buildRouteNamePathMap(routeList: any[]): Record<string, string> {
-  const map: Record<string, string> = {};
+function normalizeLookupPath(path: string | undefined): string {
+  const raw = String(path || '').trim();
+  if (!raw) return '';
+  const noQuery = raw.split('?')[0]?.split('#')[0] || '';
+  if (!noQuery) return '';
+  if (noQuery === '/') return '/';
+  return noQuery.endsWith('/') ? noQuery.slice(0, -1) : noQuery;
+}
+
+function buildRouteLookupMaps(routeList: any[]) {
+  const nameToPathMap: Record<string, string> = {};
+  const backendPathToRouteMap: Record<string, string> = {};
+  const navigableRoutePaths = new Set<string>();
 
   const walk = (items: any[]) => {
     for (const item of items || []) {
@@ -14,10 +25,32 @@ function buildRouteNamePathMap(routeList: any[]): Record<string, string> {
       const fallbackPath =
         typeof item?.path === 'string' ? String(item.path) : undefined;
       const resolvedPath = resolveTopRoutePath(item);
-      const routePath = String(resolvedPath || fallbackPath || '');
+      const routePath = normalizeLookupPath(
+        String(resolvedPath || fallbackPath || ''),
+      );
 
       if (routeName && routePath.startsWith('/')) {
-        map[routeName] = routePath;
+        nameToPathMap[routeName] = routePath;
+      }
+
+      if (
+        routePath.startsWith('/') &&
+        !Array.isArray(item?.routes) &&
+        (typeof item?.component === 'string' ||
+          typeof item?.redirect === 'string')
+      ) {
+        navigableRoutePaths.add(routePath);
+      }
+
+      if (Array.isArray(item?.backendPathUrls) && routePath.startsWith('/')) {
+        item.backendPathUrls.forEach((backendPath: unknown) => {
+          const normalizedBackendPath = normalizeLookupPath(
+            typeof backendPath === 'string' ? backendPath : '',
+          );
+          if (normalizedBackendPath) {
+            backendPathToRouteMap[normalizedBackendPath] = routePath;
+          }
+        });
       }
 
       if (Array.isArray(item?.routes) && item.routes.length > 0) {
@@ -27,44 +60,97 @@ function buildRouteNamePathMap(routeList: any[]): Record<string, string> {
   };
 
   walk(routeList || []);
-  return map;
+  return {
+    nameToPathMap,
+    backendPathToRouteMap,
+    navigableRoutePaths,
+  };
 }
 
-const ROUTE_NAME_TO_PATH_MAP = buildRouteNamePathMap(routes as any[]);
+const {
+  nameToPathMap: ROUTE_NAME_TO_PATH_MAP,
+  backendPathToRouteMap: BACKEND_PATH_TO_ROUTE_MAP,
+  navigableRoutePaths: NAVIGABLE_ROUTE_PATHS,
+} = buildRouteLookupMaps(routes as any[]);
 
-const LOCAL_MENU_PATH_OVERRIDES: Record<string, string> = {
-  角色权限: '/set/role-permission',
-};
+function pickSourceSystem(node: any): number | undefined {
+  const value = Number(node?.sourceSystem);
+  return Number.isFinite(value) ? value : undefined;
+}
 
 function pickTargetId(node: any): string | undefined {
+  if (pickSourceSystem(node) !== 1) return undefined;
+
   const raw =
-    node?.pathUrl ?? node?.targetId ?? node?.targetID ?? node?.target_id;
+    node?.oldId ??
+    node?.oldID ??
+    node?.oldid ??
+    node?.targetId ??
+    node?.targetID ??
+    node?.target_id;
   if (raw === undefined || raw === null) return undefined;
   const value = String(raw).trim();
   return value || undefined;
 }
 
+function collectPathCandidates(
+  node: any,
+  sourceSystem: number | undefined,
+): string[] {
+  const preferredKeys =
+    sourceSystem === 0
+      ? ['pathUrl', 'path', 'url', 'router', 'routePath', 'href']
+      : ['path', 'url', 'router', 'routePath', 'href', 'pathUrl'];
+  const result: string[] = [];
+
+  preferredKeys.forEach((key) => {
+    const rawValue = node?.[key];
+    if (typeof rawValue !== 'string') return;
+    const value = rawValue.trim();
+    if (!value || result.includes(value)) return;
+    result.push(value);
+  });
+
+  return result;
+}
+
+function resolveKnownRoutePath(path: string | undefined): string | undefined {
+  const normalizedPath = normalizeLookupPath(path);
+  if (!normalizedPath) return undefined;
+  return NAVIGABLE_ROUTE_PATHS.has(normalizedPath) ? normalizedPath : undefined;
+}
+
 function pickPath(node: any, menuName: string): string | undefined {
-  const overridePath = LOCAL_MENU_PATH_OVERRIDES[menuName];
-  if (overridePath) {
-    return overridePath;
+  const sourceSystem = pickSourceSystem(node);
+  const pathCandidates = collectPathCandidates(node, sourceSystem);
+
+  if (sourceSystem !== 1) {
+    for (const candidate of pathCandidates) {
+      const mappedLocalPath =
+        BACKEND_PATH_TO_ROUTE_MAP[normalizeLookupPath(candidate)];
+      if (mappedLocalPath) {
+        return mappedLocalPath;
+      }
+    }
+
+    for (const candidate of pathCandidates) {
+      const knownRoutePath = resolveKnownRoutePath(candidate);
+      if (knownRoutePath) {
+        return knownRoutePath;
+      }
+    }
+  } else {
+    for (const candidate of pathCandidates) {
+      const knownRoutePath = resolveKnownRoutePath(candidate);
+      if (knownRoutePath) {
+        return knownRoutePath;
+      }
+    }
   }
 
-  const backendPath = String(
-    node?.path ??
-      node?.url ??
-      node?.router ??
-      node?.routePath ??
-      node?.href ??
-      '',
-  ).trim();
-  if (backendPath.startsWith('/')) {
-    return backendPath;
-  }
-
-  const routePath = ROUTE_NAME_TO_PATH_MAP[menuName];
-  if (routePath && routePath.startsWith('/')) {
-    return routePath;
+  const fallbackRoutePath = ROUTE_NAME_TO_PATH_MAP[menuName];
+  if (fallbackRoutePath && fallbackRoutePath.startsWith('/')) {
+    return fallbackRoutePath;
   }
 
   return undefined;
@@ -106,12 +192,24 @@ export function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
     node: any,
     index: number,
     inheritedPath?: string,
-  ): (MenuDataItem & { targetId?: string; sort?: number }) | null => {
+    inheritedTargetId?: string,
+    inheritedSourceSystem?: number,
+  ):
+    | (MenuDataItem & {
+        targetId?: string;
+        sourceSystem?: number;
+        sort?: number;
+      })
+    | null => {
     if (node?.permType === 3) {
       return null;
     }
 
     const name = getNodeName(node, index);
+    const sourceSystem = pickSourceSystem(node) ?? inheritedSourceSystem;
+    const targetId =
+      pickTargetId(node) ??
+      (sourceSystem === 1 ? inheritedTargetId : undefined);
     const path = pickPath(node, name) || inheritedPath;
 
     const childrenSource =
@@ -121,10 +219,17 @@ export function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
       [];
 
     const children = (childrenSource as any[])
-      .map((child, childIndex) => visit(child, childIndex, path))
+      .map((child, childIndex) =>
+        visit(child, childIndex, path, targetId, sourceSystem),
+      )
       .filter(
-        (item): item is MenuDataItem & { targetId?: string; sort?: number } =>
-          item !== null,
+        (
+          item,
+        ): item is MenuDataItem & {
+          targetId?: string;
+          sourceSystem?: number;
+          sort?: number;
+        } => item !== null,
       );
 
     if (children.length > 0) {
@@ -135,16 +240,26 @@ export function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
       name,
       path,
       children: children.length > 0 ? children : undefined,
-      targetId: pickTargetId(node),
+      targetId,
+      sourceSystem,
       sort: node?.sort ?? 0,
-    } as MenuDataItem & { targetId?: string; sort?: number };
+    } as MenuDataItem & {
+      targetId?: string;
+      sourceSystem?: number;
+      sort?: number;
+    };
   };
 
   const result = (nodes || [])
     .map((node, index) => visit(node, index))
     .filter(
-      (item): item is MenuDataItem & { targetId?: string; sort?: number } =>
-        item !== null,
+      (
+        item,
+      ): item is MenuDataItem & {
+        targetId?: string;
+        sourceSystem?: number;
+        sort?: number;
+      } => item !== null,
     );
 
   result.sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
@@ -295,12 +410,58 @@ export function findPathByTargetId(
   return matchPath.startsWith('/') ? matchPath : undefined;
 }
 
+export function resolveMenuTitle(
+  menuData: MenuDataItem[] | undefined,
+  path: string | undefined,
+  targetId?: string | number,
+): string | undefined {
+  const flatMenus = flattenMenuData(menuData);
+  if (flatMenus.length === 0) return undefined;
+
+  const normalizedPath = normalizePath(path);
+  const normalizedTargetId =
+    targetId === undefined || targetId === null ? '' : String(targetId);
+
+  if (normalizedTargetId) {
+    const targetMatches = flatMenus
+      .filter((item) => String(item?.targetId || '') === normalizedTargetId)
+      .sort((a, b) => Number(b.depth ?? 0) - Number(a.depth ?? 0));
+    const targetTitle = targetMatches.find((item) =>
+      String(item?.name || '').trim(),
+    )?.name;
+    if (typeof targetTitle === 'string' && targetTitle.trim()) {
+      return targetTitle.trim();
+    }
+  }
+
+  if (!normalizedPath) return undefined;
+
+  const pathMatches = flatMenus
+    .filter(
+      (item) =>
+        normalizePath(item?.path as string | undefined) === normalizedPath,
+    )
+    .sort((a, b) => Number(b.depth ?? 0) - Number(a.depth ?? 0));
+  const pathTitle = pathMatches.find((item) =>
+    String(item?.name || '').trim(),
+  )?.name;
+  if (typeof pathTitle === 'string' && pathTitle.trim()) {
+    return pathTitle.trim();
+  }
+
+  return undefined;
+}
+
 type MenuTarget = {
   path?: string;
   targetId?: string;
+  sourceSystem?: number;
 };
 
-type MenuNodeWithTarget = MenuDataItem & { targetId?: string };
+type MenuNodeWithTarget = MenuDataItem & {
+  targetId?: string;
+  sourceSystem?: number;
+};
 
 function getMenuChildren(node: MenuDataItem | undefined): MenuNodeWithTarget[] {
   if (!node || !Array.isArray(node.children) || node.children.length === 0) {
@@ -323,21 +484,43 @@ function getMenuNodeTargetId(
   return value || undefined;
 }
 
+function getMenuNodeSourceSystem(
+  node: MenuDataItem | undefined,
+): number | undefined {
+  const rawSourceSystem = (node as any)?.sourceSystem;
+  const value = Number(rawSourceSystem);
+  return Number.isFinite(value) ? value : undefined;
+}
+
 export function findFirstLeafMenuTarget(
   node: MenuDataItem | undefined,
   inheritedPath?: string,
+  inheritedTargetId?: string,
+  inheritedSourceSystem?: number,
 ): MenuTarget | undefined {
   if (!node) return undefined;
   const currentPath = getMenuNodePath(node) || inheritedPath;
+  const currentTargetId = getMenuNodeTargetId(node) || inheritedTargetId;
+  const currentSourceSystem =
+    getMenuNodeSourceSystem(node) ?? inheritedSourceSystem;
 
   const children = getMenuChildren(node);
   if (children.length === 0) {
     if (!currentPath) return undefined;
-    return { path: currentPath, targetId: getMenuNodeTargetId(node) };
+    return {
+      path: currentPath,
+      targetId: currentTargetId,
+      sourceSystem: currentSourceSystem,
+    };
   }
 
   for (const child of children) {
-    const leafTarget = findFirstLeafMenuTarget(child, currentPath);
+    const leafTarget = findFirstLeafMenuTarget(
+      child,
+      currentPath,
+      currentTargetId,
+      currentSourceSystem,
+    );
     if (leafTarget?.path) return leafTarget;
   }
 

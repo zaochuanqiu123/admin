@@ -14,12 +14,17 @@ import {
 import type { MenuDataItem } from '@ant-design/pro-components';
 import { Menu, type MenuProps } from 'antd';
 import React from 'react';
+import {
+  isMenuHoverAutoOpenSuppressed,
+  resumeMenuHoverAutoOpen,
+  suppressMenuHoverAutoOpen,
+} from '@/utils/menuHover';
 
 type OtherMenusSplitMenuProps = {
   topMenus?: MenuDataItem[];
   pathname: string;
   currentTargetId?: string;
-  onNavigate: (path?: string, targetId?: string) => void;
+  onNavigate: (path?: string, targetId?: string, sourceSystem?: number) => void;
 };
 
 type MenuNode = {
@@ -27,6 +32,7 @@ type MenuNode = {
   name: string;
   path?: string;
   targetId?: string;
+  sourceSystem?: number;
   children?: MenuNode[];
 };
 
@@ -95,6 +101,7 @@ function buildNodes(
     if (!rawName && children.length === 0) return;
 
     const targetId = (item as any)?.targetId;
+    const sourceSystem = Number((item as any)?.sourceSystem);
     result.push({
       key: nodeKey,
       name: itemName,
@@ -103,6 +110,7 @@ function buildNodes(
         targetId === undefined || targetId === null
           ? undefined
           : String(targetId),
+      sourceSystem: Number.isFinite(sourceSystem) ? sourceSystem : undefined,
       children: children.length > 0 ? children : undefined,
     });
   });
@@ -170,18 +178,31 @@ function getBestPathMatchScoreInTree(node: MenuNode, pathname: string): number {
 function findFirstLeafNavigableNode(
   node: MenuNode | undefined,
   inheritedPath?: string,
-): { path?: string; targetId?: string } | undefined {
+  inheritedTargetId?: string,
+  inheritedSourceSystem?: number,
+): { path?: string; targetId?: string; sourceSystem?: number } | undefined {
   if (!node) return undefined;
   const currentPath = node.path || inheritedPath;
+  const currentTargetId = node.targetId || inheritedTargetId;
+  const currentSourceSystem = node.sourceSystem ?? inheritedSourceSystem;
 
   const children = node.children || [];
   if (children.length === 0) {
     if (!currentPath) return undefined;
-    return { path: currentPath, targetId: node.targetId };
+    return {
+      path: currentPath,
+      targetId: currentTargetId,
+      sourceSystem: currentSourceSystem,
+    };
   }
 
   for (const child of children) {
-    const leafTarget = findFirstLeafNavigableNode(child, currentPath);
+    const leafTarget = findFirstLeafNavigableNode(
+      child,
+      currentPath,
+      currentTargetId,
+      currentSourceSystem,
+    );
     if (leafTarget?.path) return leafTarget;
   }
 
@@ -218,6 +239,14 @@ function getMenuKeyDepth(
     cursor = parentByKey.get(cursor);
   }
   return depth;
+}
+
+function getMenuSourceNodes(node: MenuNode | undefined): MenuNode[] {
+  if (!node) return [];
+  if (node.children && node.children.length > 0) {
+    return node.children;
+  }
+  return [node];
 }
 
 const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
@@ -288,6 +317,7 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
   const buildMenuMeta = React.useCallback((menuSourceNodes: MenuNode[]) => {
     const pathByKey = new Map<string, string>();
     const targetIdByKey = new Map<string, string | undefined>();
+    const sourceSystemByKey = new Map<string, number | undefined>();
     const parentByKey = new Map<string, string | undefined>();
     const submenuKeys: string[] = [];
 
@@ -302,6 +332,7 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
         pathByKey.set(node.key, resolvedPath);
       }
       targetIdByKey.set(node.key, node.targetId);
+      sourceSystemByKey.set(node.key, node.sourceSystem);
       const children =
         node.children && node.children.length > 0
           ? node.children.map((child) =>
@@ -328,16 +359,17 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
       items,
       pathByKey,
       targetIdByKey,
+      sourceSystemByKey,
       parentByKey,
       submenuKeys,
     };
   }, []);
 
   const menuMeta = React.useMemo(() => {
-    return buildMenuMeta(activeTopNode?.children || []);
+    return buildMenuMeta(getMenuSourceNodes(activeTopNode));
   }, [activeTopNode, buildMenuMeta]);
   const hoverMenuMeta = React.useMemo(() => {
-    return buildMenuMeta(hoverTopNode?.children || []);
+    return buildMenuMeta(getMenuSourceNodes(hoverTopNode));
   }, [buildMenuMeta, hoverTopNode]);
 
   const selectedKeys = React.useMemo(() => {
@@ -467,13 +499,24 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
   const handleTopClick = React.useCallback(
     (node: MenuNode) => {
       setActiveTopKey(node.key);
-      if (normalizePath(node.path) === '/dashboard' && node.path) {
-        onNavigate(node.path, node.targetId);
+      const defaultTarget = findFirstLeafNavigableNode(
+        node,
+        node.path,
+        node.targetId,
+        node.sourceSystem,
+      );
+      if (defaultTarget?.path) {
+        suppressMenuHoverAutoOpen();
+        onNavigate(
+          defaultTarget.path,
+          defaultTarget.targetId,
+          defaultTarget.sourceSystem,
+        );
         return;
       }
-      const defaultTarget = findFirstLeafNavigableNode(node, node.path);
-      if (!defaultTarget?.path) return;
-      onNavigate(defaultTarget.path, defaultTarget.targetId);
+      if (!node.path) return;
+      suppressMenuHoverAutoOpen();
+      onNavigate(node.path, node.targetId, node.sourceSystem);
     },
     [onNavigate],
   );
@@ -483,9 +526,19 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
       const key = String(info.key || '');
       const path = menuMeta.pathByKey.get(key);
       if (!path) return;
-      onNavigate(path, menuMeta.targetIdByKey.get(key));
+      suppressMenuHoverAutoOpen();
+      onNavigate(
+        path,
+        menuMeta.targetIdByKey.get(key),
+        menuMeta.sourceSystemByKey.get(key),
+      );
     },
-    [menuMeta.pathByKey, menuMeta.targetIdByKey, onNavigate],
+    [
+      menuMeta.pathByKey,
+      menuMeta.sourceSystemByKey,
+      menuMeta.targetIdByKey,
+      onNavigate,
+    ],
   );
   const clearCloseTimer = React.useCallback(() => {
     if (closeTimerRef.current === null) return;
@@ -527,6 +580,19 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
     ],
   );
 
+  const openHoverPanelsByIntent = React.useCallback(
+    (topKey?: string, fromPointerMove = false) => {
+      if (fromPointerMove) {
+        resumeMenuHoverAutoOpen();
+      }
+      if (isMenuHoverAutoOpenSuppressed()) {
+        return;
+      }
+      openHoverPanels(topKey);
+    },
+    [openHoverPanels],
+  );
+
   const scheduleCloseHoverPanels = React.useCallback(() => {
     clearCloseTimer();
     clearCloseCleanupTimer();
@@ -547,11 +613,17 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
       const path = hoverMenuMeta.pathByKey.get(key);
       if (!path) return;
       closeHoverPanelsImmediately();
-      onNavigate(path, hoverMenuMeta.targetIdByKey.get(key));
+      suppressMenuHoverAutoOpen();
+      onNavigate(
+        path,
+        hoverMenuMeta.targetIdByKey.get(key),
+        hoverMenuMeta.sourceSystemByKey.get(key),
+      );
     },
     [
       closeHoverPanelsImmediately,
       hoverMenuMeta.pathByKey,
+      hoverMenuMeta.sourceSystemByKey,
       hoverMenuMeta.targetIdByKey,
       onNavigate,
     ],
@@ -584,10 +656,7 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
           'other-menus-split-menu-shell' +
           (hoverListOpen ? ' other-menus-split-menu-shell-open' : '')
         }
-        onMouseEnter={() => {
-          handleHoverZoneEnter();
-          openHoverPanels();
-        }}
+        onMouseEnter={handleHoverZoneEnter}
         onMouseLeave={handleHoverZoneLeave}
       >
         <div
@@ -608,8 +677,12 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
                   (active ? ' other-menus-split-menu-icon-btn-active' : '')
                 }
                 aria-label={node.name}
-                onMouseEnter={() => openHoverPanels(node.key)}
-                onFocus={() => openHoverPanels(node.key)}
+                onMouseEnter={() => openHoverPanelsByIntent(node.key)}
+                onMouseMove={() => openHoverPanelsByIntent(node.key, true)}
+                onFocus={() => {
+                  resumeMenuHoverAutoOpen();
+                  openHoverPanels(node.key);
+                }}
                 onClick={() => {
                   closeHoverPanelsImmediately();
                   handleTopClick(node);

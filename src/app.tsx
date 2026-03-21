@@ -49,7 +49,6 @@ import DashboardHomeSplitMenu from '@/components/Layout/DashboardHomeSplitMenu';
 import OtherMenusSplitMenu from '@/components/Layout/OtherMenusSplitMenu';
 import RouteTabsKeepAlive from '@/components/Layout/RouteTabsKeepAlive';
 import WorkplaceCommonMenu from '@/components/Workplace/WorkplaceCommonMenu';
-import { IFRAME_PATHS } from '@/config/iframe.config';
 import { DEFAULT_COMMON_ACTIONS } from '@/config/menu.config';
 import {
   clearPostLoginRedirect,
@@ -60,15 +59,20 @@ import {
   readCommonActionsFromStorage,
   writeCommonActionsToStorage,
 } from '@/utils/commonActions.storage';
-import { buildIframeRouteWithParams, isIframeRoutePath } from '@/utils/iframe';
+import { buildIframeRouteWithParams } from '@/utils/iframe';
 import {
   extractPermContextNodes,
   findFirstLeafMenuTarget,
+  findPathByTargetId,
   getValidBusinessCode,
   mapPermContextToMenuData,
   TEMP_BUSINESS_CODE,
 } from '@/utils/menu';
-import { getAllowedTopPaths } from '@/utils/route.utils';
+import {
+  clearStoreScopedStorage,
+  clearWorkplaceCommonActionsCache,
+  resetStoreScopedInitialState,
+} from '@/utils/store-switch';
 
 const isDev = process.env.NODE_ENV === 'development' || process.env.CI;
 const loginPath = '/user/login';
@@ -105,98 +109,6 @@ function markThemeSwitching() {
   }, 220);
 }
 
-function cloneMenuTree(items: MenuDataItem[]): MenuDataItem[] {
-  return items.map((item) => ({
-    ...item,
-    children: Array.isArray(item?.children)
-      ? cloneMenuTree(item.children as MenuDataItem[])
-      : undefined,
-  }));
-}
-
-function patchSettingsLocalMenus(items: MenuDataItem[]): MenuDataItem[] {
-  const nextItems = cloneMenuTree(items);
-  const settingsNode = nextItems.find(
-    (item) =>
-      normalizePathname(item?.path ? String(item.path) : undefined) === '/set',
-  ) as (MenuDataItem & { targetId?: string }) | undefined;
-
-  if (!settingsNode) return nextItems;
-
-  let matched = false;
-  const patchChildren = (
-    children: MenuDataItem[] | undefined,
-  ): MenuDataItem[] | undefined => {
-    if (!Array.isArray(children) || children.length === 0) return children;
-
-    return children.map((child) => {
-      const nextChild = {
-        ...child,
-        children: patchChildren(
-          Array.isArray(child?.children)
-            ? (child.children as MenuDataItem[])
-            : undefined,
-        ),
-      } as MenuDataItem & { targetId?: string };
-
-      const childName =
-        typeof nextChild?.name === 'string' ? nextChild.name.trim() : '';
-      if (childName === '角色权限') {
-        nextChild.path = '/set/role-permission';
-        matched = true;
-      }
-
-      return nextChild;
-    });
-  };
-
-  const patchedChildren = patchChildren(
-    Array.isArray(settingsNode.children)
-      ? (settingsNode.children as MenuDataItem[])
-      : [],
-  );
-
-  if (!matched) {
-    const existingChildren = Array.isArray(patchedChildren)
-      ? patchedChildren
-      : [];
-    settingsNode.children = [
-      ...existingChildren,
-      {
-        name: '角色权限',
-        path: '/set/role-permission',
-      } as MenuDataItem,
-    ];
-    return nextItems;
-  }
-
-  settingsNode.children = patchedChildren;
-  return nextItems;
-}
-
-function getModuleRoot(path: string | undefined): string {
-  if (!path) return '';
-  const pathname = String(path).split('?')[0] || '';
-  const root = pathname.split('/').filter(Boolean)[0] || '';
-  return root ? `/${root}` : '';
-}
-
-function dedupeMenuTree(items: MenuDataItem[]): MenuDataItem[] {
-  const seen = new Set<string>();
-  return items.filter((item, index) => {
-    const path = normalizePathname(item?.path ? String(item.path) : undefined);
-    const targetId =
-      (item as any)?.targetId === undefined || (item as any)?.targetId === null
-        ? ''
-        : String((item as any).targetId);
-    const name = typeof item?.name === 'string' ? item.name.trim() : '';
-    const key = `${path}__${targetId}__${name || index}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
 function normalizePathname(pathname: string | undefined): string {
   const value =
     String(pathname || '')
@@ -205,6 +117,18 @@ function normalizePathname(pathname: string | undefined): string {
   if (!value) return '/';
   if (value === '/') return '/';
   return value.endsWith('/') ? value.slice(0, -1) : value;
+}
+
+function stripIframeQueryParams(path: string): string {
+  const [pathname, query = ''] = String(path || '').split('?');
+  if (!query) return pathname;
+
+  const searchParams = new URLSearchParams(query);
+  searchParams.delete('targetId');
+  searchParams.delete('token');
+
+  const nextQuery = searchParams.toString();
+  return nextQuery ? `${pathname}?${nextQuery}` : pathname;
 }
 
 function getTargetIdFromSearch(search: string | undefined): string | undefined {
@@ -216,6 +140,15 @@ function getTargetIdFromSearch(search: string | undefined): string | undefined {
   if (!value) return undefined;
   const normalized = value.trim();
   return normalized || undefined;
+}
+
+function hasLegacyIframeAccess(
+  menuData: MenuDataItem[] | undefined,
+  search: string | undefined,
+): boolean {
+  const targetId = getTargetIdFromSearch(search);
+  if (!targetId) return false;
+  return !!findPathByTargetId(menuData, targetId);
 }
 
 function isDashboardRoute(pathname: string): boolean {
@@ -381,8 +314,6 @@ export const layout: RunTimeLayoutConfig = ({
     (window as any).g_initialState = initialState;
   }
 
-  let cachedTopMenus: MenuDataItem[] = [];
-
   // 常用数据管理
   const storageKey = `workplace_common_actions_${
     initialState?.currentUser?.name ?? 'guest'
@@ -430,40 +361,38 @@ export const layout: RunTimeLayoutConfig = ({
       initialState?.permContextMenu &&
       initialState.permContextMenu.length > 0
     ) {
-      const visiblePermContextMenu = patchSettingsLocalMenus(
-        initialState.permContextMenu,
-      ).filter((item) => {
-        const path = String(item?.path || '');
-        return path !== '/dashboard' && path !== '/dashboard/index';
-      });
+      const visiblePermContextMenu = initialState.permContextMenu.filter(
+        (item) => {
+          const path = String(item?.path || '');
+          return path !== '/dashboard' && path !== '/dashboard/index';
+        },
+      );
       return [dashboardMenu, ...visiblePermContextMenu];
     }
 
     return [dashboardMenu];
   };
 
-  const navigateMenu = (path: string | undefined, targetId?: string) => {
+  const navigateMenu = (
+    path: string | undefined,
+    targetId?: string,
+    sourceSystem?: number,
+  ) => {
     const targetPath = String(path || '').trim();
     if (!targetPath) return;
 
-    if (isIframeRoutePath(targetPath)) {
-      const nextUrl = buildIframeRouteWithParams(
-        targetPath,
-        initialState?.permContextMenu,
-        targetId,
-      );
+    if (sourceSystem === 1 || (sourceSystem === undefined && targetId)) {
+      const nextUrl = buildIframeRouteWithParams(targetPath, targetId);
       history.push(nextUrl);
       return;
     }
 
-    history.push(targetPath);
+    history.push(stripIframeQueryParams(targetPath));
   };
 
   return {
     menuDataRender: (menuData) => {
-      const nextMenus = buildTopMenus(menuData);
-      cachedTopMenus = nextMenus;
-      return nextMenus;
+      return buildTopMenus(menuData);
     },
     menu: {
       locale: false,
@@ -475,7 +404,10 @@ export const layout: RunTimeLayoutConfig = ({
         <div
           style={{ cursor: 'pointer', width: '100%', height: '100%' }}
           onClickCapture={() => {
-            const clickedItem = item as MenuDataItem & { targetId?: string };
+            const clickedItem = item as MenuDataItem & {
+              targetId?: string;
+              sourceSystem?: number;
+            };
             const fallbackPath = clickedItem?.path
               ? String(clickedItem.path)
               : undefined;
@@ -484,13 +416,42 @@ export const layout: RunTimeLayoutConfig = ({
               rawTargetId === undefined || rawTargetId === null
                 ? undefined
                 : String(rawTargetId);
+            const fallbackSourceSystem = Number(clickedItem?.sourceSystem);
+            const firstLeafTarget = findFirstLeafMenuTarget(
+              clickedItem,
+              fallbackPath,
+              fallbackTargetId,
+              Number.isFinite(fallbackSourceSystem)
+                ? fallbackSourceSystem
+                : undefined,
+            );
             const nextTarget = isWorkplaceMenuItem(clickedItem)
-              ? { path: fallbackPath, targetId: fallbackTargetId }
-              : findFirstLeafMenuTarget(clickedItem, fallbackPath);
+              ? {
+                  path: fallbackPath,
+                  targetId: fallbackTargetId,
+                  sourceSystem: Number.isFinite(fallbackSourceSystem)
+                    ? fallbackSourceSystem
+                    : undefined,
+                }
+              : firstLeafTarget?.path
+                ? firstLeafTarget
+                : fallbackPath
+                  ? {
+                      path: fallbackPath,
+                      targetId: fallbackTargetId,
+                      sourceSystem: Number.isFinite(fallbackSourceSystem)
+                        ? fallbackSourceSystem
+                        : undefined,
+                    }
+                  : undefined;
 
             if (!nextTarget?.path) return;
 
-            navigateMenu(nextTarget.path, nextTarget.targetId);
+            navigateMenu(
+              nextTarget.path,
+              nextTarget.targetId,
+              nextTarget.sourceSystem,
+            );
           }}
         >
           {dom}
@@ -539,18 +500,19 @@ export const layout: RunTimeLayoutConfig = ({
           });
 
           // 检查当前页面是否还有权限
-          const currentPath = history.location.pathname;
-          const allowedPaths = getAllowedTopPaths(
-            permContextMenu.length > 0 ? permContextMenu : undefined,
+          const currentTargetId = getTargetIdFromSearch(
+            history.location.search,
           );
-          const moduleRoot = `/${String(currentPath || '').split('/')[1] || ''}`;
-          const isIframeModule = IFRAME_PATHS.some((p) => moduleRoot === p);
 
-          if (isIframeModule && !allowedPaths.has(moduleRoot)) {
+          if (
+            currentTargetId &&
+            !hasLegacyIframeAccess(
+              permContextMenu.length > 0 ? permContextMenu : undefined,
+              history.location.search,
+            )
+          ) {
             // 如果当前页面在新业态下没有权限，跳转到工作台
-            history.replace(
-              buildIframeRouteWithParams('/dashboard/index', permContextMenu),
-            );
+            history.replace(buildIframeRouteWithParams('/dashboard/index'));
             message.success('切换业态成功，已跳转到工作台');
           } else {
             message.success('切换业态成功');
@@ -664,8 +626,11 @@ export const layout: RunTimeLayoutConfig = ({
         menuProps?.location?.pathname ?? history.location.pathname;
       const currentTargetId = getTargetIdFromSearch(history.location.search);
       const isInDashboard = isDashboardRoute(pathname);
-      const topMenus = cachedTopMenus.length > 0 ? cachedTopMenus : [];
+      const topMenus = buildTopMenus(menuProps?.menuData);
       const useSplitMenu = topMenus.length > 0;
+      const menuScopeKey = `${initialState?.currentOrgCode || 'no-org'}::${
+        initialState?.currentBusinessCode || 'no-business'
+      }`;
 
       if (!isInDashboard) {
         if (useSplitMenu) {
@@ -674,6 +639,7 @@ export const layout: RunTimeLayoutConfig = ({
               <div className="plain-sider-split-content">
                 <DashboardHomeMenuBoundary fallback={defaultDom}>
                   <OtherMenusSplitMenu
+                    key={`other-split-${menuScopeKey}`}
                     topMenus={topMenus}
                     pathname={pathname}
                     currentTargetId={currentTargetId}
@@ -702,6 +668,7 @@ export const layout: RunTimeLayoutConfig = ({
         <div className="dashboard-sider">
           <div className="dashboard-sider-common">
             <WorkplaceCommonMenu
+              key={`workplace-common-${menuScopeKey}`}
               storageKey={storageKey}
               commonActions={commonActions}
               setCommonActions={setCommonActions}
@@ -717,6 +684,7 @@ export const layout: RunTimeLayoutConfig = ({
               {useSplitMenu ? (
                 <DashboardHomeMenuBoundary fallback={defaultDom}>
                   <DashboardHomeSplitMenu
+                    key={`dashboard-split-${menuScopeKey}`}
                     topMenus={topMenus}
                     pathname={pathname}
                     currentTargetId={currentTargetId}
@@ -745,31 +713,6 @@ export const layout: RunTimeLayoutConfig = ({
       src: HEADER_USER_AVATAR_SRC,
       title: undefined,
       render: () => {
-        const clearWorkplaceCache = () => {
-          try {
-            const keys: string[] = [];
-            for (let i = 0; i < localStorage.length; i += 1) {
-              const k = localStorage.key(i);
-              if (!k) continue;
-              if (k.startsWith('workplace_common_actions_')) keys.push(k);
-              if (
-                k.includes('workplace_common_actions_') &&
-                k.endsWith('__groupOrder')
-              )
-                keys.push(k);
-            }
-            keys.forEach((k) => {
-              try {
-                localStorage.removeItem(k);
-              } catch {
-                // ignore
-              }
-            });
-          } catch {
-            // ignore
-          }
-        };
-
         // 退出登录处理函数
         const handleLogout = async () => {
           if (logoutInFlight) {
@@ -799,22 +742,14 @@ export const layout: RunTimeLayoutConfig = ({
               clearToken();
               clearRouteTabs();
               clearPostLoginRedirect();
-              clearWorkplaceCache();
+              clearWorkplaceCommonActionsCache();
 
-              setInitialState((s) => {
-                const next = {
+              setInitialState((s) =>
+                resetStoreScopedInitialState({
                   ...(s || {}),
                   currentUser: undefined,
-                  currentOrgCode: undefined,
-                  permContextMenu: undefined,
-                  businessList: undefined,
-                  currentBusinessCode: undefined,
-                };
-                if (typeof window !== 'undefined') {
-                  (window as any).g_initialState = next;
-                }
-                return next;
-              });
+                }),
+              );
 
               if (history.location.pathname !== loginPath) {
                 history.replace(loginPath);
@@ -840,7 +775,11 @@ export const layout: RunTimeLayoutConfig = ({
         };
 
         const handleSwitchStore = () => {
-          history.push('/user/character');
+          clearStoreScopedStorage();
+          clearPostLoginRedirect();
+          Modal.destroyAll();
+          setInitialState((s) => resetStoreScopedInitialState(s));
+          history.replace('/user/character');
         };
 
         // 下拉菜单配置
@@ -940,21 +879,16 @@ export const layout: RunTimeLayoutConfig = ({
         return;
       }
 
-      const allowedTopPaths = getAllowedTopPaths(initialState?.permContextMenu);
       const pathname = location.pathname;
       const isDashboard =
         pathname === '/dashboard' || pathname.startsWith('/dashboard/');
       if (isDashboard) return;
 
-      const moduleRoot = `/${String(pathname || '').split('/')[1] || ''}`;
-      const isIframeModule = IFRAME_PATHS.some((p) => moduleRoot === p);
-      if (isIframeModule && !allowedTopPaths.has(moduleRoot)) {
-        history.replace(
-          buildIframeRouteWithParams(
-            '/dashboard/index',
-            initialState?.permContextMenu,
-          ),
-        );
+      if (
+        getTargetIdFromSearch(location.search) &&
+        !hasLegacyIframeAccess(initialState?.permContextMenu, location.search)
+      ) {
+        history.replace(buildIframeRouteWithParams('/dashboard/index'));
       }
     },
 
@@ -966,7 +900,11 @@ export const layout: RunTimeLayoutConfig = ({
 
       return (
         <>
-          <RouteTabsKeepAlive themeCacheKey={keepAliveThemeKey}>
+          <RouteTabsKeepAlive
+            key={initialState?.currentOrgCode || 'no-org'}
+            themeCacheKey={keepAliveThemeKey}
+            menuData={initialState?.permContextMenu}
+          >
             {children}
           </RouteTabsKeepAlive>
           {isDev && (

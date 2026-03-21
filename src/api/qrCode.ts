@@ -61,7 +61,7 @@ export async function getQrCodePageQuery(
   data: QrCodePageQueryParams,
   options?: { [key: string]: any },
 ) {
-  return apiData<QrCodePageResult>('/api/device/admin/qrCode/pageQuery', {
+  return apiData<QrCodePageResult>('/api/device/admin/qrCode/page', {
     method: 'POST',
     data,
     ...(options || {}),

@@ -13,9 +13,9 @@
    - `padding: 0 22px`
    - `border: none`
    - `border-radius: 999px`
-   - `background: var(--ant-color-primary)`
-   - `box-shadow: none`
-   - `font-weight: 500`
+   - `background: var`
+   - `font-weight: 50(--ant-color-primary)`
+   - `box-shadow: none0`
    - `hover/focus` 使用 `var(--ant-color-primary-hover, var(--ant-color-primary))`
 4. 如果是页面主按钮，但文案不是“新增/添加/创建”，只有在视觉层级与该按钮一致时才允许复用这套样式。
 5. 后续如果同类按钮继续增多，优先抽离成公共类或公共组件，不允许继续复制粘贴样式。
