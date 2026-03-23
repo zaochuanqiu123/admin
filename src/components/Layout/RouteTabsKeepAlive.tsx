@@ -16,7 +16,8 @@ import {
   UNSAFE_RouteContext,
   useOutlet,
 } from 'react-router-dom';
-import { ROUTE_TABS_STORAGE_KEY } from '@/api/storage';
+import { ROUTE_TABS_RESET_EVENT, ROUTE_TABS_STORAGE_KEY } from '@/api/storage';
+import { buildIframeRouteWithParams } from '@/utils/iframe';
 import { resolveMenuTitle } from '@/utils/menu';
 import routes from '../../../config/routes';
 
@@ -24,6 +25,7 @@ type RouteTabItem = {
   key: string;
   path: string;
   title: string;
+  targetId?: string;
 };
 
 type FlatRouteItem = {
@@ -214,11 +216,7 @@ function isFixedTabKey(key: string): boolean {
 }
 
 function createFixedTab(): RouteTabItem {
-  return {
-    key: FIXED_TAB_PATH,
-    path: FIXED_TAB_PATH,
-    title: resolveTabTitle(FIXED_TAB_PATH),
-  };
+  return createRouteTab(FIXED_TAB_PATH, resolveTabTitle(FIXED_TAB_PATH));
 }
 
 function isPersistableTabPath(pathname: string): boolean {
@@ -243,6 +241,40 @@ function getTargetIdFromSearch(search: string | undefined): string | undefined {
   return targetId || undefined;
 }
 
+function normalizeTargetId(targetId: string | undefined): string | undefined {
+  const normalized = String(targetId || '').trim();
+  return normalized || undefined;
+}
+
+function buildTabKey(pathname: string, targetId?: string): string {
+  const normalizedPath = normalizePath(resolveTagPath(pathname));
+  const normalizedTargetId = normalizeTargetId(targetId);
+  if (!normalizedTargetId) return normalizedPath;
+  return `${normalizedPath}::${normalizedTargetId}`;
+}
+
+function createRouteTab(
+  pathname: string,
+  title?: string,
+  targetId?: string,
+): RouteTabItem {
+  const normalizedPath = normalizePath(resolveTagPath(pathname));
+  const normalizedTargetId = normalizeTargetId(targetId);
+  return {
+    key: buildTabKey(normalizedPath, normalizedTargetId),
+    path: normalizedPath,
+    title: title || resolveTabTitle(normalizedPath),
+    ...(normalizedTargetId ? { targetId: normalizedTargetId } : {}),
+  };
+}
+
+function getTabNavigatePath(tab: RouteTabItem): string {
+  if (tab.targetId) {
+    return buildIframeRouteWithParams(tab.path, tab.targetId);
+  }
+  return tab.path;
+}
+
 function canCacheTabPath(pathname: string, search?: string): boolean {
   const normalized = normalizePath(pathname);
   return isPersistableTabPath(normalized) && !hasLegacyIframeTarget(search);
@@ -256,28 +288,28 @@ function sanitizeStoredTabs(raw: unknown): RouteTabItem[] {
   const restored: RouteTabItem[] = [fixedTab];
 
   raw.forEach((item: any) => {
-    const candidate =
+    const candidatePath =
       typeof item?.path === 'string'
         ? item.path
         : typeof item?.key === 'string'
-          ? item.key
+          ? String(item.key).split('::')[0]
           : '';
-    if (!candidate) return;
+    if (!candidatePath) return;
 
-    const normalized = normalizePath(resolveTagPath(candidate));
+    const normalized = normalizePath(resolveTagPath(candidatePath));
     if (isFixedTabKey(normalized)) return;
     if (!isPersistableTabPath(normalized)) return;
-    if (seen.has(normalized)) return;
+    const tab = createRouteTab(
+      normalized,
+      typeof item?.title === 'string' && item.title.trim()
+        ? item.title.trim()
+        : undefined,
+      normalizeTargetId(item?.targetId),
+    );
+    if (seen.has(tab.key)) return;
 
-    seen.add(normalized);
-    restored.push({
-      key: normalized,
-      path: normalized,
-      title:
-        typeof item?.title === 'string' && item.title.trim()
-          ? item.title.trim()
-          : resolveTabTitle(normalized),
-    });
+    seen.add(tab.key);
+    restored.push(tab);
   });
 
   return restored;
@@ -309,6 +341,7 @@ const RouteTabsKeepAlive: React.FC<{
   const rawPathname = normalizePath(location.pathname);
   const pathname = resolveTagPath(rawPathname);
   const currentTargetId = getTargetIdFromSearch(location.search);
+  const currentTabKey = buildTabKey(pathname, currentTargetId);
   const activeTabTitle =
     resolveMenuTitle(menuData, pathname, currentTargetId) ||
     resolveTabTitle(pathname);
@@ -334,6 +367,23 @@ const RouteTabsKeepAlive: React.FC<{
   React.useEffect(() => {
     cacheKeyRef.current = themeCacheKey || '';
   }, [themeCacheKey]);
+
+  // 权限菜单变更时（身份/业态切换），清除所有 KeepAlive 缓存的组件实例
+  const menuDataSignatureRef = React.useRef<string>('');
+  React.useEffect(() => {
+    const nextSignature = JSON.stringify(
+      (menuData || []).map(
+        (item) => `${item?.path || ''}::${item?.name || ''}`,
+      ),
+    );
+    if (
+      menuDataSignatureRef.current &&
+      menuDataSignatureRef.current !== nextSignature
+    ) {
+      cacheEntryMapRef.current = {};
+    }
+    menuDataSignatureRef.current = nextSignature;
+  }, [menuData]);
 
   React.useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -362,13 +412,14 @@ const RouteTabsKeepAlive: React.FC<{
         if (!normalized) return;
         if (isFixedTabKey(normalized)) return;
         if (!isPersistableTabPath(normalized)) return;
-        if (seen.has(normalized)) return;
-        seen.add(normalized);
-        persistTabs.push({
-          key: normalized,
-          path: normalized,
-          title: tab.title || resolveTabTitle(normalized),
-        });
+        const nextTab = createRouteTab(
+          normalized,
+          tab.title || resolveTabTitle(normalized),
+          tab.targetId,
+        );
+        if (seen.has(nextTab.key)) return;
+        seen.add(nextTab.key);
+        persistTabs.push(nextTab);
       });
 
       localStorage.setItem(ROUTE_TABS_STORAGE_KEY, JSON.stringify(persistTabs));
@@ -386,32 +437,30 @@ const RouteTabsKeepAlive: React.FC<{
     canCacheTabPath(rawPathname, location.search) &&
     canCacheTabPath(pathname, location.search) &&
     !isPathMappedFromRedirect;
-  const suppressCurrentAutoAdd = suppressedPathRef.current === pathname;
+  const suppressCurrentAutoAdd = suppressedPathRef.current === currentTabKey;
 
   const renderedTabs = React.useMemo(() => {
     if (!isTaggablePage || suppressCurrentAutoAdd) return tabs;
-    if (isPathMappedFromRedirect && !tabs.some((tab) => tab.key === pathname)) {
+    if (
+      isPathMappedFromRedirect &&
+      !tabs.some((tab) => tab.key === currentTabKey)
+    ) {
       return tabs;
     }
-    if (tabs.some((tab) => tab.key === pathname)) return tabs;
-    return [
-      ...tabs,
-      {
-        key: pathname,
-        path: pathname,
-        title: activeTabTitle,
-      },
-    ];
+    if (tabs.some((tab) => tab.key === currentTabKey)) return tabs;
+    return [...tabs, createRouteTab(pathname, activeTabTitle, currentTargetId)];
   }, [
     isPathMappedFromRedirect,
     isTaggablePage,
+    currentTabKey,
+    currentTargetId,
     pathname,
     activeTabTitle,
     suppressCurrentAutoAdd,
     tabs,
   ]);
 
-  const hasActiveTab = renderedTabs.some((tab) => tab.key === pathname);
+  const hasActiveTab = renderedTabs.some((tab) => tab.key === currentTabKey);
   const shouldRenderTabsInHeader = !!headerTabsSlot;
   const barInlineStyle: React.CSSProperties = {
     display: 'flex',
@@ -460,31 +509,37 @@ const RouteTabsKeepAlive: React.FC<{
   }, []);
 
   React.useEffect(() => {
-    if (suppressedPathRef.current && suppressedPathRef.current !== pathname) {
+    if (
+      suppressedPathRef.current &&
+      suppressedPathRef.current !== currentTabKey
+    ) {
       suppressedPathRef.current = '';
     }
 
     if (!isTaggablePage) return;
-    if (suppressedPathRef.current === pathname) return;
+    if (suppressedPathRef.current === currentTabKey) return;
     if (isPathMappedFromRedirect) return;
 
     setTabs((prev) => {
-      if (prev.some((tab) => tab.key === pathname)) return prev;
+      if (prev.some((tab) => tab.key === currentTabKey)) return prev;
       return [
         ...prev,
-        {
-          key: pathname,
-          path: pathname,
-          title: activeTabTitle,
-        },
+        createRouteTab(pathname, activeTabTitle, currentTargetId),
       ];
     });
-  }, [activeTabTitle, isPathMappedFromRedirect, isTaggablePage, pathname]);
+  }, [
+    activeTabTitle,
+    currentTabKey,
+    currentTargetId,
+    isPathMappedFromRedirect,
+    isTaggablePage,
+    pathname,
+  ]);
 
   React.useEffect(() => {
     if (!isTaggablePage) return;
     setTabs((prev) => {
-      const index = prev.findIndex((tab) => tab.key === pathname);
+      const index = prev.findIndex((tab) => tab.key === currentTabKey);
       if (index < 0) return prev;
       if (prev[index]?.title === activeTabTitle) return prev;
       const next = [...prev];
@@ -494,7 +549,7 @@ const RouteTabsKeepAlive: React.FC<{
       };
       return next;
     });
-  }, [activeTabTitle, isTaggablePage, pathname]);
+  }, [activeTabTitle, currentTabKey, isTaggablePage]);
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -511,8 +566,8 @@ const RouteTabsKeepAlive: React.FC<{
 
   React.useEffect(() => {
     if (!canUseCacheForCurrentRoute) return;
-    if (cacheEntryMapRef.current[pathname]) return;
-    cacheEntryMapRef.current[pathname] = {
+    if (cacheEntryMapRef.current[currentTabKey]) return;
+    cacheEntryMapRef.current[currentTabKey] = {
       node: activeNode,
       locationContext: locationContextValue,
       navigationContext: navigationContextValue,
@@ -521,18 +576,19 @@ const RouteTabsKeepAlive: React.FC<{
   }, [
     activeNode,
     canUseCacheForCurrentRoute,
+    currentTabKey,
     locationContextValue,
     navigationContextValue,
-    pathname,
     routeContextValue,
   ]);
 
   const handleTabClick = React.useCallback(
-    (path: string) => {
-      if (!path || path === pathname) return;
-      history.push(path);
+    (tab: RouteTabItem) => {
+      const nextPath = getTabNavigatePath(tab);
+      if (!nextPath || tab.key === currentTabKey) return;
+      history.push(nextPath);
     },
-    [pathname],
+    [currentTabKey],
   );
 
   const handleCloseTab = React.useCallback(
@@ -553,44 +609,44 @@ const RouteTabsKeepAlive: React.FC<{
           return nextVersions;
         });
 
-        if (targetKey !== pathname) {
+        if (targetKey !== currentTabKey) {
           return nextTabs;
         }
 
         if (nextTabs.length === 0) {
-          suppressedPathRef.current = pathname;
+          suppressedPathRef.current = currentTabKey;
           return nextTabs;
         }
 
         const leftTab = prev[index - 1];
         const rightTab = prev[index + 1];
         const nextActive = leftTab || rightTab;
-        if (nextActive?.path) {
-          history.push(nextActive.path);
+        if (nextActive) {
+          history.push(getTabNavigatePath(nextActive));
         }
 
         return nextTabs;
       });
     },
-    [pathname],
+    [currentTabKey],
   );
 
   const handleRefreshCurrentTab = React.useCallback(() => {
-    delete cacheEntryMapRef.current[pathname];
+    delete cacheEntryMapRef.current[currentTabKey];
     setRefreshVersionMap((prev) => ({
       ...prev,
-      [pathname]: (prev[pathname] || 0) + 1,
+      [currentTabKey]: (prev[currentTabKey] || 0) + 1,
     }));
-  }, [pathname]);
+  }, [currentTabKey]);
 
   const handleCloseCurrentTab = React.useCallback(() => {
-    if (isFixedTabKey(pathname)) return;
-    handleCloseTab(pathname);
-  }, [handleCloseTab, pathname]);
+    if (isFixedTabKey(currentTabKey)) return;
+    handleCloseTab(currentTabKey);
+  }, [currentTabKey, handleCloseTab]);
 
   const handleCloseOtherTabs = React.useCallback(() => {
     setTabs((prev) => {
-      const keepKeys = new Set([FIXED_TAB_PATH, pathname]);
+      const keepKeys = new Set([FIXED_TAB_PATH, currentTabKey]);
       const removedKeys = prev
         .filter((tab) => !keepKeys.has(tab.key))
         .map((tab) => tab.key);
@@ -613,7 +669,7 @@ const RouteTabsKeepAlive: React.FC<{
       });
       return prev.filter((tab) => keepKeys.has(tab.key));
     });
-  }, [pathname]);
+  }, [currentTabKey]);
 
   const handleCloseAllTabs = React.useCallback(() => {
     setTabs((prev) => {
@@ -639,14 +695,14 @@ const RouteTabsKeepAlive: React.FC<{
       });
       return prev.filter((tab) => isFixedTabKey(tab.key));
     });
-    if (pathname !== FIXED_TAB_PATH) {
+    if (currentTabKey !== FIXED_TAB_PATH) {
       history.push(FIXED_TAB_PATH);
     }
-  }, [pathname]);
+  }, [currentTabKey]);
 
-  const canCloseCurrentTab = !isFixedTabKey(pathname);
+  const canCloseCurrentTab = !isFixedTabKey(currentTabKey);
   const canCloseOtherTabs = renderedTabs.some(
-    (tab) => !isFixedTabKey(tab.key) && tab.key !== pathname,
+    (tab) => !isFixedTabKey(tab.key) && tab.key !== currentTabKey,
   );
   const canCloseAllTabs = renderedTabs.some((tab) => !isFixedTabKey(tab.key));
 
@@ -693,6 +749,20 @@ const RouteTabsKeepAlive: React.FC<{
   );
 
   React.useEffect(() => {
+    const handleResetTabs = () => {
+      cacheEntryMapRef.current = {};
+      tabRefs.current = {};
+      suppressedPathRef.current = currentTabKey;
+      setRefreshVersionMap({});
+      setTabs([createFixedTab()]);
+    };
+    window.addEventListener(ROUTE_TABS_RESET_EVENT, handleResetTabs);
+    return () => {
+      window.removeEventListener(ROUTE_TABS_RESET_EVENT, handleResetTabs);
+    };
+  }, [currentTabKey]);
+
+  React.useEffect(() => {
     const handleExternalRefresh = () => {
       handleRefreshCurrentTab();
     };
@@ -720,14 +790,14 @@ const RouteTabsKeepAlive: React.FC<{
   }, [renderedTabs.length, shouldRenderTabsInHeader, updateScrollState]);
 
   React.useEffect(() => {
-    const activeTabEl = tabRefs.current[pathname];
+    const activeTabEl = tabRefs.current[currentTabKey];
     if (!activeTabEl) return;
     activeTabEl.scrollIntoView({
       behavior: 'smooth',
       block: 'nearest',
       inline: 'center',
     });
-  }, [pathname, renderedTabs.length]);
+  }, [currentTabKey, renderedTabs.length]);
 
   if (!isTaggablePage) {
     return (
@@ -802,7 +872,7 @@ const RouteTabsKeepAlive: React.FC<{
         <div className="pc-admin-route-tabs-scroll" ref={scrollRef}>
           <div className="pc-admin-route-tabs-scroll-inner">
             {renderedTabs.map((tab) => {
-              const active = tab.key === pathname;
+              const active = tab.key === currentTabKey;
               const fixed = isFixedTabKey(tab.key);
               return (
                 <button
@@ -811,7 +881,7 @@ const RouteTabsKeepAlive: React.FC<{
                   role="tab"
                   aria-selected={active}
                   className={`pc-admin-route-tab${active ? ' pc-admin-route-tab-active' : ''}`}
-                  onClick={() => handleTabClick(tab.path)}
+                  onClick={() => handleTabClick(tab)}
                   ref={(node) => {
                     tabRefs.current[tab.key] = node;
                   }}
@@ -889,7 +959,7 @@ const RouteTabsKeepAlive: React.FC<{
         : null}
 
       {renderedTabs.map((tab) => {
-        const visible = tab.key === pathname;
+        const visible = tab.key === currentTabKey;
         const cacheEntry = cacheEntryMapRef.current[tab.key];
         const useLiveNode = visible && isPathMappedFromRedirect;
         const node = useLiveNode

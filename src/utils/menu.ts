@@ -125,6 +125,7 @@ function pickPath(node: any, menuName: string): string | undefined {
   const pathCandidates = collectPathCandidates(node, sourceSystem);
 
   if (sourceSystem !== 1) {
+    // 优先通过 backendPathUrls 映射表查找
     for (const candidate of pathCandidates) {
       const mappedLocalPath =
         BACKEND_PATH_TO_ROUTE_MAP[normalizeLookupPath(candidate)];
@@ -133,6 +134,7 @@ function pickPath(node: any, menuName: string): string | undefined {
       }
     }
 
+    // 然后在已知路由路径中精确匹配
     for (const candidate of pathCandidates) {
       const knownRoutePath = resolveKnownRoutePath(candidate);
       if (knownRoutePath) {
@@ -140,6 +142,7 @@ function pickPath(node: any, menuName: string): string | undefined {
       }
     }
   } else {
+    // sourceSystem=1（iframe），优先精确匹配已知路由
     for (const candidate of pathCandidates) {
       const knownRoutePath = resolveKnownRoutePath(candidate);
       if (knownRoutePath) {
@@ -148,11 +151,37 @@ function pickPath(node: any, menuName: string): string | undefined {
     }
   }
 
+  // 按菜单名称回退查找
   const fallbackRoutePath = ROUTE_NAME_TO_PATH_MAP[menuName];
   if (fallbackRoutePath && fallbackRoutePath.startsWith('/')) {
     return fallbackRoutePath;
   }
 
+  // === fallback：白名单中找不到时，尝试一级路径段匹配 ===
+  // 注意：不能直接返回后端原始路径（如 /Retail/Store/store），
+  // 那些是后端 API 路径而非前端路由，会导致 404。
+  // 这里只匹配一级路径段已知的情况（如 /app、/device 等 iframe-view 路由）
+  for (const candidate of pathCandidates) {
+    const normalized = normalizeLookupPath(candidate);
+    if (!normalized || !normalized.startsWith('/')) continue;
+    const firstSegment = `/${normalized.split('/').filter(Boolean)[0] || ''}`;
+    if (
+      firstSegment &&
+      firstSegment !== '/' &&
+      NAVIGABLE_ROUTE_PATHS.has(firstSegment)
+    ) {
+      return firstSegment;
+    }
+  }
+
+  // sourceSystem=1（iframe 嵌入）的菜单：使用默认 iframe 路由兜底
+  // 所有 iframe 路由（/app、/device 等）都渲染同一个 MicroIframe 组件，
+  // 实际页面内容由 targetId 区分，因此 path 用哪个 iframe 路由都可以
+  if (sourceSystem === 1) {
+    return '/app';
+  }
+
+  // sourceSystem≠1 的菜单：返回 undefined，让 mapPermContextToMenuData 继承父级 path
   return undefined;
 }
 

@@ -3,6 +3,7 @@ import {
   clearCurrentBusinessCode,
   clearRouteTabs,
   clearSelectedOrgCode,
+  emitRouteTabsResetEvent,
 } from '@/api/storage';
 
 const WORKPLACE_COMMON_ACTIONS_PREFIX = 'workplace_common_actions_';
@@ -35,6 +36,7 @@ export function clearStoreScopedStorage() {
   clearBusinessList();
   clearCurrentBusinessCode();
   clearRouteTabs();
+  emitRouteTabsResetEvent();
   clearWorkplaceCommonActionsCache();
 }
 

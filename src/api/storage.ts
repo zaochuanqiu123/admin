@@ -5,6 +5,7 @@ export const SELECTED_ORG_CODE_STORAGE_KEY = 'selected_org_code';
 export const BUSINESS_LIST_STORAGE_KEY = 'business_list';
 export const CURRENT_BUSINESS_CODE_STORAGE_KEY = 'current_business_code';
 export const ROUTE_TABS_STORAGE_KEY = 'pc_admin_route_tabs';
+export const ROUTE_TABS_RESET_EVENT = 'pc-admin-reset-route-tabs';
 
 export function getToken(): string | null {
   try {
@@ -173,4 +174,9 @@ export function clearRouteTabs() {
   } catch {
     // ignore
   }
+}
+
+export function emitRouteTabsResetEvent() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(ROUTE_TABS_RESET_EVENT));
 }

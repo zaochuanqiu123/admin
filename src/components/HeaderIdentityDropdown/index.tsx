@@ -64,7 +64,7 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
   const accountName = currentUser?.name || '用户';
   const accountNo = currentUser?.phone || currentUser?.userid || '-';
   const accountRole =
-    currentIdentity?.levelName || currentIdentity?.groupLabel || '未选择身份';
+    currentIdentity?.groupLabel || currentIdentity?.levelName || '未选择身份';
   const avatarSrc = currentUser?.avatar || HEADER_USER_AVATAR_SRC;
   const triggerLabel = currentIdentity?.name || accountName;
 

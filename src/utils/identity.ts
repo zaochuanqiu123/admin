@@ -3,7 +3,10 @@ import { message } from 'antd';
 import { getPermContext, getUserLoginContextResponse } from '@/api/context';
 import {
   clearSelectedOrgCode,
+  getBusinessList,
+  getCurrentBusinessCode,
   getLoginOrgList,
+  getSelectedOrgCode,
   setBusinessList,
   setCurrentBusinessCode,
   setSelectedOrgCode,
@@ -20,15 +23,13 @@ import {
   resetStoreScopedInitialState,
 } from '@/utils/store-switch';
 
-export type IdentityGroupKey = 'group' | 'brand' | 'store';
-
 export type IdentityItem = {
   id: string;
   name: string;
   desc?: string;
   orgCode?: string;
   levelName?: string;
-  groupKey: IdentityGroupKey;
+  groupKey: string;
   groupLabel: string;
 };
 
@@ -36,12 +37,17 @@ type SetInitialState = (
   updater: (state: Record<string, any> | undefined) => Record<string, any>,
 ) => void;
 
-const IDENTITY_GROUP_ORDER: IdentityGroupKey[] = ['group', 'brand', 'store'];
-
 function toStringSafe(value: any): string {
   if (typeof value === 'string') return value.trim();
   if (typeof value === 'number') return String(value);
   return '';
+}
+
+function formatIdentityViewLabel(value: string | undefined): string {
+  const normalized = toStringSafe(value);
+  if (!normalized) return '未分类视角';
+  if (normalized.endsWith('视角')) return normalized;
+  return `${normalized}视角`;
 }
 
 function getAnyArray(source: any, keys: string[]): any[] {
@@ -50,10 +56,6 @@ function getAnyArray(source: any, keys: string[]): any[] {
     if (Array.isArray(value)) return value;
   }
   return [];
-}
-
-function containsAny(text: string, keywords: string[]) {
-  return keywords.some((keyword) => text.includes(keyword));
 }
 
 function flattenOrgList(list: any[]): any[] {
@@ -73,75 +75,6 @@ function flattenOrgList(list: any[]): any[] {
   };
   list.forEach(visit);
   return result;
-}
-
-function getIdentityGroup(
-  org: any,
-): Pick<IdentityItem, 'groupKey' | 'groupLabel'> {
-  const typeText = [
-    org?.orgLevelName,
-    org?.levelName,
-    org?.typeName,
-    org?.type,
-    org?.orgTypeName,
-    org?.orgTypeCode,
-    org?.typeCode,
-    org?.levelCode,
-    org?.nodeTypeName,
-    org?.nodeTypeCode,
-    org?.identityType,
-    org?.roleType,
-  ]
-    .map(toStringSafe)
-    .filter(Boolean)
-    .join(' ')
-    .toUpperCase();
-  const displayText = [org?.name, org?.orgName, org?.storeName, org?.title]
-    .map(toStringSafe)
-    .filter(Boolean)
-    .join(' ')
-    .toUpperCase();
-  const hasChildren =
-    getAnyArray(org, [
-      'children',
-      'child',
-      'stores',
-      'storeList',
-      'shopList',
-      'orgList',
-    ]).length > 0;
-
-  if (
-    containsAny(typeText, [
-      '集团',
-      'GROUP',
-      'GRP',
-      '平台',
-      'PLATFORM',
-      '总部',
-      'HQ',
-    ]) ||
-    containsAny(displayText, ['集团', '平台', '总部'])
-  ) {
-    return { groupKey: 'group', groupLabel: '集团视角' };
-  }
-
-  if (
-    containsAny(typeText, [
-      '品牌',
-      '商户',
-      '公司',
-      'MER',
-      'MERCHANT',
-      'BRAND',
-      '企业',
-    ]) ||
-    (hasChildren && !containsAny(typeText, ['门店', 'STORE', 'SHOP', '店铺']))
-  ) {
-    return { groupKey: 'brand', groupLabel: '品牌视角' };
-  }
-
-  return { groupKey: 'store', groupLabel: '门店视角' };
 }
 
 function normalizeOrgToIdentityItem(org: any, index: number): IdentityItem {
@@ -178,7 +111,7 @@ function normalizeOrgToIdentityItem(org: any, index: number): IdentityItem {
     toStringSafe(org?.levelName) ||
     toStringSafe(org?.typeName) ||
     undefined;
-  const group = getIdentityGroup(org);
+  const groupLabel = formatIdentityViewLabel(levelName);
 
   return {
     id,
@@ -186,8 +119,8 @@ function normalizeOrgToIdentityItem(org: any, index: number): IdentityItem {
     desc,
     orgCode,
     levelName,
-    groupKey: group.groupKey,
-    groupLabel: group.groupLabel,
+    groupKey: groupLabel,
+    groupLabel,
   };
 }
 
@@ -204,14 +137,7 @@ export function getIdentityItemsFromStorage(): IdentityItem[] {
     }
   });
 
-  return Array.from(identityMap.values()).sort((left, right) => {
-    const leftIndex = IDENTITY_GROUP_ORDER.indexOf(left.groupKey);
-    const rightIndex = IDENTITY_GROUP_ORDER.indexOf(right.groupKey);
-    if (leftIndex !== rightIndex) {
-      return leftIndex - rightIndex;
-    }
-    return left.name.localeCompare(right.name, 'zh-CN');
-  });
+  return Array.from(identityMap.values());
 }
 
 export function getCurrentIdentityItem(
@@ -224,11 +150,32 @@ export function getCurrentIdentityItem(
 }
 
 export function groupIdentityItems(items: IdentityItem[]) {
-  return IDENTITY_GROUP_ORDER.map((groupKey) => ({
-    groupKey,
-    label: items.find((item) => item.groupKey === groupKey)?.groupLabel || '',
-    items: items.filter((item) => item.groupKey === groupKey),
-  })).filter((group) => group.items.length > 0);
+  const groups: { groupKey: string; label: string; items: IdentityItem[] }[] =
+    [];
+  const groupMap = new Map<
+    string,
+    { groupKey: string; label: string; items: IdentityItem[] }
+  >();
+
+  items.forEach((item) => {
+    const key =
+      item.groupKey || item.groupLabel || item.levelName || '未分类视角';
+    const existing = groupMap.get(key);
+    if (existing) {
+      existing.items.push(item);
+      return;
+    }
+
+    const nextGroup = {
+      groupKey: key,
+      label: item.groupLabel || item.levelName || '未分类视角',
+      items: [item],
+    };
+    groupMap.set(key, nextGroup);
+    groups.push(nextGroup);
+  });
+
+  return groups;
 }
 
 function unwrapApiData<T = any>(response: any): T {
@@ -248,9 +195,19 @@ export async function switchIdentityContext(
     return false;
   }
 
-  clearStoreScopedStorage();
-  setInitialState((state) => resetStoreScopedInitialState(state));
+  // 备份当前状态，失败时恢复
+  const prevOrgCode = getSelectedOrgCode();
+  const prevBusinessList = getBusinessList<any[]>();
+  const prevBusinessCode = getCurrentBusinessCode();
+  let prevInitialState: Record<string, any> | undefined;
+  setInitialState((state) => {
+    prevInitialState = state ? { ...state } : undefined;
+    return state as Record<string, any>;
+  });
+
+  // 先设置新 orgCode，让 UI 立即响应
   setSelectedOrgCode(orgCode);
+  history.replace(buildIframeRouteWithParams('/dashboard/index'));
 
   try {
     const loginContextResponse = await getUserLoginContextResponse(orgCode, {
@@ -268,13 +225,25 @@ export async function switchIdentityContext(
         loginContext?.msg ||
         loginContext?.message ||
         '当前身份暂无可用业态';
-      clearSelectedOrgCode();
+      // 恢复旧状态
+      if (prevOrgCode) {
+        setSelectedOrgCode(prevOrgCode);
+      } else {
+        clearSelectedOrgCode();
+      }
+      if (prevInitialState) {
+        setInitialState(() => prevInitialState as Record<string, any>);
+      }
       message.warning(String(backendMessage));
       return false;
     }
 
     const defaultBusiness = businessList[0];
     const businessCode = defaultBusiness?.businessCode || TEMP_BUSINESS_CODE;
+
+    // 接口成功后再清理旧数据并写入新数据
+    clearStoreScopedStorage();
+    setSelectedOrgCode(orgCode);
     setBusinessList(businessList);
     setCurrentBusinessCode(businessCode);
 
@@ -309,8 +278,24 @@ export async function switchIdentityContext(
       error?.message ||
       '切换身份失败，请稍后重试';
     message.error(String(backendMessage));
-    clearSelectedOrgCode();
-    setInitialState((state) => resetStoreScopedInitialState(state));
+
+    // 恢复到切换前的状态，而不是清空
+    if (prevOrgCode) {
+      setSelectedOrgCode(prevOrgCode);
+    } else {
+      clearSelectedOrgCode();
+    }
+    if (prevBusinessList) {
+      setBusinessList(prevBusinessList);
+    }
+    if (prevBusinessCode) {
+      setCurrentBusinessCode(prevBusinessCode);
+    }
+    if (prevInitialState) {
+      setInitialState(() => prevInitialState as Record<string, any>);
+    } else {
+      setInitialState((state) => resetStoreScopedInitialState(state));
+    }
     return false;
   }
 }

@@ -25,6 +25,7 @@ import {
   clearRouteTabs,
   clearSelectedOrgCode,
   clearToken,
+  emitRouteTabsResetEvent,
   getBusinessList,
   getCurrentBusinessCode,
   getLoginUserInfo,
@@ -485,6 +486,10 @@ export const layout: RunTimeLayoutConfig = ({
             }
             return next;
           });
+
+          // 清理旧业态的 tabs 和 KeepAlive 缓存
+          clearRouteTabs();
+          emitRouteTabsResetEvent();
 
           // 检查当前页面是否还有权限
           const currentTargetId = getTargetIdFromSearch(
