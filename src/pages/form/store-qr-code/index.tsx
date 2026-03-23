@@ -16,6 +16,8 @@ import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getQrCodePageQuery, type QrCodeRecord } from '@/api/qrCode';
+import { CreateQrCodeModal } from './components/CreateQrCodeModal';
+import { TransferModal } from './components/TransferModal';
 import './index.less';
 
 const { RangePicker } = DatePicker;
@@ -29,7 +31,7 @@ type QueryFilters = {
   isBound?: string;
   sn: string;
   batchSn: string;
-  qrCodeTemplateId?: string;
+  qrcodeTemplateId?: string;
   openType?: string;
   snStart: string;
   snEnd: string;
@@ -117,6 +119,11 @@ const StoreQrCodeListPage: React.FC = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState('');
+
+  // Modals state
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+
   const [draftFilters, setDraftFilters] = useState<QueryFilters>({
     brandName: undefined,
     transferTimeRange: undefined,
@@ -126,7 +133,7 @@ const StoreQrCodeListPage: React.FC = () => {
     isBound: undefined,
     sn: '',
     batchSn: '',
-    qrCodeTemplateId: undefined,
+    qrcodeTemplateId: undefined,
     openType: undefined,
     snStart: '',
     snEnd: '',
@@ -142,7 +149,7 @@ const StoreQrCodeListPage: React.FC = () => {
     isBound: undefined,
     sn: '',
     batchSn: '',
-    qrCodeTemplateId: undefined,
+    qrcodeTemplateId: undefined,
     openType: undefined,
     snStart: '',
     snEnd: '',
@@ -162,7 +169,7 @@ const StoreQrCodeListPage: React.FC = () => {
   const templateOptions = useMemo(() => {
     const templateMap = new Map<string, { label: string; value: string }>();
     records.forEach((record) => {
-      const templateId = String(record?.qrCodeTemplateId || '').trim();
+      const templateId = String(record?.qrcodeTemplateId || '').trim();
       const templateName = getTemplateName(record);
       if (!templateId || !templateName) return;
       templateMap.set(templateId, { label: templateName, value: templateId });
@@ -209,7 +216,7 @@ const StoreQrCodeListPage: React.FC = () => {
         sn: filters.sn.trim() || undefined,
         batchSn: filters.batchSn.trim() || undefined,
         model: filters.model.trim() || undefined,
-        qrCodeTemplateId: filters.qrCodeTemplateId || undefined,
+        qrcodeTemplateId: filters.qrcodeTemplateId || undefined,
       });
       setRecords(Array.isArray(res?.records) ? res.records : []);
       setServerTotal(Number(res?.total || 0));
@@ -225,7 +232,7 @@ const StoreQrCodeListPage: React.FC = () => {
     current,
     filters.batchSn,
     filters.model,
-    filters.qrCodeTemplateId,
+    filters.qrcodeTemplateId,
     filters.sn,
     pageSize,
   ]);
@@ -509,7 +516,7 @@ const StoreQrCodeListPage: React.FC = () => {
       isBound: undefined,
       sn: '',
       batchSn: '',
-      qrCodeTemplateId: undefined,
+      qrcodeTemplateId: undefined,
       openType: undefined,
       snStart: '',
       snEnd: '',
@@ -681,12 +688,12 @@ const StoreQrCodeListPage: React.FC = () => {
             <Select
               allowClear
               placeholder="请选择"
-              value={draftFilters.qrCodeTemplateId}
+              value={draftFilters.qrcodeTemplateId}
               options={templateOptions}
               onChange={(value) => {
                 setDraftFilters((prev) => ({
                   ...prev,
-                  qrCodeTemplateId: value,
+                  qrcodeTemplateId: value,
                 }));
               }}
             />
@@ -766,9 +773,7 @@ const StoreQrCodeListPage: React.FC = () => {
           <Space wrap size={12}>
             <Button
               onClick={() => {
-                showPendingActionMessage(
-                  selectedCount > 0 ? '划拨/回调' : '划拨/回调',
-                );
+                setTransferModalOpen(true);
               }}
             >
               划拨/回调
@@ -778,7 +783,7 @@ const StoreQrCodeListPage: React.FC = () => {
               icon={<PlusOutlined />}
               className="qr-code-create-btn"
               onClick={() => {
-                showPendingActionMessage('生成收款码');
+                setCreateModalOpen(true);
               }}
             >
               生成收款码
@@ -843,6 +848,30 @@ const StoreQrCodeListPage: React.FC = () => {
           }}
         />
       </div>
+
+      <TransferModal
+        open={transferModalOpen}
+        onCancel={() => setTransferModalOpen(false)}
+        selectedRecords={records.filter((r) => selectedRowKeys.includes(r.id))}
+        onOk={(values) => {
+          console.log('Transfer values:', values);
+          message.success('操作成功 (Mock)');
+          setTransferModalOpen(false);
+          setSelectedRowKeys([]);
+        }}
+      />
+
+      <CreateQrCodeModal
+        open={createModalOpen}
+        onCancel={() => setCreateModalOpen(false)}
+        brandOptions={brandOptions}
+        templateOptions={templateOptions}
+        onOk={(values) => {
+          console.log('Create QR code values:', values);
+          message.success('生成收款码成功 (Mock)');
+          setCreateModalOpen(false);
+        }}
+      />
 
       <Image
         preview={{

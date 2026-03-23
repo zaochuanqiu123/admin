@@ -552,9 +552,13 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
     closeCleanupTimerRef.current = null;
   }, []);
 
+  // 关闭动画进行中标记，用于禁用 pointer-events 防止二次触发 hover
+  const [panelClosing, setPanelClosing] = React.useState(false);
+
   const closeHoverPanelsImmediately = React.useCallback(() => {
     clearCloseTimer();
     clearCloseCleanupTimer();
+    setPanelClosing(false);
     setHoverListOpen(false);
     setHoveredTopKey('');
     setHoverOpenKeys([]);
@@ -564,6 +568,7 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
     (topKey?: string) => {
       clearCloseTimer();
       clearCloseCleanupTimer();
+      setPanelClosing(false);
       const nextTopKey =
         topKey || hoveredTopKey || activeTopNode?.key || topNodes[0]?.key || '';
       if (nextTopKey) {
@@ -596,15 +601,18 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
   const scheduleCloseHoverPanels = React.useCallback(() => {
     clearCloseTimer();
     clearCloseCleanupTimer();
+    // 立刻标记关闭中，禁用 pointer-events 防止鼠标移出过程中再次触发 hover
+    setPanelClosing(true);
     closeTimerRef.current = window.setTimeout(() => {
       setHoverListOpen(false);
       closeTimerRef.current = null;
       closeCleanupTimerRef.current = window.setTimeout(() => {
         setHoveredTopKey('');
         setHoverOpenKeys([]);
+        setPanelClosing(false);
         closeCleanupTimerRef.current = null;
       }, OTHER_SPLIT_MENU_FADE_DURATION);
-    }, 120);
+    }, 60);
   }, [clearCloseCleanupTimer, clearCloseTimer]);
 
   const handleHoverItemClick: MenuProps['onClick'] = React.useCallback(
@@ -654,7 +662,8 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
       <div
         className={
           'other-menus-split-menu-shell' +
-          (hoverListOpen ? ' other-menus-split-menu-shell-open' : '')
+          (hoverListOpen ? ' other-menus-split-menu-shell-open' : '') +
+          (panelClosing ? ' other-menus-split-menu-shell-closing' : '')
         }
         onMouseEnter={handleHoverZoneEnter}
         onMouseLeave={handleHoverZoneLeave}

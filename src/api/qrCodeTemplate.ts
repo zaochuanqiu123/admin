@@ -49,7 +49,7 @@ export async function getQrCodeTemplatePageQuery(
   options?: { [key: string]: any },
 ) {
   return apiData<QrCodeTemplatePageResult>(
-    '/api/device/admin/qrCodeTemplate/page',
+    '/api/device/admin/qrcodeTemplate/page',
     {
       method: 'POST',
       data,

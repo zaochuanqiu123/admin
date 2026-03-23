@@ -1,0 +1,113 @@
+.qr-code-transfer-modal {
+  .ant-modal-body {
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+
+  .transfer-filter-area {
+    margin-bottom: 24px;
+
+    .filter-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 16px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .filter-label {
+        width: 80px;
+        flex: none;
+        color: rgba(0, 0, 0, 0.88);
+        font-weight: 500;
+      }
+
+      .filter-content {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+    }
+  }
+
+  .transfer-shuttle-area {
+    display: flex;
+    align-items: stretch;
+    height: 380px;
+    background: #f8f9fc;
+    border-radius: 8px;
+    padding: 16px;
+    gap: 16px;
+
+    .shuttle-panel {
+      flex: 1;
+      width: 0;
+      background: #fff;
+      border: 1px solid #f0f0f0;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+
+      .shuttle-panel-table {
+        flex: 1;
+        overflow: auto;
+
+        // Hide standard pagination as we'll use a custom footer
+        .ant-table-pagination {
+          display: none;
+        }
+
+        .ant-table-thead>tr>th {
+          background: #f0f5ff;
+          color: rgba(0, 0, 0, 0.88);
+          font-weight: 500;
+          padding: 8px 16px;
+        }
+
+        .ant-table-tbody>tr>td {
+          padding: 8px 16px;
+        }
+      }
+
+      .shuttle-panel-footer {
+        padding: 12px 16px;
+        border-top: 1px solid #f0f0f0;
+        background: #fff;
+        color: rgba(0, 0, 0, 0.45);
+        font-size: 13px;
+      }
+    }
+
+    .shuttle-actions {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 12px;
+
+      .ant-btn {
+        width: 40px;
+        height: 32px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #eef2fe;
+        color: var(--ant-color-primary);
+        border: none;
+
+        &:disabled {
+          background: #f5f5f5;
+          color: rgba(0, 0, 0, 0.25);
+        }
+
+        &:hover:not(:disabled) {
+          background: var(--ant-color-primary);
+          color: #fff;
+        }
+      }
+    }
+  }
+}

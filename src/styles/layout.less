@@ -627,6 +627,11 @@ body .ant-layout-sider .ant-layout-sider-children > div {
   border-radius: 16px;
 }
 
+/* 关闭动画进行中：禁用所有鼠标事件，防止移出过程中二次触发 hover 导致抖动 */
+.other-menus-split-menu-shell-closing {
+  pointer-events: none;
+}
+
 .other-menus-split-menu-list {
   position: relative;
   flex: 0 0 var(--other-split-menu-icon-width);

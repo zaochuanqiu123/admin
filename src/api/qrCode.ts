@@ -6,7 +6,7 @@ export type QrCodePageQueryParams = {
   batchSn?: string;
   sn?: string;
   model?: string;
-  qrCodeTemplateId?: string;
+  qrcodeTemplateId?: string;
 };
 
 export type QrCodeTemplateInfo = {
@@ -24,7 +24,7 @@ export type QrCodeRecord = {
   batchSn?: string;
   sn?: string;
   model?: string;
-  qrCodeTemplateId?: string;
+  qrcodeTemplateId?: string;
   openType?: string;
   bizType?: string;
   qrCodeContent?: string;
@@ -61,7 +61,7 @@ export async function getQrCodePageQuery(
   data: QrCodePageQueryParams,
   options?: { [key: string]: any },
 ) {
-  return apiData<QrCodePageResult>('/api/device/admin/qrCode/page', {
+  return apiData<QrCodePageResult>('/api/device/admin/qrcode/page', {
     method: 'POST',
     data,
     ...(options || {}),
