@@ -20,6 +20,11 @@ export default {
       // 后端当前不包含 /api 前缀，因此需要去掉前端约定的 /api 前缀
       pathRewrite: { '^/api': '' },
     },
+    '/php-api/': {
+      target: 'http://192.168.1.201:8081',
+      changeOrigin: true,
+      pathRewrite: { '^/php-api': '' },
+    },
   },
   /**
    * @name 详细的代理配置

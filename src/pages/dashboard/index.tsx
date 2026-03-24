@@ -1,9 +1,20 @@
 ﻿import { InfoCircleOutlined } from '@ant-design/icons';
-import { Area, Column, Pie } from '@ant-design/plots';
-import { DatePicker, Select } from 'antd';
+import { Area, Pie } from '@ant-design/plots';
+import { DatePicker, Empty, message, Select } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  getAppletMallTransactUser,
+  getAppletMallVisitUser,
+  getGoodsAnalysis,
+  getGoodsRanking,
+  getIncomeCensus,
+  getStoreRanking,
+  getSuperPlugRanking,
+  getVipConsumeRanking,
+  getVipPortrait,
+} from '@/api/dashboard';
 import allDrawback from '@/assets/allDrawback.png';
 import allDrawbackActive from '@/assets/allDrawback1.png';
 import orderPrice from '@/assets/orderPrice.png';
@@ -31,6 +42,20 @@ type RankItem = {
   key: string;
   name: string;
   status: string;
+  icon?: string;
+};
+
+type GoodsRankItem = {
+  rank: number;
+  name: string;
+  value: string;
+  image?: string;
+};
+
+type MemberRankItem = {
+  rank: number;
+  name: string;
+  value: string;
 };
 
 type TrendPoint = {
@@ -41,25 +66,19 @@ type TrendPoint = {
 type PiePoint = {
   type: string;
   value: number;
+  ratio?: string;
 };
 
-type BarPoint = {
-  type: string;
-  value: number;
-};
-
-const overviewStats: StatItem[] = [
+const overviewStatMeta: Omit<StatItem, 'value'>[] = [
   {
     key: 'turnover',
     label: '营业额(元)',
-    value: '100',
     icon: orderPrice,
     iconActive: orderPriceActive,
   },
   {
     key: 'orderAmount',
     label: '订单总金额(元)',
-    value: '100',
     active: true,
     icon: orderPrice,
     iconActive: orderPriceActive,
@@ -67,21 +86,28 @@ const overviewStats: StatItem[] = [
   {
     key: 'paidMemberAmount',
     label: '会员余额支付(元)',
-    value: '0',
     icon: vipPay,
     iconActive: vipPayActive,
   },
   {
     key: 'refundAmount',
     label: '退款总金额(元)',
-    value: '0',
     icon: allDrawback,
     iconActive: allDrawbackActive,
   },
 ];
 
 const initialActiveOverviewKey =
-  overviewStats.find((item) => item.active)?.key ?? overviewStats[0]?.key ?? '';
+  overviewStatMeta.find((item) => item.active)?.key ??
+  overviewStatMeta[0]?.key ??
+  '';
+
+const emptyOverviewData = {
+  turnover: '0.00',
+  orderAmount: '0.00',
+  paidMemberAmount: '0.00',
+  refundAmount: '0.00',
+};
 
 const shopStats: StatItem[] = [
   { key: 'goodsTotal', label: '在售商品种数', value: '12' },
@@ -94,32 +120,50 @@ const shopStats: StatItem[] = [
   { key: 'tradeRate', label: '访问交易转化率', value: '0%' },
 ];
 
-const rankingApps: RankItem[] = [
-  { key: 'pos', name: '桌台', status: '0商家在用' },
-  { key: 'order', name: '挂账', status: '0商家在用' },
-  { key: 'event', name: '油站活动', status: '0商家在用' },
-  { key: 'parking', name: '智慧停车场', status: '0商家在用' },
-  { key: 'card', name: '消费卡', status: '0商家在用' },
-  { key: 'voucher', name: '智慧分账', status: '0商家在用' },
-  { key: 'supply', name: '云供应链', status: '0商家在用' },
-  { key: 'screen', name: '数据大屏', status: '0商家在用' },
-];
+const goodsTrendMetricMeta = [
+  { key: 'paidGoods', label: '付款商品数' },
+  { key: 'tradeCount', label: '交易笔数' },
+  { key: 'buyerCount', label: '交易人数' },
+  { key: 'unitPrice', label: '客单价' },
+  { key: 'visitCount', label: '商品访问人数' },
+] as const;
 
-const topShops = [
-  { rank: 1, name: '锋华科技旗舰店', value: '100.00' },
-  { rank: 2, name: '中环科技旗舰店', value: '0' },
-  { rank: 3, name: '小毛的店铺', value: '0' },
-  { rank: 4, name: '123213', value: '0' },
-  { rank: 5, name: '34', value: '0' },
-];
+const offlineGoodsStatKeys = [
+  'goodsTotal',
+  'paidGoods',
+  'tradeCount',
+  'buyerCount',
+  'unitPrice',
+  'refundMoney',
+] as const;
 
-const memberTop = [
-  { rank: 1, name: '测试6', value: '0' },
-  { rank: 2, name: '测试5', value: '0' },
-  { rank: 3, name: '测试3', value: '0' },
-  { rank: 4, name: '测试2', value: '0' },
-  { rank: 5, name: '测试', value: '0' },
-];
+const onlineGoodsStatKeys = [
+  ...offlineGoodsStatKeys,
+  'visitCount',
+  'tradeRate',
+] as const;
+
+const emptyGoodsStats = {
+  goodsTotal: '0',
+  paidGoods: '0',
+  tradeCount: '0',
+  buyerCount: '0',
+  unitPrice: '0.00',
+  refundMoney: '0.00',
+  visitCount: '0',
+  tradeRate: '0%',
+};
+
+const emptyRankingApps: RankItem[] = [];
+
+const emptyTopStoreRanking: Array<{
+  rank: number;
+  name: string;
+  value: string;
+}> = [];
+
+const emptyGoodsRanking: GoodsRankItem[] = [];
+const emptyMemberRanking: MemberRankItem[] = [];
 
 const topRankBadges = [top0, top1, top2];
 const appRankBadges = [plugTop0, plugTop1, plugTop2];
@@ -134,6 +178,13 @@ const overviewTrendData: TrendPoint[] = [
   { date: '02/25', value: 0 },
 ];
 
+const emptyOverviewTrendMap = {
+  turnover: overviewTrendData.map((item) => ({ ...item, value: 0 })),
+  orderAmount: overviewTrendData.map((item) => ({ ...item, value: 0 })),
+  paidMemberAmount: overviewTrendData.map((item) => ({ ...item, value: 0 })),
+  refundAmount: overviewTrendData.map((item) => ({ ...item, value: 0 })),
+};
+
 const goodsTrendData: TrendPoint[] = [
   { date: '02/19', value: 0 },
   { date: '02/20', value: 0 },
@@ -144,50 +195,95 @@ const goodsTrendData: TrendPoint[] = [
   { date: '02/25', value: 0 },
 ];
 
-const memberGenderData: PiePoint[] = [
-  { type: '未知', value: 86 },
-  { type: '男', value: 12 },
-  { type: '女', value: 2 },
-];
+const emptyGoodsTrendMap = {
+  paidGoods: goodsTrendData.map((item) => ({ ...item, value: 0 })),
+  tradeCount: goodsTrendData.map((item) => ({ ...item, value: 0 })),
+  buyerCount: goodsTrendData.map((item) => ({ ...item, value: 0 })),
+  unitPrice: goodsTrendData.map((item) => ({ ...item, value: 0 })),
+  visitCount: goodsTrendData.map((item) => ({ ...item, value: 0 })),
+};
 
-const memberLevelData: PiePoint[] = [
-  { type: '普通会员', value: 76 },
-  { type: '银卡会员', value: 15 },
-  { type: '金卡会员', value: 7 },
-  { type: '黑金会员', value: 2 },
-];
+const emptyMemberPortraitData = {
+  gender: [] as PiePoint[],
+  level: [] as PiePoint[],
+  age: [] as PiePoint[],
+};
 
-const memberAgeData: BarPoint[] = [
-  { type: '0~6', value: 1 },
-  { type: '7~12', value: 3 },
-  { type: '13~18', value: 8 },
-  { type: '19~28', value: 36 },
-  { type: '29~35', value: 29 },
-  { type: '36~45', value: 15 },
-  { type: '46~55', value: 6 },
-  { type: '56~', value: 2 },
-];
+const emptyMallUserData = {
+  visit: [] as PiePoint[],
+  trade: [] as PiePoint[],
+};
 
-const mallVisitorData: PiePoint[] = [
-  { type: '新访问用户', value: 1048 },
-  { type: '老访问用户', value: 735 },
-];
+function toNumber(value: string | number | undefined) {
+  const num = Number(value || 0);
+  return Number.isFinite(num) ? num : 0;
+}
 
-const mallTraderData: PiePoint[] = [
-  { type: '新交易用户', value: 486 },
-  { type: '老交易用户', value: 912 },
-];
+function formatMoney(value: string | number | undefined) {
+  return toNumber(value).toFixed(2);
+}
+
+function formatCount(value: string | number | undefined) {
+  return toNumber(value).toLocaleString();
+}
+
+function formatRate(value: string | number | undefined) {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '0%';
+  return raw.endsWith('%') ? raw : `${raw}%`;
+}
+
+function mapPieData<T>(
+  list: T[] | undefined,
+  getType: (item: T) => string,
+  getValue: (item: T) => string | number | undefined,
+) {
+  if (!Array.isArray(list) || list.length === 0) {
+    return [] as PiePoint[];
+  }
+
+  const mapped = list.map((item) => ({
+    type: getType(item),
+    value: toNumber(getValue(item)),
+  }));
+  const total = mapped.reduce((sum, item) => sum + item.value, 0);
+
+  return mapped.map((item) => ({
+    ...item,
+    ratio: total > 0 ? `${((item.value / total) * 100).toFixed(2)}%` : '0.00%',
+  }));
+}
+
+function mapTrendData(
+  list:
+    | Array<{
+        time?: string;
+        amount?: string | number;
+        value?: string | number;
+      }>
+    | undefined,
+) {
+  if (!Array.isArray(list) || list.length === 0) {
+    return overviewTrendData.map((item) => ({ ...item, value: 0 }));
+  }
+  return list.map((item) => ({
+    date: String(item?.time || '').trim() || '-',
+    value: toNumber(item?.amount ?? item?.value),
+  }));
+}
 
 type DashboardAreaChartProps = {
   data: TrendPoint[];
   max: number;
   tickCount: number;
+  tooltipLabel?: string;
 };
 
 const DashboardAreaChart: React.FC<DashboardAreaChartProps> = ({
   data,
   max,
   tickCount,
+  tooltipLabel = '数值',
 }) => {
   const config: any = {
     data,
@@ -230,7 +326,29 @@ const DashboardAreaChart: React.FC<DashboardAreaChartProps> = ({
     },
     tooltip: {
       title: 'date',
-      items: [{ channel: 'y', valueFormatter: (value: number) => `${value}` }],
+      items: [
+        {
+          channel: 'y',
+          name: tooltipLabel,
+          valueFormatter: (value: number) => formatCount(value),
+        },
+      ],
+      render: (event: any, { title, items }: any) => {
+        const currentItem = items?.[0];
+        if (!currentItem) return '';
+        return `
+          <div class="dashboard-chart-tooltip">
+            <div class="dashboard-chart-tooltip-title">${title || '-'}</div>
+            <div class="dashboard-chart-tooltip-row">
+              <span class="dashboard-chart-tooltip-name">
+                <span class="dashboard-chart-tooltip-dot"></span>
+                ${currentItem.name || tooltipLabel}
+              </span>
+              <span class="dashboard-chart-tooltip-value">${currentItem.value ?? '0'}</span>
+            </div>
+          </div>
+        `;
+      },
     },
   };
 
@@ -259,21 +377,22 @@ const DashboardDonutChart: React.FC<DashboardDonutChartProps> = ({
     angleField: 'value',
     colorField: 'type',
     color: colors,
-    legend: {
-      color: {
-        position: 'bottom',
-        itemMarker: 'circle',
-        itemSpacing: 20,
-        layout: {
-          justifyContent: 'center',
-        },
-      },
-    },
+    legend: false,
     label: false,
     annotations: [],
     tooltip: {
-      title: false,
-      items: [{ channel: 'y', valueFormatter: (value: number) => `${value}` }],
+      title: (datum: PiePoint) => datum?.type || '-',
+      items: [
+        {
+          field: 'value',
+          name: '数量',
+          valueFormatter: (value: number) => formatCount(value),
+        },
+        {
+          field: 'ratio',
+          name: '占比',
+        },
+      ],
     },
     innerRadius,
     radius,
@@ -286,47 +405,23 @@ const DashboardDonutChart: React.FC<DashboardDonutChartProps> = ({
   };
   return (
     <div className="dashboard-mini-chart">
-      <Pie {...config} />
-    </div>
-  );
-};
-
-const DashboardBarChart: React.FC<{ data: BarPoint[] }> = ({ data }) => {
-  const config: any = {
-    data,
-    xField: 'type',
-    yField: 'value',
-    legend: false,
-    axis: {
-      x: {
-        title: false,
-        labelFill: '#7f899f',
-        labelFontSize: 12,
-        line: true,
-        lineStroke: '#dce4f1',
-      },
-      y: {
-        title: false,
-        labelFill: '#7f899f',
-        labelFontSize: 12,
-        grid: true,
-        gridLineDash: [4, 4],
-        gridStroke: '#e8edf7',
-      },
-    },
-    style: {
-      fill: '#5b79d1',
-      radiusTopLeft: 6,
-      radiusTopRight: 6,
-      maxWidth: 26,
-    },
-    height: 220,
-    padding: [12, 12, 26, 36],
-  };
-
-  return (
-    <div className="dashboard-mini-chart">
-      <Column {...config} />
+      <div className="dashboard-mini-chart-plot">
+        <Pie {...config} />
+      </div>
+      <div className="dashboard-donut-legend">
+        {data.map((item, index) => (
+          <div
+            key={`${item.type}-${index}`}
+            className="dashboard-donut-legend-item"
+          >
+            <span
+              className="dashboard-donut-legend-dot"
+              style={{ backgroundColor: colors[index % colors.length] }}
+            />
+            <span className="dashboard-donut-legend-text">{item.type}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -336,17 +431,411 @@ const DashboardIndexPage: React.FC = () => {
     dayjs(),
     dayjs(),
   ]);
+  const [overviewLoading, setOverviewLoading] = useState(false);
+  const [overviewValues, setOverviewValues] = useState(emptyOverviewData);
+  const [overviewTrendMap, setOverviewTrendMap] = useState(
+    emptyOverviewTrendMap,
+  );
   const [activeOverviewKey, setActiveOverviewKey] = useState<string>(
     initialActiveOverviewKey,
   );
+  const [goodsLoading, setGoodsLoading] = useState(false);
+  const [goodsValues, setGoodsValues] = useState(emptyGoodsStats);
+  const [goodsTrendMap, setGoodsTrendMap] = useState(emptyGoodsTrendMap);
+  const [goodsType, setGoodsType] = useState<'1' | '2'>('2');
+  const [activeGoodsTrendKey, setActiveGoodsTrendKey] =
+    useState<(typeof goodsTrendMetricMeta)[number]['key']>('visitCount');
+  const [topStoreSearchType, setTopStoreSearchType] = useState<'1' | '2'>('1');
+  const [topStoreRanking, setTopStoreRanking] = useState(emptyTopStoreRanking);
+  const [goodsRankingSearchType, setGoodsRankingSearchType] = useState<
+    '1' | '2'
+  >('1');
+  const [goodsRanking, setGoodsRanking] =
+    useState<GoodsRankItem[]>(emptyGoodsRanking);
+  const [memberRankingType, setMemberRankingType] = useState<
+    'register' | 'consume'
+  >('consume');
+  const [memberRanking, setMemberRanking] =
+    useState<MemberRankItem[]>(emptyMemberRanking);
+  const [memberPortraitData, setMemberPortraitData] = useState(
+    emptyMemberPortraitData,
+  );
+  const [mallUserData, setMallUserData] = useState(emptyMallUserData);
+  const [rankingApps, setRankingApps] = useState<RankItem[]>(emptyRankingApps);
   const [memberDistKey, setMemberDistKey] = useState<
     'gender' | 'level' | 'age'
   >('gender');
   const [mallVisitKey, setMallVisitKey] = useState<'visit' | 'trade'>('visit');
 
-  const memberPieData =
-    memberDistKey === 'gender' ? memberGenderData : memberLevelData;
-  const mallData = mallVisitKey === 'visit' ? mallVisitorData : mallTraderData;
+  const memberPieData = memberPortraitData[memberDistKey];
+  const mallData = mallUserData[mallVisitKey];
+  const overviewSubtitle = `${dateRange[0].format('MM-DD')} ~ ${dateRange[1].format('MM-DD')}`;
+  const overviewStats = useMemo(
+    () =>
+      overviewStatMeta.map((item) => ({
+        ...item,
+        value: overviewValues[item.key as keyof typeof overviewValues],
+      })),
+    [overviewValues],
+  );
+  const goodsStats = useMemo(
+    () =>
+      shopStats.map((item) => ({
+        ...item,
+        value: goodsValues[item.key as keyof typeof goodsValues],
+      })),
+    [goodsValues],
+  );
+  const visibleGoodsStats = goodsStats.filter((item) =>
+    goodsType === '1'
+      ? true
+      : item.key !== 'visitCount' && item.key !== 'tradeRate',
+  );
+  const visibleGoodsTrendMetricMeta = goodsTrendMetricMeta.filter(
+    (item) => goodsType === '1' || item.key !== 'visitCount',
+  );
+  const currentOverviewTrendData =
+    overviewTrendMap[activeOverviewKey as keyof typeof overviewTrendMap] ||
+    emptyOverviewTrendMap.turnover;
+  const activeOverviewLabel =
+    overviewStats.find((item) => item.key === activeOverviewKey)?.label ||
+    '数值';
+  const currentOverviewTrendMax = Math.max(
+    100,
+    ...currentOverviewTrendData.map((item) => item.value),
+  );
+  const currentGoodsTrendData =
+    goodsTrendMap[activeGoodsTrendKey as keyof typeof goodsTrendMap] ||
+    emptyGoodsTrendMap.visitCount;
+  const activeGoodsTrendLabel =
+    visibleGoodsTrendMetricMeta.find((item) => item.key === activeGoodsTrendKey)
+      ?.label || '数值';
+  const currentGoodsTrendMax = Math.max(
+    2,
+    ...currentGoodsTrendData.map((item) => item.value),
+  );
+  const topStoreValueLabel =
+    topStoreSearchType === '1' ? '交易金额' : '交易笔数';
+  const goodsRankingValueLabel =
+    goodsRankingSearchType === '1' ? '成交金额' : '成交件数';
+  const memberRankingValueLabel =
+    memberRankingType === 'consume' ? '消费金额' : '会员数量';
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadOverview() {
+      setOverviewLoading(true);
+      try {
+        const data = await getIncomeCensus({
+          startTime: String(dateRange[0].startOf('day').unix()),
+          endTime: String(dateRange[1].endOf('day').unix()),
+        });
+        if (cancelled) return;
+
+        setOverviewValues({
+          turnover: formatMoney(data.turnover_money_total),
+          orderAmount: formatMoney(data.order_money_total),
+          paidMemberAmount: formatMoney(data.member_pay_money_total),
+          refundAmount: formatMoney(data.refund_money_total),
+        });
+        setOverviewTrendMap({
+          turnover: mapTrendData(data.turnover_money_total_trend),
+          orderAmount: mapTrendData(data.order_money_total_trend),
+          paidMemberAmount: mapTrendData(data.member_pay_money_total_trend),
+          refundAmount: mapTrendData(data.refund_money_total_trend),
+        });
+      } catch (error: any) {
+        if (cancelled) return;
+        setOverviewValues(emptyOverviewData);
+        setOverviewTrendMap(emptyOverviewTrendMap);
+        message.error(error?.message || '获取数据概览失败');
+      } finally {
+        if (!cancelled) {
+          setOverviewLoading(false);
+        }
+      }
+    }
+
+    loadOverview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dateRange]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadGoodsAnalysis() {
+      setGoodsLoading(true);
+      try {
+        const data = await getGoodsAnalysis({
+          startTime: String(dateRange[0].startOf('day').unix()),
+          endTime: String(dateRange[1].endOf('day').unix()),
+          type: goodsType,
+        });
+        if (cancelled) return;
+
+        setGoodsValues({
+          goodsTotal: String(data.sales_goods_species_count ?? 0),
+          paidGoods: String(data.payment_sales_goods_species_count ?? 0),
+          tradeCount: String(data.sales_order_count ?? 0),
+          buyerCount: String(data.transaction_people_count ?? 0),
+          unitPrice: formatMoney(data.customer_consume_average_amount),
+          refundMoney: formatMoney(data.refund_amount),
+          visitCount: String(data.visit_goods_people_count ?? 0),
+          tradeRate: formatRate(data.shop_visit_goods_transact_rate),
+        });
+        setGoodsTrendMap({
+          paidGoods: mapTrendData(data.payment_sales_goods_species_count_trend),
+          tradeCount: mapTrendData(data.sales_order_count_trend),
+          buyerCount: mapTrendData(data.transaction_people_count_trend),
+          unitPrice: mapTrendData(data.customer_consume_average_amount_trend),
+          visitCount: mapTrendData(data.visit_goods_people_count_trend),
+        });
+      } catch (error: any) {
+        if (cancelled) return;
+        setGoodsValues(emptyGoodsStats);
+        setGoodsTrendMap(emptyGoodsTrendMap);
+        message.error(error?.message || '获取门店商品数据失败');
+      } finally {
+        if (!cancelled) {
+          setGoodsLoading(false);
+        }
+      }
+    }
+
+    loadGoodsAnalysis();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dateRange, goodsType]);
+
+  useEffect(() => {
+    if (goodsType === '2' && activeGoodsTrendKey === 'visitCount') {
+      setActiveGoodsTrendKey('paidGoods');
+    }
+  }, [goodsType, activeGoodsTrendKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTopStoreRanking() {
+      try {
+        const data = await getStoreRanking({
+          startTime: String(dateRange[0].startOf('day').unix()),
+          endTime: String(dateRange[1].endOf('day').unix()),
+          searchType: topStoreSearchType,
+        });
+        if (cancelled) return;
+        setTopStoreRanking(
+          data.map((item, index) => ({
+            rank: Number(item.rank || index + 1),
+            name: String(item.store_name || '').trim() || `门店${index + 1}`,
+            value: String(item.value ?? '0'),
+          })),
+        );
+      } catch (error: any) {
+        if (cancelled) return;
+        setTopStoreRanking(emptyTopStoreRanking);
+        message.error(error?.message || '获取门店排行失败');
+      }
+    }
+
+    loadTopStoreRanking();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dateRange, topStoreSearchType]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadGoodsRanking() {
+      try {
+        const data = await getGoodsRanking({
+          startTime: String(dateRange[0].startOf('day').unix()),
+          endTime: String(dateRange[1].endOf('day').unix()),
+          searchType: goodsRankingSearchType,
+        });
+        if (cancelled) return;
+        setGoodsRanking(
+          data.map((item, index) => ({
+            rank: Number(item.rank || index + 1),
+            name: String(item.goods_name || '').trim() || `商品${index + 1}`,
+            value: String(item.value ?? '0'),
+            image: String(item.goods_image || '').trim(),
+          })),
+        );
+      } catch (error: any) {
+        if (cancelled) return;
+        setGoodsRanking(emptyGoodsRanking);
+        message.error(error?.message || '获取商品排行失败');
+      }
+    }
+
+    loadGoodsRanking();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dateRange, goodsRankingSearchType]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRankingApps() {
+      try {
+        const data = await getSuperPlugRanking();
+        if (cancelled) return;
+        setRankingApps(
+          data.map((item, index) => ({
+            key: item.id || String(index),
+            name: String(item.plug_name || '').trim() || `应用 ${index + 1}`,
+            status:
+              String(item.information || '').trim() ||
+              String(item.identification || '').trim() ||
+              '-',
+            icon: String(item.icon_url || '').trim(),
+          })),
+        );
+      } catch (error: any) {
+        if (cancelled) return;
+        setRankingApps(emptyRankingApps);
+        message.error(error?.message || '获取应用排行失败');
+      }
+    }
+
+    loadRankingApps();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMemberRanking() {
+      if (memberRankingType !== 'consume') {
+        setMemberRanking(emptyMemberRanking);
+        return;
+      }
+
+      try {
+        const data = await getVipConsumeRanking({
+          startTime: String(dateRange[0].startOf('day').unix()),
+          endTime: String(dateRange[1].endOf('day').unix()),
+        });
+        if (cancelled) return;
+        setMemberRanking(
+          data.map((item, index) => ({
+            rank: Number(item.rank || index + 1),
+            name: String(item.vip_name || '').trim() || `会员${index + 1}`,
+            value: formatMoney(item.trade_amount),
+          })),
+        );
+      } catch (error: any) {
+        if (cancelled) return;
+        setMemberRanking(emptyMemberRanking);
+        message.error(error?.message || '获取会员消费排行失败');
+      }
+    }
+
+    loadMemberRanking();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dateRange, memberRankingType]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMemberPortrait() {
+      try {
+        const data = await getVipPortrait();
+        if (cancelled) return;
+
+        setMemberPortraitData({
+          gender: mapPieData(
+            data.vip_sex_people_count_list,
+            (item) => String(item.type_name || '').trim() || '未知',
+            (item) => item.vip_count,
+          ),
+          level: mapPieData(
+            data.vip_grade_people_count_list,
+            (item) => String(item.grade_name || '').trim() || '未知等级',
+            (item) => item.people_count,
+          ),
+          age: mapPieData(
+            data.vip_age_people_count_list,
+            (item) =>
+              String(item.age_range || '').trim() ||
+              String(item.age_group || '').trim() ||
+              '未知年龄',
+            (item) => item.vip_count,
+          ),
+        });
+      } catch (error: any) {
+        if (cancelled) return;
+        setMemberPortraitData(emptyMemberPortraitData);
+        message.error(error?.message || '获取会员画像失败');
+      }
+    }
+
+    loadMemberPortrait();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMallUserData() {
+      try {
+        const [visitData, tradeData] = await Promise.all([
+          getAppletMallVisitUser({
+            startTime: String(dateRange[0].startOf('day').unix()),
+            endTime: String(dateRange[1].endOf('day').unix()),
+          }),
+          getAppletMallTransactUser({
+            startTime: String(dateRange[0].startOf('day').unix()),
+            endTime: String(dateRange[1].endOf('day').unix()),
+          }),
+        ]);
+        if (cancelled) return;
+
+        setMallUserData({
+          visit: mapPieData(
+            visitData,
+            (item) => String(item.type_name || '').trim() || '未知',
+            (item) => item.count,
+          ),
+          trade: mapPieData(
+            tradeData,
+            (item) => String(item.type_name || '').trim() || '未知',
+            (item) => item.count,
+          ),
+        });
+      } catch (error: any) {
+        if (cancelled) return;
+        setMallUserData(emptyMallUserData);
+        message.error(error?.message || '获取商城访问人数失败');
+      }
+    }
+
+    loadMallUserData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dateRange]);
 
   return (
     <div className="dashboard-index-page">
@@ -358,7 +847,9 @@ const DashboardIndexPage: React.FC = () => {
                 <div className="dashboard-card-title">
                   数据概览 <InfoCircleOutlined />
                 </div>
-                <div className="dashboard-card-subtitle">02-25 ~ 02-25</div>
+                <div className="dashboard-card-subtitle">
+                  {overviewLoading ? '数据加载中...' : overviewSubtitle}
+                </div>
               </div>
               <div className="dashboard-card-tools">
                 <Select
@@ -407,9 +898,10 @@ const DashboardIndexPage: React.FC = () => {
             </div>
 
             <DashboardAreaChart
-              data={overviewTrendData}
-              max={8000}
-              tickCount={9}
+              data={currentOverviewTrendData}
+              max={currentOverviewTrendMax}
+              tickCount={6}
+              tooltipLabel={activeOverviewLabel}
             />
           </section>
 
@@ -419,16 +911,32 @@ const DashboardIndexPage: React.FC = () => {
                 <div className="dashboard-card-title">
                   门店商品数据 <InfoCircleOutlined />
                 </div>
-                <div className="dashboard-card-subtitle">02-25 ~ 02-25</div>
+                <div className="dashboard-card-subtitle">
+                  {goodsLoading ? '数据加载中...' : overviewSubtitle}
+                </div>
               </div>
               <div className="dashboard-chip-row u-flex u-flex-wrap">
-                <button type="button">线下门店商品数据</button>
-                <button type="button">线上商城商品数据</button>
+                <button
+                  type="button"
+                  className={goodsType === '2' ? 'is-active' : ''}
+                  onClick={() => setGoodsType('2')}
+                >
+                  线下门店商品数据
+                </button>
+                <button
+                  type="button"
+                  className={goodsType === '1' ? 'is-active' : ''}
+                  onClick={() => setGoodsType('1')}
+                >
+                  线上商城商品数据
+                </button>
               </div>
             </div>
 
-            <div className="dashboard-metrics-grid">
-              {shopStats.map((item) => (
+            <div
+              className={`dashboard-metrics-grid dashboard-metrics-grid--${visibleGoodsStats.length}`}
+            >
+              {visibleGoodsStats.map((item) => (
                 <div key={item.key} className="dashboard-metric-item">
                   <div className="dashboard-metric-label">{item.label}</div>
                   <div className="dashboard-metric-value">{item.value}</div>
@@ -437,18 +945,30 @@ const DashboardIndexPage: React.FC = () => {
             </div>
 
             <div className="dashboard-chip-row u-flex u-flex-wrap">
-              <button type="button">付款商品数</button>
-              <button type="button">交易笔数</button>
-              <button type="button">交易人数</button>
-              <button type="button">客单价</button>
-              <button type="button">商品访问人数</button>
+              {visibleGoodsTrendMetricMeta.map((item) => (
+                <button
+                  type="button"
+                  key={item.key}
+                  className={
+                    activeGoodsTrendKey === item.key ? 'is-active' : ''
+                  }
+                  onClick={() => setActiveGoodsTrendKey(item.key)}
+                >
+                  {item.label}
+                </button>
+              ))}
             </div>
 
-            <DashboardAreaChart data={goodsTrendData} max={2} tickCount={3} />
+            <DashboardAreaChart
+              data={currentGoodsTrendData}
+              max={currentGoodsTrendMax}
+              tickCount={4}
+              tooltipLabel={activeGoodsTrendLabel}
+            />
           </section>
 
           <div className="dashboard-grid-row dashboard-grid-row-3">
-            <section className="dashboard-local-card">
+            <section className="dashboard-local-card dashboard-ranking-card">
               <div className="dashboard-card-head">
                 <div>
                   <div className="dashboard-card-title">门店营业额TOP</div>
@@ -457,106 +977,227 @@ const DashboardIndexPage: React.FC = () => {
               </div>
 
               <div className="dashboard-chip-row u-flex u-flex-wrap">
-                <button type="button">交易金额</button>
-                <button type="button">交易笔数</button>
+                <button
+                  type="button"
+                  className={topStoreSearchType === '1' ? 'is-active' : ''}
+                  onClick={() => setTopStoreSearchType('1')}
+                >
+                  交易金额
+                </button>
+                <button
+                  type="button"
+                  className={topStoreSearchType === '2' ? 'is-active' : ''}
+                  onClick={() => setTopStoreSearchType('2')}
+                >
+                  交易笔数
+                </button>
               </div>
 
-              <table className="dashboard-list-table">
-                <thead>
-                  <tr>
-                    <th>排名</th>
-                    <th>门店名称</th>
-                    <th>交易金额</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topShops.map((item) => (
-                    <tr key={item.rank}>
-                      <td>
-                        {item.rank <= 3 ? (
-                          <img
-                            className="dashboard-table-rank-icon"
-                            src={topRankBadges[item.rank - 1]}
-                            alt=""
-                          />
-                        ) : (
-                          item.rank
-                        )}
-                      </td>
-                      <td>{item.name}</td>
-                      <td>{item.value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="dashboard-ranking-scroll">
+                <table className="dashboard-list-table">
+                  {topStoreRanking.length > 0 ? (
+                    <>
+                      <thead>
+                        <tr>
+                          <th>排名</th>
+                          <th>门店名称</th>
+                          <th>{topStoreValueLabel}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {topStoreRanking.map((item) => (
+                          <tr key={item.rank}>
+                            <td>
+                              {item.rank <= 3 ? (
+                                <img
+                                  className="dashboard-table-rank-icon"
+                                  src={topRankBadges[item.rank - 1]}
+                                  alt=""
+                                />
+                              ) : (
+                                item.rank
+                              )}
+                            </td>
+                            <td>{item.name}</td>
+                            <td>{item.value}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </>
+                  ) : null}
+                </table>
+                {topStoreRanking.length === 0 ? (
+                  <div className="dashboard-empty-block">
+                    <Empty description="暂无排行数据" />
+                  </div>
+                ) : null}
+              </div>
             </section>
 
-            <section className="dashboard-local-card">
+            <section className="dashboard-local-card dashboard-ranking-card">
               <div className="dashboard-card-head">
                 <div>
                   <div className="dashboard-card-title">商品成交榜TOP</div>
-                  <div className="dashboard-card-subtitle">02-25 ~ 02-25</div>
+                  <div className="dashboard-card-subtitle">
+                    {overviewSubtitle}
+                  </div>
                 </div>
               </div>
 
               <div className="dashboard-chip-row u-flex u-flex-wrap">
-                <button type="button">成交金额</button>
-                <button type="button">成交件数</button>
+                <button
+                  type="button"
+                  className={goodsRankingSearchType === '1' ? 'is-active' : ''}
+                  onClick={() => setGoodsRankingSearchType('1')}
+                >
+                  成交金额
+                </button>
+                <button
+                  type="button"
+                  className={goodsRankingSearchType === '2' ? 'is-active' : ''}
+                  onClick={() => setGoodsRankingSearchType('2')}
+                >
+                  成交件数
+                </button>
               </div>
 
-              <div className="dashboard-empty-image">图片占位</div>
+              <div className="dashboard-ranking-scroll">
+                <table className="dashboard-list-table">
+                  {goodsRanking.length > 0 ? (
+                    <>
+                      <thead>
+                        <tr>
+                          <th>排名</th>
+                          <th>商品名称</th>
+                          <th>{goodsRankingValueLabel}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {goodsRanking.map((item) => (
+                          <tr key={`${item.rank}-${item.name}`}>
+                            <td>
+                              {item.rank <= 3 ? (
+                                <img
+                                  className="dashboard-table-rank-icon"
+                                  src={topRankBadges[item.rank - 1]}
+                                  alt=""
+                                />
+                              ) : (
+                                item.rank
+                              )}
+                            </td>
+                            <td>
+                              <div className="dashboard-goods-rank-cell">
+                                {item.image ? (
+                                  <img
+                                    className="dashboard-goods-rank-image"
+                                    src={item.image}
+                                    alt={item.name}
+                                  />
+                                ) : null}
+                                <span className="dashboard-goods-rank-name">
+                                  {item.name}
+                                </span>
+                              </div>
+                            </td>
+                            <td>{item.value}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </>
+                  ) : null}
+                </table>
+                {goodsRanking.length === 0 ? (
+                  <div className="dashboard-empty-block">
+                    <Empty description="暂无排行数据" />
+                  </div>
+                ) : null}
+              </div>
             </section>
 
-            <section className="dashboard-local-card">
+            <section className="dashboard-local-card dashboard-ranking-card">
               <div className="dashboard-card-head">
                 <div>
                   <div className="dashboard-card-title">会员榜TOP</div>
-                  <div className="dashboard-card-subtitle">02-25 ~ 02-25</div>
+                  <div className="dashboard-card-subtitle">
+                    {overviewSubtitle}
+                  </div>
                 </div>
               </div>
 
               <div className="dashboard-chip-row u-flex u-flex-wrap">
-                <button type="button">会员注册</button>
-                <button type="button">会员消费</button>
+                <button
+                  type="button"
+                  className={
+                    memberRankingType === 'register' ? 'is-active' : ''
+                  }
+                  onClick={() => setMemberRankingType('register')}
+                >
+                  会员注册
+                </button>
+                <button
+                  type="button"
+                  className={memberRankingType === 'consume' ? 'is-active' : ''}
+                  onClick={() => setMemberRankingType('consume')}
+                >
+                  会员消费
+                </button>
               </div>
 
-              <table className="dashboard-list-table">
-                <thead>
-                  <tr>
-                    <th>排名</th>
-                    <th>门店名称</th>
-                    <th>会员数量</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {memberTop.map((item) => (
-                    <tr key={item.rank}>
-                      <td>
-                        {item.rank <= 3 ? (
-                          <img
-                            className="dashboard-table-rank-icon"
-                            src={topRankBadges[item.rank - 1]}
-                            alt=""
-                          />
-                        ) : (
-                          item.rank
-                        )}
-                      </td>
-                      <td>{item.name}</td>
-                      <td>{item.value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="dashboard-ranking-scroll">
+                <table className="dashboard-list-table">
+                  {memberRanking.length > 0 ? (
+                    <>
+                      <thead>
+                        <tr>
+                          <th>排名</th>
+                          <th>会员名称</th>
+                          <th>{memberRankingValueLabel}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {memberRanking.map((item) => (
+                          <tr key={`${item.rank}-${item.name}`}>
+                            <td>
+                              {item.rank <= 3 ? (
+                                <img
+                                  className="dashboard-table-rank-icon"
+                                  src={topRankBadges[item.rank - 1]}
+                                  alt=""
+                                />
+                              ) : (
+                                item.rank
+                              )}
+                            </td>
+                            <td>
+                              <div className="dashboard-goods-rank-cell">
+                                <span className="dashboard-goods-rank-name">
+                                  {item.name}
+                                </span>
+                              </div>
+                            </td>
+                            <td>{item.value}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </>
+                  ) : null}
+                </table>
+                {memberRanking.length === 0 ? (
+                  <div className="dashboard-empty-block">
+                    <Empty description="暂无排行数据" />
+                  </div>
+                ) : null}
+              </div>
             </section>
           </div>
 
           <div className="dashboard-grid-row dashboard-grid-row-2">
-            <section className="dashboard-local-card">
+            <section className="dashboard-local-card dashboard-member-portrait-card">
               <div className="dashboard-card-head">
                 <div>
                   <div className="dashboard-card-title">会员分布</div>
-                  <div className="dashboard-card-subtitle">02-25 ~ 02-25</div>
+                  <div className="dashboard-card-subtitle">会员画像</div>
                 </div>
               </div>
               <div className="dashboard-chip-row u-flex u-flex-wrap">
@@ -582,17 +1223,37 @@ const DashboardIndexPage: React.FC = () => {
                   年龄列表
                 </button>
               </div>
-              {memberDistKey === 'age' ? (
-                <DashboardBarChart data={memberAgeData} />
-              ) : (
+              {memberPieData.length > 0 ? (
                 <DashboardDonutChart
                   data={memberPieData}
                   colors={
                     memberDistKey === 'gender'
                       ? ['#5b79d1', '#84c66c', '#e8ba4a']
-                      : ['#5b79d1', '#84c66c', '#e8ba4a', '#e56666']
+                      : memberDistKey === 'level'
+                        ? [
+                            '#5b79d1',
+                            '#84c66c',
+                            '#e8ba4a',
+                            '#e56666',
+                            '#6f8ef6',
+                            '#60cfc7',
+                          ]
+                        : [
+                            '#5b79d1',
+                            '#84c66c',
+                            '#e8ba4a',
+                            '#e56666',
+                            '#6f8ef6',
+                            '#60cfc7',
+                            '#a56ef5',
+                            '#ff9f43',
+                          ]
                   }
                 />
+              ) : (
+                <div className="dashboard-empty-block">
+                  <Empty description="暂无画像数据" />
+                </div>
               )}
             </section>
 
@@ -600,7 +1261,9 @@ const DashboardIndexPage: React.FC = () => {
               <div className="dashboard-card-head">
                 <div>
                   <div className="dashboard-card-title">商城访问人数</div>
-                  <div className="dashboard-card-subtitle">02-25 ~ 02-25</div>
+                  <div className="dashboard-card-subtitle">
+                    {overviewSubtitle}
+                  </div>
                 </div>
               </div>
               <div className="dashboard-chip-row u-flex u-flex-wrap">
@@ -619,12 +1282,18 @@ const DashboardIndexPage: React.FC = () => {
                   交易人数
                 </button>
               </div>
-              <DashboardDonutChart
-                data={mallData}
-                colors={['#5470c6', '#91cc75']}
-                innerRadius={0.5}
-                radius={0.7}
-              />
+              {mallData.length > 0 ? (
+                <DashboardDonutChart
+                  data={mallData}
+                  colors={['#5470c6', '#91cc75', '#f6bd16', '#5ad8a6']}
+                  innerRadius={0.5}
+                  radius={0.7}
+                />
+              ) : (
+                <div className="dashboard-empty-block">
+                  <Empty description="暂无人数数据" />
+                </div>
+              )}
             </section>
           </div>
         </div>
@@ -690,23 +1359,43 @@ const DashboardIndexPage: React.FC = () => {
             <div className="dashboard-card-head">
               <div className="dashboard-card-title">应用排行</div>
             </div>
-            <ul className="dashboard-rank-list u-flex-col">
-              {rankingApps.map((item, index) => (
-                <li key={item.key} className="u-flex-center">
-                  <span className="dashboard-rank-badge u-inline-flex-middle">
-                    <img
-                      className="dashboard-rank-badge-img"
-                      src={appRankBadges[index] || plugTop2}
-                      alt=""
-                    />
-                  </span>
-                  <span className="dashboard-rank-meta u-flex-col">
-                    <span className="dashboard-rank-name">{item.name}</span>
-                    <span className="dashboard-rank-status">{item.status}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
+            {rankingApps.length > 0 ? (
+              <ul className="dashboard-rank-list u-flex-col">
+                {rankingApps.map((item, index) => (
+                  <li key={item.key} className="u-flex-center">
+                    <span className="dashboard-rank-badge u-inline-flex-middle">
+                      {index < 3 ? (
+                        <img
+                          className="dashboard-rank-badge-img"
+                          src={appRankBadges[index]}
+                          alt={item.name}
+                        />
+                      ) : item.icon ? (
+                        <img
+                          className="dashboard-rank-badge-img"
+                          src={item.icon}
+                          alt={item.name}
+                        />
+                      ) : (
+                        <span className="dashboard-rank-badge-fallback">
+                          {index + 1}
+                        </span>
+                      )}
+                    </span>
+                    <span className="dashboard-rank-meta u-flex-col">
+                      <span className="dashboard-rank-name">{item.name}</span>
+                      <span className="dashboard-rank-status">
+                        {item.status}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="dashboard-empty-block">
+                <Empty description="暂无排行数据" />
+              </div>
+            )}
           </section>
         </aside>
       </div>

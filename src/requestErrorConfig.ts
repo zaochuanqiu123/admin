@@ -113,9 +113,14 @@ export const errorConfig: RequestConfig = {
       // 拦截请求配置，进行个性化处理。
       const token = getToken();
       const orgCode = getSelectedOrgCode();
+      const hasAuthorizationHeader = Boolean(
+        (config.headers as Record<string, any> | undefined)?.Authorization,
+      );
       const headers = {
         ...(config.headers || {}),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(!hasAuthorizationHeader && token
+          ? { Authorization: `Bearer ${token}` }
+          : {}),
         ...(orgCode ? { 'X-Org-Code': orgCode } : {}),
       };
 
