@@ -129,6 +129,10 @@
       color: var(--ant-color-primary);
       white-space: nowrap;
     }
+
+    .is-danger {
+      color: var(--ant-color-error);
+    }
   }
 
   .qr-template-drawer {
@@ -687,40 +691,6 @@ body.theme-black-mode .qr-template-page {
       color: var(--pc-dark-text-secondary) !important;
     }
 
-    .qr-template-canvas-stage {
-      background: rgba(255, 255, 255, 0.04);
-    }
-
-    .qr-template-canvas {
-      background:
-        linear-gradient(180deg, rgba(16, 22, 32, 0.88), rgba(16, 22, 32, 0.94)),
-        repeating-linear-gradient(
-          0deg,
-          rgba(255, 255, 255, 0.04) 0,
-          rgba(255, 255, 255, 0.04) 1px,
-          transparent 1px,
-          transparent 24px
-        ),
-        repeating-linear-gradient(
-          90deg,
-          rgba(255, 255, 255, 0.04) 0,
-          rgba(255, 255, 255, 0.04) 1px,
-          transparent 1px,
-          transparent 24px
-        );
-      box-shadow:
-        0 18px 44px rgba(0, 0, 0, 0.42),
-        inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-    }
-
-    .qr-template-canvas-empty {
-      color: rgba(255, 255, 255, 0.52);
-    }
-
-    .qr-template-canvas-code-text {
-      text-shadow: none;
-    }
-
     .ant-drawer-header,
     .ant-drawer-footer {
       border-color: var(--pc-dark-border);
@@ -751,13 +721,14 @@ body.theme-black-mode .qr-template-drawer {
     color: var(--pc-dark-text-secondary) !important;
   }
 
+  /* 画布外层算法资贴区域：深色棋盘格背景 */
   .qr-template-canvas-stage {
     background: rgba(255, 255, 255, 0.04);
   }
 
+  /* 画布本躯保留第一层透明棋盘格，胹部内容返回模擟贴纸 */
   .qr-template-canvas {
     background:
-      linear-gradient(180deg, rgba(16, 22, 32, 0.88), rgba(16, 22, 32, 0.94)),
       repeating-linear-gradient(
         0deg,
         rgba(255, 255, 255, 0.04) 0,
@@ -771,16 +742,18 @@ body.theme-black-mode .qr-template-drawer {
         rgba(255, 255, 255, 0.04) 1px,
         transparent 1px,
         transparent 24px
-      );
+      ),
+      rgba(30, 35, 48, 0.88);
     box-shadow:
       0 18px 44px rgba(0, 0, 0, 0.42),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+      inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   }
 
   .qr-template-canvas-empty {
     color: rgba(255, 255, 255, 0.52);
   }
 
+  /* 编号文字在深色下去掉百色光晨投影 */
   .qr-template-canvas-code-text {
     text-shadow: none;
   }

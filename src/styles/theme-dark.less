@@ -412,3 +412,37 @@ body.theme-switching *::after {
   transition: none !important;
   animation-duration: 0s !important;
 }
+
+body.theme-black-mode .ant-dropdown-menu.business-switch-menu {
+  background: var(--pc-dark-bg-surface) !important;
+  border: 1px solid var(--pc-dark-border) !important;
+}
+
+body.theme-black-mode .ant-dropdown-menu.business-switch-menu .ant-dropdown-menu-item {
+  color: var(--pc-dark-text) !important;
+}
+
+body.theme-black-mode .ant-dropdown-menu.business-switch-menu .ant-dropdown-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Fix dropdown trigger pill */
+body.theme-black-mode .business-switch-pill {
+  color: var(--pc-dark-text) !important;
+  background: transparent !important;
+}
+body.theme-black-mode .business-switch-pill:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Fix User Avatar/Name Button Dark Mode Background */
+body.theme-black-mode .ant-pro-global-header-layout-mix .ant-pro-global-header-right > span.ant-pro-drop-down,
+body.theme-black-mode .ant-pro-global-header-layout-mix .ant-pro-global-header-right > *,
+body.theme-black-mode .ant-pro-top-nav-header-actions > * {
+  background: transparent !important;
+  color: var(--pc-dark-text) !important;
+}
+body.theme-black-mode .ant-pro-global-header-layout-mix .ant-pro-global-header-right > *:hover,
+body.theme-black-mode .ant-pro-top-nav-header-actions > *:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}

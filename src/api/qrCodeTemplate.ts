@@ -15,7 +15,7 @@ export type QrCodeTemplateRecord = {
   defaultFlag?: number;
   prevImage?: string;
   prevImageUrl?: string;
-  qrCodeSnConfig?: {
+  qrcodeSnConfig?: {
     isShow?: number;
     size?: number;
     y?: number;
@@ -56,4 +56,70 @@ export async function getQrCodeTemplatePageQuery(
       ...(options || {}),
     },
   );
+}
+
+export type QrCodeTemplateAddParams = {
+  name: string;
+  prevImageUrl: string;
+  qrcodeSnConfig: {
+    isShow: number;
+    size: number;
+    y: number;
+    color: string;
+  };
+  qrcodeImageConfig: {
+    w: number;
+    h: number;
+    x: number;
+    y: number;
+  };
+  bgConfig: {
+    w: number;
+    h: number;
+    imageUrl: string;
+  };
+  remark?: string;
+  state: number;
+};
+
+export async function addQrCodeTemplate(
+  data: QrCodeTemplateAddParams,
+  options?: { [key: string]: any },
+) {
+  return apiData<any>('/api/device/admin/qrcodeTemplate/add', {
+    method: 'POST',
+    data,
+    ...(options || {}),
+  });
+}
+
+export async function getQrCodeTemplateDetail(
+  id: string,
+  options?: { [key: string]: any },
+) {
+  return apiData<any>(`/api/device/admin/qrcodeTemplate/${id}`, {
+    method: 'GET',
+    ...(options || {}),
+  });
+}
+
+export async function updateQrCodeTemplate(
+  data: QrCodeTemplateAddParams & { id: string },
+  options?: { [key: string]: any },
+) {
+  return apiData<any>('/api/device/admin/qrcodeTemplate/update', {
+    method: 'POST', // 如果后端是 PUT 请求请自行更改
+    data,
+    ...(options || {}),
+  });
+}
+
+export async function deleteQrCodeTemplate(
+  id: string,
+  options?: { [key: string]: any },
+) {
+  return apiData<any>(`/api/device/admin/qrcodeTemplate/${id}`, {
+    method: 'DELETE',
+    ...(options || {}),
+  });
 }

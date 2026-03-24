@@ -16,6 +16,7 @@ import {
   InputNumber,
   Modal,
   message,
+  Popconfirm,
   QRCode,
   Select,
   Slider,
@@ -30,10 +31,25 @@ import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  addQrCodeTemplate,
+  deleteQrCodeTemplate,
+  getQrCodeTemplateDetail,
   getQrCodeTemplatePageQuery,
   type QrCodeTemplateRecord,
+  updateQrCodeTemplate,
 } from '@/api/qrCodeTemplate';
 import './index.less';
+
+// 临时挡板：前端假装上传成功并返回一个固定图片 URL
+const mockUploadImage = async (base64Data: string): Promise<string> => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(
+        'https://dummyimage.com/600x400/1890ff/ffffff&text=Backend+Upload+Pending',
+      );
+    }, 800);
+  });
+};
 
 const { RangePicker } = DatePicker;
 
@@ -137,7 +153,7 @@ function revokeObjectUrl(url?: string | null) {
 }
 
 function getShowSnLabel(record: QrCodeTemplateRecord) {
-  return Number(record?.qrCodeSnConfig?.isShow) === 1 ? '显示' : '隐藏';
+  return Number(record?.qrcodeSnConfig?.isShow) === 1 ? '显示' : '隐藏';
 }
 
 function getStateLabel(state?: number) {
@@ -158,7 +174,11 @@ const QrTemplateListPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [records, setRecords] = useState<QrCodeTemplateRecord[]>([]);
   const [serverTotal, setServerTotal] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(
+    null,
+  );
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState('');
   const [drawerForm] = Form.useForm();
@@ -361,7 +381,7 @@ const QrTemplateListPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [current, filters.name, pageSize]);
+  }, [current, filters.name, pageSize, refreshKey]);
 
   useEffect(() => {
     void loadTemplates();
@@ -377,7 +397,7 @@ const QrTemplateListPage: React.FC = () => {
 
       if (filters.showSn !== undefined && filters.showSn !== '') {
         if (
-          String(Number(record?.qrCodeSnConfig?.isShow ?? 0)) !==
+          String(Number(record?.qrcodeSnConfig?.isShow ?? 0)) !==
           String(filters.showSn)
         ) {
           return false;
@@ -446,12 +466,12 @@ const QrTemplateListPage: React.FC = () => {
       },
       {
         title: '显示编号',
-        dataIndex: ['qrCodeSnConfig', 'isShow'],
+        dataIndex: ['qrcodeSnConfig', 'isShow'],
         width: 120,
         render: (_value, record) => (
           <span
             className={`qr-template-chip ${
-              Number(record?.qrCodeSnConfig?.isShow) === 1
+              Number(record?.qrcodeSnConfig?.isShow) === 1
                 ? 'is-success'
                 : 'is-muted'
             }`}
@@ -490,12 +510,17 @@ const QrTemplateListPage: React.FC = () => {
           <div className="qr-template-action-links">
             <a
               onClick={() => {
-                void record;
-                showPendingEditorMessage();
+                openEditDrawer(record.id);
               }}
             >
               编辑
             </a>
+            <Popconfirm
+              title="确认删除该模板？"
+              onConfirm={() => handleDeleteTemplate(record.id)}
+            >
+              <a className="is-danger">删除</a>
+            </Popconfirm>
           </div>
         ),
       },
@@ -535,6 +560,7 @@ const QrTemplateListPage: React.FC = () => {
       : serverTotal;
 
   const openCreateDrawer = () => {
+    setEditingTemplateId(null);
     drawerForm.setFieldsValue({
       name: '',
       state: 1,
@@ -544,6 +570,45 @@ const QrTemplateListPage: React.FC = () => {
     });
     resetEditorState();
     setDrawerOpen(true);
+  };
+
+  const openEditDrawer = async (id: string) => {
+    try {
+      const res = await getQrCodeTemplateDetail(id);
+      if (!res) throw new Error('Query detail empty');
+      const data = res as any;
+
+      setEditingTemplateId(id);
+
+      drawerForm.setFieldsValue({
+        name: data.name,
+        state: data.state ?? 1,
+        showSn: data.qrcodeSnConfig?.isShow === 1,
+        remark: data.remark || '',
+      });
+
+      setEditorState({
+        canvasWidth: data.bgConfig?.w || 320,
+        canvasHeight: data.bgConfig?.h || 420,
+        backgroundImage: data.bgConfig?.imageUrl || null,
+        qrcode: {
+          x: data.qrcodeImageConfig?.x || 88,
+          y: data.qrcodeImageConfig?.y || 112,
+          size: data.qrcodeImageConfig?.w || 144,
+        },
+        codeText: {
+          offsetY: data.qrcodeSnConfig?.y || 14,
+          fontSize: data.qrcodeSnConfig?.size || 16,
+          color: data.qrcodeSnConfig?.color || '#1f2837',
+        },
+        showCodeText: data.qrcodeSnConfig?.isShow === 1,
+      });
+
+      setDrawerOpen(true);
+    } catch (error) {
+      console.error('Fetch template detail failed:', error);
+      message.error('获取模板详情失败');
+    }
   };
 
   const handleCanvasWidthChange = (value: number | null) => {
@@ -730,10 +795,69 @@ const QrTemplateListPage: React.FC = () => {
 
   const handleDrawerSubmit = async () => {
     try {
-      await drawerForm.validateFields();
-      message.success('模板编辑抽屉已接好，保存接口待接入。');
+      const values = await drawerForm.validateFields();
+
+      const payload = {
+        name: values.name,
+        prevImageUrl: '',
+        qrcodeSnConfig: {
+          isShow: values.showSn ? 1 : 0,
+          size: editorState.codeText.fontSize,
+          y: editorState.codeText.offsetY,
+          color: editorState.codeText.color,
+        },
+        qrcodeImageConfig: {
+          w: editorState.qrcode.size,
+          h: editorState.qrcode.size,
+          x: editorState.qrcode.x,
+          y: editorState.qrcode.y,
+        },
+        bgConfig: {
+          w: editorState.canvasWidth,
+          h: editorState.canvasHeight,
+          imageUrl: '',
+        },
+        remark: values.remark || '',
+        state: values.state,
+      };
+
+      if (editorState.backgroundImage) {
+        // TODO: 等后端上传接口 OK 后，在此替换真实 axios 上传
+        let uploadedUrl = editorState.backgroundImage;
+        if (uploadedUrl.startsWith('data:image')) {
+          uploadedUrl = await mockUploadImage(editorState.backgroundImage);
+        }
+        payload.prevImageUrl = uploadedUrl;
+        payload.bgConfig.imageUrl = uploadedUrl;
+      }
+
+      if (editingTemplateId) {
+        await updateQrCodeTemplate({ ...payload, id: editingTemplateId });
+        message.success('修改成功！');
+      } else {
+        await addQrCodeTemplate(payload);
+        message.success('保存成功！图片使用了临时 mock 链接。');
+      }
+
+      setDrawerOpen(false);
+      // 强制触发列表刷新，并默认切回第一页
+      setRefreshKey((prev) => prev + 1);
+      setPagination((prev) => ({ ...prev, current: 1 }));
     } catch (error: any) {
       if (error?.errorFields) return;
+      message.error('保存失败，请重试');
+      console.error(error);
+    }
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    try {
+      await deleteQrCodeTemplate(id);
+      message.success('删除成功');
+      setRefreshKey((prev) => prev + 1);
+    } catch (error) {
+      console.error('Delete template failed:', error);
+      message.error('删除失败');
     }
   };
 

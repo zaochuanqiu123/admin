@@ -772,6 +772,8 @@ const StoreQrCodeListPage: React.FC = () => {
         <div className="qr-code-toolbar">
           <Space wrap size={12}>
             <Button
+              type="primary"
+              className="qr-code-primary-action-btn"
               onClick={() => {
                 setTransferModalOpen(true);
               }}
@@ -781,7 +783,7 @@ const StoreQrCodeListPage: React.FC = () => {
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              className="qr-code-create-btn"
+              className="qr-code-primary-action-btn"
               onClick={() => {
                 setCreateModalOpen(true);
               }}
