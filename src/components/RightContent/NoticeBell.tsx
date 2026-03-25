@@ -1,6 +1,6 @@
 import { BellOutlined, CloseOutlined } from '@ant-design/icons';
 import type { TabsProps } from 'antd';
-import { Button, Drawer, Empty, List, Tabs, Tag, theme } from 'antd';
+import { Button, Drawer, Empty, List, Tabs, Tag, Tooltip, theme } from 'antd';
 import React, { useMemo, useState } from 'react';
 
 type NoticeItem = {
@@ -193,13 +193,15 @@ const NoticeBell: React.FC = () => {
 
   return (
     <>
-      <Button
-        type="text"
-        shape="circle"
-        className="pc-admin-header-circle-action"
-        icon={<BellOutlined />}
-        onClick={() => setOpen(true)}
-      />
+      <Tooltip title="消息通知">
+        <Button
+          type="text"
+          shape="circle"
+          className="pc-admin-header-circle-action"
+          icon={<BellOutlined />}
+          onClick={() => setOpen(true)}
+        />
+      </Tooltip>
       <Drawer
         open={open}
         placement="right"

@@ -35,6 +35,19 @@
   gap: 10px;
 }
 
+.dashboard-local-card.dashboard-org-image-card {
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.dashboard-org-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+}
+
 .dashboard-local-card {
   position: relative;
   overflow: hidden;
@@ -51,9 +64,13 @@
   left: 0;
   top: 0;
   width: 100%;
-  height: 50%;
-  max-height: 180px;
-  background-image: linear-gradient(180deg, #d9e7ff 0%, #ffffff 100%);
+  height: 100%;
+  max-height: none;
+  // background-image: linear-gradient(180deg, #d9e7ff 0%, #ffffff 100%);
+  background-image: url('../../assets/shouyebg.png');
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: 100% 200px;
   pointer-events: none;
   z-index: 0;
 }

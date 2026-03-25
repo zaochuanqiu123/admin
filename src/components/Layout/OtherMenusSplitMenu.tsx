@@ -19,6 +19,7 @@ import {
   resumeMenuHoverAutoOpen,
   suppressMenuHoverAutoOpen,
 } from '@/utils/menuHover';
+import { useSplitMenuHoverIntent } from './useSplitMenuHoverIntent';
 
 type OtherMenusSplitMenuProps = {
   topMenus?: MenuDataItem[];
@@ -586,10 +587,7 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
   );
 
   const openHoverPanelsByIntent = React.useCallback(
-    (topKey?: string, fromPointerMove = false) => {
-      if (fromPointerMove) {
-        resumeMenuHoverAutoOpen();
-      }
+    (topKey?: string) => {
       if (isMenuHoverAutoOpenSuppressed()) {
         return;
       }
@@ -598,9 +596,18 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
     [openHoverPanels],
   );
 
+  const { clearHoverIntent, queueHoverIntent } = useSplitMenuHoverIntent({
+    hoverOpen: hoverListOpen,
+    activeHoverKey: displayTopKey,
+    onIntentOpen: openHoverPanelsByIntent,
+    clearCloseTimer,
+    clearCloseCleanupTimer,
+  });
+
   const scheduleCloseHoverPanels = React.useCallback(() => {
     clearCloseTimer();
     clearCloseCleanupTimer();
+    clearHoverIntent();
     // 立刻标记关闭中，禁用 pointer-events 防止鼠标移出过程中再次触发 hover
     setPanelClosing(true);
     closeTimerRef.current = window.setTimeout(() => {
@@ -613,13 +620,14 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
         closeCleanupTimerRef.current = null;
       }, OTHER_SPLIT_MENU_FADE_DURATION);
     }, 60);
-  }, [clearCloseCleanupTimer, clearCloseTimer]);
+  }, [clearCloseCleanupTimer, clearCloseTimer, clearHoverIntent]);
 
   const handleHoverItemClick: MenuProps['onClick'] = React.useCallback(
     (info: Parameters<NonNullable<MenuProps['onClick']>>[0]) => {
       const key = String(info.key || '');
       const path = hoverMenuMeta.pathByKey.get(key);
       if (!path) return;
+      clearHoverIntent();
       closeHoverPanelsImmediately();
       suppressMenuHoverAutoOpen();
       onNavigate(
@@ -629,6 +637,7 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
       );
     },
     [
+      clearHoverIntent,
       closeHoverPanelsImmediately,
       hoverMenuMeta.pathByKey,
       hoverMenuMeta.sourceSystemByKey,
@@ -648,10 +657,11 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
 
   React.useEffect(() => {
     return () => {
+      clearHoverIntent();
       clearCloseTimer();
       clearCloseCleanupTimer();
     };
-  }, [clearCloseCleanupTimer, clearCloseTimer]);
+  }, [clearCloseCleanupTimer, clearCloseTimer, clearHoverIntent]);
 
   if (!activeTopNode) {
     return <div className="other-menus-split-menu-empty" />;
@@ -665,7 +675,10 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
           (hoverListOpen ? ' other-menus-split-menu-shell-open' : '') +
           (panelClosing ? ' other-menus-split-menu-shell-closing' : '')
         }
-        onMouseEnter={handleHoverZoneEnter}
+        onMouseEnter={() => {
+          clearHoverIntent();
+          handleHoverZoneEnter();
+        }}
         onMouseLeave={handleHoverZoneLeave}
       >
         <div
@@ -686,13 +699,15 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
                   (active ? ' other-menus-split-menu-icon-btn-active' : '')
                 }
                 aria-label={node.name}
-                onMouseEnter={() => openHoverPanelsByIntent(node.key)}
-                onMouseMove={() => openHoverPanelsByIntent(node.key, true)}
+                onMouseEnter={() => queueHoverIntent(node.key)}
+                onMouseMove={() => queueHoverIntent(node.key, true)}
                 onFocus={() => {
+                  clearHoverIntent();
                   resumeMenuHoverAutoOpen();
                   openHoverPanels(node.key);
                 }}
                 onClick={() => {
+                  clearHoverIntent();
                   closeHoverPanelsImmediately();
                   handleTopClick(node);
                 }}
@@ -713,7 +728,10 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
               ? ' other-menus-split-menu-submenu-panel-open'
               : '')
           }
-          onMouseEnter={handleHoverZoneEnter}
+          onMouseEnter={() => {
+            clearHoverIntent();
+            handleHoverZoneEnter();
+          }}
           onMouseLeave={handleHoverZoneLeave}
         >
           <Menu

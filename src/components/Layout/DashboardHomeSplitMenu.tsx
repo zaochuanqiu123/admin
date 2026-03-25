@@ -21,6 +21,7 @@ import {
   resumeMenuHoverAutoOpen,
   suppressMenuHoverAutoOpen,
 } from '@/utils/menuHover';
+import { useSplitMenuHoverIntent } from './useSplitMenuHoverIntent';
 
 type DashboardHomeSplitMenuProps = {
   topMenus?: MenuDataItem[];
@@ -479,28 +480,6 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
     ],
   );
 
-  const handleHoverItemClick: MenuProps['onClick'] = React.useCallback(
-    (info: Parameters<NonNullable<MenuProps['onClick']>>[0]) => {
-      const key = String(info.key || '');
-      const path = hoverMenuMeta.pathByKey.get(key);
-      if (!path) return;
-      setHoverPanelOpen(false);
-      setHoveredTopKey('');
-      suppressMenuHoverAutoOpen();
-      onNavigate(
-        path,
-        hoverMenuMeta.targetIdByKey.get(key),
-        hoverMenuMeta.sourceSystemByKey.get(key),
-      );
-    },
-    [
-      hoverMenuMeta.pathByKey,
-      hoverMenuMeta.sourceSystemByKey,
-      hoverMenuMeta.targetIdByKey,
-      onNavigate,
-    ],
-  );
-
   const clearCloseTimer = React.useCallback(() => {
     if (closeTimerRef.current === null) return;
     window.clearTimeout(closeTimerRef.current);
@@ -519,10 +498,7 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
   );
 
   const openHoverPanelByIntent = React.useCallback(
-    (topKey?: string, fromPointerMove = false) => {
-      if (fromPointerMove) {
-        resumeMenuHoverAutoOpen();
-      }
+    (topKey?: string) => {
       if (isMenuHoverAutoOpenSuppressed()) {
         return;
       }
@@ -531,20 +507,53 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
     [openHoverPanel],
   );
 
+  const { clearHoverIntent, queueHoverIntent } = useSplitMenuHoverIntent({
+    hoverOpen: hoverPanelOpen,
+    activeHoverKey: displayTopKey,
+    onIntentOpen: openHoverPanelByIntent,
+    clearCloseTimer,
+  });
+
+  const handleHoverItemClick: MenuProps['onClick'] = React.useCallback(
+    (info: Parameters<NonNullable<MenuProps['onClick']>>[0]) => {
+      const key = String(info.key || '');
+      const path = hoverMenuMeta.pathByKey.get(key);
+      if (!path) return;
+      clearHoverIntent();
+      setHoverPanelOpen(false);
+      setHoveredTopKey('');
+      suppressMenuHoverAutoOpen();
+      onNavigate(
+        path,
+        hoverMenuMeta.targetIdByKey.get(key),
+        hoverMenuMeta.sourceSystemByKey.get(key),
+      );
+    },
+    [
+      clearHoverIntent,
+      hoverMenuMeta.pathByKey,
+      hoverMenuMeta.sourceSystemByKey,
+      hoverMenuMeta.targetIdByKey,
+      onNavigate,
+    ],
+  );
+
   const scheduleCloseHoverPanel = React.useCallback(() => {
     clearCloseTimer();
+    clearHoverIntent();
     closeTimerRef.current = window.setTimeout(() => {
       setHoverPanelOpen(false);
       setHoveredTopKey('');
       closeTimerRef.current = null;
     }, 120);
-  }, [clearCloseTimer]);
+  }, [clearCloseTimer, clearHoverIntent]);
 
   React.useEffect(() => {
     return () => {
+      clearHoverIntent();
       clearCloseTimer();
     };
-  }, [clearCloseTimer]);
+  }, [clearCloseTimer, clearHoverIntent]);
 
   const hasCommonActions = commonActions.length > 0;
 
@@ -563,7 +572,10 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
           'dashboard-home-split-menu-hover-wrap' +
           (hoverPanelOpen ? ' dashboard-home-split-menu-hover-wrap-open' : '')
         }
-        onMouseEnter={clearCloseTimer}
+        onMouseEnter={() => {
+          clearHoverIntent();
+          clearCloseTimer();
+        }}
         onMouseLeave={scheduleCloseHoverPanel}
       >
         <div className="dashboard-home-split-menu-icons">
@@ -579,9 +591,10 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
                   (active ? ' dashboard-home-split-menu-icon-btn-active' : '')
                 }
                 aria-label={node.name}
-                onMouseEnter={() => openHoverPanelByIntent(node.key)}
-                onMouseMove={() => openHoverPanelByIntent(node.key, true)}
+                onMouseEnter={() => queueHoverIntent(node.key)}
+                onMouseMove={() => queueHoverIntent(node.key, true)}
                 onFocus={() => {
+                  clearHoverIntent();
                   resumeMenuHoverAutoOpen();
                   openHoverPanel(node.key);
                 }}
@@ -602,7 +615,10 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
               ? ' dashboard-home-split-menu-hover-panel-open'
               : '')
           }
-          onMouseEnter={clearCloseTimer}
+          onMouseEnter={() => {
+            clearHoverIntent();
+            clearCloseTimer();
+          }}
           onMouseLeave={scheduleCloseHoverPanel}
         >
           <Menu

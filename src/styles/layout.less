@@ -166,6 +166,7 @@ body .ant-layout-sider .ant-layout-sider-children>div {
   margin-bottom: 8px;
   position: relative;
   overflow: visible;
+  z-index: 80;
 }
 
 .dashboard-sider-common .workplace-common-card {
@@ -173,6 +174,7 @@ body .ant-layout-sider .ant-layout-sider-children>div {
   border: 1px solid #fafcff;
   position: relative;
   overflow: visible;
+  z-index: 2;
 }
 
 .dashboard-sider-common .workplace-common-card::before,
@@ -202,6 +204,7 @@ body .ant-layout-sider .ant-layout-sider-children>div {
   min-height: 0;
   position: relative;
   overflow: visible;
+  z-index: 1;
 }
 
 .dashboard-sider-menu-content {
@@ -354,7 +357,7 @@ body .ant-layout-sider .ant-layout-sider-children>div {
 }
 
 .dashboard-home-split-menu-icon-btn:hover {
-  color: #2f64f8;
+  color: rgba(0, 0, 0, 0.72);
   border-color: transparent;
   background: transparent;
 }
@@ -409,8 +412,14 @@ body .ant-layout-sider .ant-layout-sider-children>div {
   transition-delay: 0.04s;
 }
 
-.dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-icon-btn:hover,
-.dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-icon-btn-active {
+.dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-icon-btn:hover:not(.dashboard-home-split-menu-icon-btn-active) {
+  color: rgba(0, 0, 0, 0.72);
+  background: transparent;
+}
+
+.dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-icon-btn-active,
+.dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-icon-btn-active:hover {
+  color: #1f5bff;
   background: rgba(22, 119, 255, 0.08);
 }
 
@@ -700,7 +709,7 @@ body .ant-layout-sider .ant-layout-sider-children>div {
 }
 
 .other-menus-split-menu-icon-btn:hover {
-  color: #2f64f8;
+  color: rgba(0, 0, 0, 0.72);
   background: transparent;
 }
 
@@ -713,8 +722,14 @@ body .ant-layout-sider .ant-layout-sider-children>div {
   grid-template-columns: var(--other-split-menu-icon-content-width) var(--other-split-menu-label-width);
 }
 
-.other-menus-split-menu-list-open .other-menus-split-menu-icon-btn:hover,
-.other-menus-split-menu-list-open .other-menus-split-menu-icon-btn-active {
+.other-menus-split-menu-list-open .other-menus-split-menu-icon-btn:hover:not(.other-menus-split-menu-icon-btn-active) {
+  color: rgba(0, 0, 0, 0.72);
+  background: transparent;
+}
+
+.other-menus-split-menu-list-open .other-menus-split-menu-icon-btn-active,
+.other-menus-split-menu-list-open .other-menus-split-menu-icon-btn-active:hover {
+  color: #1f5bff;
   background: rgba(22, 119, 255, 0.08);
 }
 
@@ -1564,7 +1579,7 @@ body.theme-black-mode .business-switch-pill {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .pc-admin-route-tabs-bar.pc-admin-route-tabs-bar-empty {

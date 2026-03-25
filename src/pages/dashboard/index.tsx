@@ -22,6 +22,7 @@ import orderPriceActive from '@/assets/orderPrice1.png';
 import plugTop0 from '@/assets/plug-top0.png';
 import plugTop1 from '@/assets/plug-top1.png';
 import plugTop2 from '@/assets/plug-top2.png';
+import suifudaCard from '@/assets/suifuda.jpg';
 import top0 from '@/assets/top0.png';
 import top1 from '@/assets/top1.png';
 import top2 from '@/assets/top2.png';
@@ -1300,38 +1301,12 @@ const DashboardIndexPage: React.FC = () => {
 
         <aside className="dashboard-index-side">
           <div className="dashboard-org-card-stack">
-            <section className="dashboard-local-card dashboard-local-card--gradient">
-              <div className="dashboard-card-head">
-                <div className="dashboard-card-title">
-                  挚伴科技（上海）有限公司
-                </div>
-              </div>
-
-              <div className="dashboard-org-actions u-flex-between">
-                <button type="button" className="dashboard-btn-lifetime">
-                  终身
-                </button>
-                <button
-                  type="button"
-                  className="dashboard-btn-shop u-inline-flex-center"
-                >
-                  <span className="dashboard-btn-shop-icon u-inline-flex-middle">
-                    ♬
-                  </span>
-                  私域商城
-                </button>
-              </div>
-
-              <div className="dashboard-org-top u-flex-col">
-                <div className="dashboard-org-line u-flex-between">
-                  <span>到期时间</span>
-                  <span>2124-09-11</span>
-                </div>
-                <div className="dashboard-org-line u-flex-between">
-                  <span>剩余天数</span>
-                  <span>35993</span>
-                </div>
-              </div>
+            <section className="dashboard-local-card dashboard-org-image-card">
+              <img
+                className="dashboard-org-image"
+                src={suifudaCard}
+                alt="随付达服务卡片"
+              />
             </section>
 
             <section className="dashboard-local-card dashboard-org-card-bottom">
