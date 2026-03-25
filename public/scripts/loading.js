@@ -3,6 +3,16 @@
  * 解决首次加载时白屏的问题
  */
 (function () {
+  const NAV_THEME_STORAGE_KEY = 'pc_admin_nav_theme';
+  let isDarkMode = false;
+  try {
+    isDarkMode = localStorage.getItem(NAV_THEME_STORAGE_KEY) === 'realDark';
+  } catch (error) {}
+
+  if (document.body) {
+    document.body.classList.toggle('theme-black-mode', isDarkMode);
+  }
+
   const _root = document.querySelector('#root');
   if (_root && _root.innerHTML === '') {
     _root.innerHTML = `
@@ -13,6 +23,7 @@
           height: 100%;
           margin: 0;
           padding: 0;
+          ${isDarkMode ? 'background: #141414 !important;' : ''}
         }
         #root {
           background-repeat: no-repeat;
@@ -21,12 +32,13 @@
 
         .loading-title {
           font-size: 1.1rem;
+          color: ${isDarkMode ? 'rgba(255, 255, 255, 0.88)' : 'inherit'};
         }
 
         .loading-sub-title {
           margin-top: 20px;
           font-size: 1rem;
-          color: #888;
+          color: ${isDarkMode ? 'rgba(255, 255, 255, 0.45)' : '#888'};
         }
 
         .page-loading-warp {
@@ -42,8 +54,7 @@
           box-sizing: border-box;
           margin: 0;
           padding: 0;
-          color: rgba(0, 0, 0, 0.65);
-          color: #1890ff;
+          color: ${isDarkMode ? '#4da3ff' : '#1890ff'};
           font-size: 14px;
           font-variant: tabular-nums;
           line-height: 1.5;
@@ -80,7 +91,7 @@
           display: block;
           width: 9px;
           height: 9px;
-          background-color: #1890ff;
+          background-color: ${isDarkMode ? '#4da3ff' : '#1890ff'};
           border-radius: 100%;
           -webkit-transform: scale(0.75);
           -ms-transform: scale(0.75);

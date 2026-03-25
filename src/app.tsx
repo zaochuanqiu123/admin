@@ -71,10 +71,43 @@ const HEADER_USER_AVATAR_SRC =
 let logoutInFlight: Promise<void> | null = null;
 
 const apiBase = typeof __API_BASE__ !== 'undefined' ? __API_BASE__ : undefined;
+const NAV_THEME_STORAGE_KEY = 'pc_admin_nav_theme';
 
 if (isDev && typeof window !== 'undefined') {
   (window as any).__DEV_BYPASS_AUTH__ = devBypassAuth;
   (window as any).__API_BASE__ = apiBase;
+}
+
+function readPersistedNavTheme(): 'light' | 'realDark' | undefined {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    const theme = localStorage.getItem(NAV_THEME_STORAGE_KEY);
+    if (theme === 'light' || theme === 'realDark') return theme;
+  } catch (error) {
+    console.warn('read persisted navTheme failed:', error);
+  }
+  return undefined;
+}
+
+function persistNavTheme(navTheme: string | undefined) {
+  if (typeof window === 'undefined') return;
+  const normalizedTheme =
+    navTheme === 'realDark' ? 'realDark' : navTheme === 'light' ? 'light' : '';
+  if (!normalizedTheme) return;
+  try {
+    localStorage.setItem(NAV_THEME_STORAGE_KEY, normalizedTheme);
+  } catch (error) {
+    console.warn('persist navTheme failed:', error);
+  }
+}
+
+function getResolvedLayoutSettings(): Partial<LayoutSettings> {
+  const navTheme = readPersistedNavTheme();
+  if (!navTheme) return defaultSettings as Partial<LayoutSettings>;
+  return {
+    ...(defaultSettings as Partial<LayoutSettings>),
+    navTheme,
+  };
 }
 
 function getDevUser(): API.CurrentUser {
@@ -204,6 +237,7 @@ export async function getInitialState(): Promise<{
       return undefined;
     }
   };
+  const resolvedSettings = getResolvedLayoutSettings();
 
   if (devBypassAuth) {
     const currentUser = getDevUser();
@@ -212,7 +246,7 @@ export async function getInitialState(): Promise<{
       fetchUserInfo: async () => currentUser,
       currentUser,
       permContextMenu,
-      settings: defaultSettings as Partial<LayoutSettings>,
+      settings: resolvedSettings,
     };
   }
 
@@ -234,7 +268,7 @@ export async function getInitialState(): Promise<{
     if (!hasToken) {
       return {
         fetchUserInfo,
-        settings: defaultSettings as Partial<LayoutSettings>,
+        settings: resolvedSettings,
       };
     }
     const selectedOrgCode = getSelectedOrgCode() || undefined;
@@ -251,7 +285,7 @@ export async function getInitialState(): Promise<{
       }
       return {
         fetchUserInfo,
-        settings: defaultSettings as Partial<LayoutSettings>,
+        settings: resolvedSettings,
       };
     }
 
@@ -282,12 +316,12 @@ export async function getInitialState(): Promise<{
       businessList,
       currentBusinessCode,
       permContextMenu,
-      settings: defaultSettings as Partial<LayoutSettings>,
+      settings: resolvedSettings,
     };
   }
   return {
     fetchUserInfo,
-    settings: defaultSettings as Partial<LayoutSettings>,
+    settings: resolvedSettings,
   };
 }
 
@@ -584,6 +618,7 @@ export const layout: RunTimeLayoutConfig = ({
             onClick={() => {
               const nextNavTheme = checked ? 'light' : 'realDark';
               markThemeSwitching();
+              persistNavTheme(nextNavTheme);
               setInitialState((preInitialState) => ({
                 ...preInitialState,
                 settings: {
@@ -840,6 +875,7 @@ export const layout: RunTimeLayoutConfig = ({
               settings={initialState?.settings}
               onSettingChange={(settings) => {
                 markThemeSwitching();
+                persistNavTheme((settings as any)?.navTheme);
                 setInitialState((preInitialState) => ({
                   ...preInitialState,
                   settings,

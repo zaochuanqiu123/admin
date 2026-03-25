@@ -198,6 +198,27 @@ ol {
   }
 }
 
+.route-loading-dark {
+  background: #141414 !important;
+}
+
+.route-loading-dark .ant-skeleton .ant-skeleton-title,
+.route-loading-dark .ant-skeleton .ant-skeleton-paragraph > li {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.route-loading-dark.ant-skeleton-active .ant-skeleton-title,
+.route-loading-dark.ant-skeleton-active .ant-skeleton-paragraph > li,
+.route-loading-dark .ant-skeleton.ant-skeleton-active .ant-skeleton-title,
+.route-loading-dark .ant-skeleton.ant-skeleton-active .ant-skeleton-paragraph > li {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.08) 25%,
+    rgba(255, 255, 255, 0.14) 37%,
+    rgba(255, 255, 255, 0.08) 63%
+  ) !important;
+}
+
 @import './styles/utilities.less';
 @import './styles/layout.less';
 @import './styles/overrides.less';

@@ -85,15 +85,77 @@
 
 .dashboard-card-tools {
   .mixin-flex-center();
-  gap: 8px;
+  gap: 16px;
+  flex-wrap: wrap;
+  color: rgba(0, 0, 0, 0.72);
 }
 
 .dashboard-card-tools .ant-select {
-  width: 156px;
+  width: auto;
 }
 
 .dashboard-card-tools .ant-picker-range {
-  width: 300px;
+  width: auto;
+}
+
+.dashboard-card-tools .ant-select .ant-select-selector {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  height: auto !important;
+}
+
+.dashboard-card-tools .ant-select .ant-select-selection-wrap {
+  align-items: center;
+}
+
+.dashboard-card-tools .ant-select .ant-select-selection-item {
+  padding-inline-end: 18px !important;
+  color: rgba(0, 0, 0, 0.72);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.dashboard-card-tools .ant-select .ant-select-arrow {
+  color: rgba(0, 0, 0, 0.35);
+  inset-inline-end: 0;
+}
+
+.dashboard-card-tools .ant-picker {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  color: rgba(0, 0, 0, 0.72);
+}
+
+.dashboard-card-tools .ant-picker-input > input {
+  color: rgba(0, 0, 0, 0.72);
+  font-size: 14px;
+}
+
+.dashboard-card-tools .ant-picker-input > input::placeholder {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.dashboard-card-tools .ant-picker-range-separator {
+  padding-inline: 6px;
+  color: rgba(0, 0, 0, 0.35);
+}
+
+.dashboard-card-tools .ant-picker-suffix,
+.dashboard-card-tools .ant-picker-clear {
+  color: rgba(0, 0, 0, 0.35);
+}
+
+.dashboard-card-tools .ant-select-focused .ant-select-selector,
+.dashboard-card-tools .ant-picker-focused,
+.dashboard-card-tools .ant-picker:hover,
+.dashboard-card-tools .ant-select:hover .ant-select-selector {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
 }
 
 .dashboard-stat-grid {

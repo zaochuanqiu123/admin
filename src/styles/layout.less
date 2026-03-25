@@ -31,6 +31,7 @@ body:not(.theme-black-mode) .dashboard-index-page {
   // padding: 0;
   margin: 0 !important;
 }
+
 /* 3.父级菜单选中时，强制保持“深灰色” (不让它变蓝) */
 .pc-admin-sider-real-menu .ant-layout-sider.ant-layout-sider-collapsed .ant-menu-sub .ant-menu-item {
   float: none !important;
@@ -69,8 +70,8 @@ body .ant-layout-sider .ant-layout-sider-children {
 }
 
 /* Ant Pro 会在 sider-children 内再包一层带 inline overflow:hidden auto 的匿名容器；这里强制放开 x 轴避免分栏展开被裁剪 */
-body .ant-pro-sider .ant-layout-sider-children > div,
-body .ant-layout-sider .ant-layout-sider-children > div {
+body .ant-pro-sider .ant-layout-sider-children>div,
+body .ant-layout-sider .ant-layout-sider-children>div {
   overflow: visible !important;
 }
 
@@ -136,15 +137,11 @@ body .ant-layout-sider .ant-layout-sider-children > div {
   background: transparent !important;
 }
 
-.pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline
-  .ant-menu-item:not(.ant-menu-item-disabled):hover
-  .ant-menu-title-content {
+.pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline .ant-menu-item:not(.ant-menu-item-disabled):hover .ant-menu-title-content {
   color: var(--ant-color-primary) !important;
 }
 
-.pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline
-  .ant-menu-item:not(.ant-menu-item-disabled).ant-menu-item-selected
-  .ant-menu-title-content {
+.pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline .ant-menu-item:not(.ant-menu-item-disabled).ant-menu-item-selected .ant-menu-title-content {
   color: var(--ant-color-primary) !important;
 }
 
@@ -162,7 +159,7 @@ body .ant-layout-sider .ant-layout-sider-children > div {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .dashboard-sider-common {
@@ -220,10 +217,13 @@ body .ant-layout-sider .ant-layout-sider-children > div {
 .dashboard-sider-menu-content.dashboard-sider-menu-content-split {
   padding: 0 !important;
   background: transparent !important;
+  overflow: visible !important;
+  position: relative;
+  z-index: 60;
   // border-radius: 0 !important;
 }
 
-.dashboard-sider-menu > .ant-menu,
+.dashboard-sider-menu>.ant-menu,
 .dashboard-sider-menu .ant-menu {
   height: auto;
   overflow: visible !important;
@@ -233,35 +233,38 @@ body .ant-layout-sider .ant-layout-sider-children > div {
   overflow: visible !important;
 }
 
-.dashboard-sider-menu-content .ant-menu-submenu-selected > .ant-menu-submenu-title,
-.dashboard-sider-menu-content .ant-menu-submenu-active > .ant-menu-submenu-title {
+.dashboard-sider-menu-content .ant-menu-submenu-selected>.ant-menu-submenu-title,
+.dashboard-sider-menu-content .ant-menu-submenu-active>.ant-menu-submenu-title {
   color: rgba(0, 0, 0, 0.88) !important;
 }
 
-.dashboard-sider-menu-content
-  .ant-menu-submenu-selected
-  > .ant-menu-submenu-title
-  .ant-menu-title-content {
+.dashboard-sider-menu-content .ant-menu-submenu-selected>.ant-menu-submenu-title .ant-menu-title-content {
   color: rgba(0, 0, 0, 0.88) !important;
 }
 
 .dashboard-home-split-menu {
-  --dashboard-home-split-icon-width: 56px;
-  --dashboard-home-split-open-width: 126px;
-  --dashboard-home-split-icon-content-width: 42px;
-  --dashboard-home-split-label-width: 62px;
-  --dashboard-home-split-icon-text-gap: 2px;
-  --dashboard-home-split-gap: 8px;
+  --dashboard-home-split-icon-width: 52px;
+  --dashboard-home-split-label-width: 58px;
+  --dashboard-home-split-list-padding-left: 8px;
+  --dashboard-home-split-list-padding-right: 8px;
+  --dashboard-home-split-icon-content-width: calc(var(--dashboard-home-split-icon-width) - var(--dashboard-home-split-list-padding-left) - var(--dashboard-home-split-list-padding-right));
+  --dashboard-home-split-submenu-width: 200px;
+  --dashboard-home-split-open-width: calc(var(--dashboard-home-split-icon-content-width) + var(--dashboard-home-split-label-width) + var(--dashboard-home-split-icon-text-gap) + var(--dashboard-home-split-list-padding-left) + var(--dashboard-home-split-list-padding-right));
+  --dashboard-home-split-shell-open-width: calc(var(--dashboard-home-split-open-width) + var(--dashboard-home-split-submenu-width));
+  --dashboard-home-split-item-height: 44px;
+  --dashboard-home-split-panel-top-padding: 10px;
+  --dashboard-home-split-icon-text-gap: -2px;
   position: relative;
   height: 100%;
+  min-height: 0;
   display: flex;
   align-items: stretch;
-  gap: var(--dashboard-home-split-gap);
+  gap: 0;
   overflow: visible;
 }
 
 .dashboard-sider-menu-content.dashboard-sider-menu-content-split .dashboard-home-split-menu {
-  --dashboard-home-split-gap: 2px;
+  gap: 2px;
 }
 
 .dashboard-home-split-menu-empty {
@@ -270,53 +273,56 @@ body .ant-layout-sider .ant-layout-sider-children > div {
 
 .dashboard-home-split-menu-hover-wrap {
   position: relative;
-  z-index: 3;
+  z-index: 30;
   flex: 0 0 var(--dashboard-home-split-icon-width);
   width: var(--dashboard-home-split-icon-width);
   height: 100%;
-  align-self: stretch;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
   overflow: visible;
+  border-radius: 16px 0 0 16px;
+  background: var(--ant-color-bg-container);
+  transition: width 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: width;
 }
 
 .dashboard-home-split-menu-hover-wrap-open {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  width: auto;
-  flex-basis: auto;
-  background: var(--ant-color-bg-container);
+  flex-basis: var(--dashboard-home-split-shell-open-width);
+  width: var(--dashboard-home-split-shell-open-width);
   border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.03);
-  z-index: 6;
 }
 
 .dashboard-home-split-menu-icons {
+  position: relative;
+  flex: 0 0 var(--dashboard-home-split-icon-width);
   width: var(--dashboard-home-split-icon-width);
-  flex: none;
   height: 100%;
-  padding: 0 6px;
-  border-radius: 10px;
-  background: var(--ant-color-bg-container);
+  min-height: 0;
+  box-sizing: border-box;
+  padding: var(--dashboard-home-split-panel-top-padding) var(--dashboard-home-split-list-padding-right) 0 var(--dashboard-home-split-list-padding-left);
+  border-radius: 16px 0 0 16px;
+  background: transparent;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 0;
-  margin-top: 10px;
+  margin-top: 0;
   overflow-y: auto;
-  overflow-x: visible;
+  overflow-x: hidden;
   transition: width 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: width;
 }
 
 .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-icons {
+  flex-basis: var(--dashboard-home-split-open-width);
   width: var(--dashboard-home-split-open-width);
+  overflow-x: visible;
 }
 
 .dashboard-sider-menu-content.dashboard-sider-menu-content-split .dashboard-home-split-menu-icons {
   .mixin-white-card();
-  padding: 15px 4px 10px 8px;
+  padding: var(--dashboard-home-split-panel-top-padding) var(--dashboard-home-split-list-padding-right) 0 var(--dashboard-home-split-list-padding-left);
   margin-top: 0;
   background: var(--ant-color-bg-container);
   border-radius: 16px 0 0 16px;
@@ -324,12 +330,12 @@ body .ant-layout-sider .ant-layout-sider-children > div {
 
 .dashboard-home-split-menu-icon-btn {
   width: 100%;
-  height: 45px;
-  min-height: 45px;
+  height: var(--dashboard-home-split-item-height);
+  min-height: var(--dashboard-home-split-item-height);
   border: 0;
-  border-radius: 10px;
+  border-radius: 12px;
   background: transparent;
-  color: #6f7690;
+  color: rgba(0, 0, 0, 0.72);
   cursor: pointer;
   display: grid;
   grid-template-columns: var(--dashboard-home-split-icon-content-width) 0;
@@ -343,7 +349,7 @@ body .ant-layout-sider .ant-layout-sider-children > div {
     background-color 0.2s ease;
 }
 
-.dashboard-home-split-menu-icons > .dashboard-home-split-menu-icon-btn:first-of-type {
+.dashboard-home-split-menu-icons>.dashboard-home-split-menu-icon-btn:first-of-type {
   margin-top: 0 !important;
 }
 
@@ -369,32 +375,38 @@ body .ant-layout-sider .ant-layout-sider-children > div {
 }
 
 .dashboard-home-split-menu-icon-label {
-  display: block;
+  flex: 1 1 0;
   width: 0;
   min-width: 0;
+  margin-left: 0;
+  padding-right: 0;
   opacity: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: left;
-  transform: translateX(-2px);
+  font-size: 14px;
+  line-height: var(--dashboard-home-split-item-height);
+  transform: translateX(-4px);
   pointer-events: none;
   transition:
-    width 0.2s ease,
-    opacity 0.16s ease,
-    transform 0.2s ease;
+    opacity 0.14s ease-out,
+    transform 0.18s ease-out;
 }
 
 .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-icon-btn {
-  grid-template-columns: var(--dashboard-home-split-icon-content-width)
-    var(--dashboard-home-split-label-width);
+  grid-template-columns: var(--dashboard-home-split-icon-content-width) var(--dashboard-home-split-label-width);
 }
 
 .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-icon-label {
+  flex: 0 0 var(--dashboard-home-split-label-width);
   width: var(--dashboard-home-split-label-width);
+  max-width: var(--dashboard-home-split-label-width);
+  margin-left: var(--dashboard-home-split-icon-text-gap);
   opacity: 1;
   transform: translateX(0);
   pointer-events: auto;
+  transition-delay: 0.04s;
 }
 
 .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-icon-btn:hover,
@@ -403,27 +415,41 @@ body .ant-layout-sider .ant-layout-sider-children > div {
 }
 
 .dashboard-home-split-menu-hover-panel {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(100% - 2px);
-  width: 168px;
-  padding: 0;
+  position: relative;
+  z-index: 44;
+  flex: 0 0 0;
+  width: 0;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  padding: var(--dashboard-home-split-panel-top-padding) 0 0;
   border-radius: 0 16px 16px 0;
-  background: var(--ant-color-bg-container);
+  background: #fafafa;
+  border-left: 1px solid rgba(0, 0, 0, 0.04);
   box-shadow: none;
+  overflow-y: auto;
+  overflow-x: hidden;
   opacity: 0;
   pointer-events: none;
   transform: translateX(-8px);
   transition:
+    width 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    flex-basis 0.22s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 0.18s ease,
     transform 0.18s ease;
 }
 
 .dashboard-home-split-menu-hover-panel-open {
+  flex-basis: var(--dashboard-home-split-submenu-width);
+  width: var(--dashboard-home-split-submenu-width);
   opacity: 1;
   pointer-events: auto;
   transform: translateX(0);
+}
+
+.dashboard-home-split-menu-hover-panel .dashboard-home-split-menu-hover-panel-ant.ant-menu,
+.dashboard-home-split-menu-hover-panel .dashboard-home-split-menu-hover-panel-ant .ant-menu-sub.ant-menu-inline {
+  background: #fafafa !important;
 }
 
 .dashboard-home-split-menu-hover-panel-list {
@@ -434,8 +460,7 @@ body .ant-layout-sider .ant-layout-sider-children > div {
   padding: 10px 10px 0;
 }
 
-.dashboard-home-split-menu-hover-panel-list
-  > .dashboard-home-split-menu-hover-panel-item:first-child {
+.dashboard-home-split-menu-hover-panel-list>.dashboard-home-split-menu-hover-panel-item:first-child {
   margin-top: 0;
 }
 
@@ -468,27 +493,35 @@ body .ant-layout-sider .ant-layout-sider-children > div {
   flex: 1;
   min-width: 0;
   min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
   border-radius: 10px;
   background: var(--ant-color-bg-container);
-  overflow: auto;
+  overflow: hidden;
   padding: 16px 0;
 }
 
 .dashboard-sider-menu-content.dashboard-sider-menu-content-split .dashboard-home-split-menu-tree {
   .mixin-white-card();
   padding: 15px 0;
-  border-radius:0 16px 16px 0;
+  border-radius: 0 16px 16px 0;
 }
 
 .dashboard-home-split-menu-ant.ant-menu {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   border-inline-end: 0 !important;
   background: transparent !important;
   padding: 0 !important;
 }
 
 .dashboard-home-split-menu-ant .ant-menu-item-icon,
-.dashboard-home-split-menu-ant .ant-menu-title-content > .anticon,
-.dashboard-home-split-menu-ant .ant-menu-item > .anticon {
+.dashboard-home-split-menu-ant .ant-menu-title-content>.anticon,
+.dashboard-home-split-menu-ant .ant-menu-item>.anticon {
   display: none !important;
 }
 
@@ -519,7 +552,7 @@ body .ant-layout-sider .ant-layout-sider-children > div {
   font-size: 15px !important;
 }
 
-.dashboard-home-split-menu-ant > .ant-menu-submenu-inline > .ant-menu-submenu-title {
+.dashboard-home-split-menu-ant>.ant-menu-submenu-inline>.ant-menu-submenu-title {
   font-size: 15px !important;
   font-weight: 500;
 }
@@ -554,12 +587,9 @@ body .ant-layout-sider .ant-layout-sider-children > div {
 }
 
 /* 仅取消二级菜单（右侧树直接子级）的 hover 高亮，三级保持不变 */
-.dashboard-home-split-menu-ant > .ant-menu-item:hover .ant-menu-title-content,
-.dashboard-home-split-menu-ant > .ant-menu-item-active .ant-menu-title-content,
-.dashboard-home-split-menu-ant
-  > .ant-menu-submenu-inline
-  > .ant-menu-submenu-title:hover
-  .ant-menu-title-content {
+.dashboard-home-split-menu-ant>.ant-menu-item:hover .ant-menu-title-content,
+.dashboard-home-split-menu-ant>.ant-menu-item-active .ant-menu-title-content,
+.dashboard-home-split-menu-ant>.ant-menu-submenu-inline>.ant-menu-submenu-title:hover .ant-menu-title-content {
   color: inherit !important;
 }
 
@@ -573,21 +603,10 @@ body .ant-layout-sider .ant-layout-sider-children > div {
   --other-split-menu-label-width: 58px;
   --other-split-menu-list-padding-left: 8px;
   --other-split-menu-list-padding-right: 8px;
-  --other-split-menu-icon-content-width: calc(
-    var(--other-split-menu-icon-width) - var(--other-split-menu-list-padding-left) -
-      var(--other-split-menu-list-padding-right)
-  );
+  --other-split-menu-icon-content-width: calc(var(--other-split-menu-icon-width) - var(--other-split-menu-list-padding-left) - var(--other-split-menu-list-padding-right));
   --other-split-menu-submenu-width: 200px;
-  --other-split-menu-open-width: calc(
-    var(--other-split-menu-icon-content-width) +
-      var(--other-split-menu-label-width) +
-      var(--other-split-menu-icon-text-gap) +
-      var(--other-split-menu-list-padding-left) +
-      var(--other-split-menu-list-padding-right)
-  );
-  --other-split-menu-shell-open-width: calc(
-    var(--other-split-menu-open-width) + var(--other-split-menu-submenu-width)
-  );
+  --other-split-menu-open-width: calc(var(--other-split-menu-icon-content-width) + var(--other-split-menu-label-width) + var(--other-split-menu-icon-text-gap) + var(--other-split-menu-list-padding-left) + var(--other-split-menu-list-padding-right));
+  --other-split-menu-shell-open-width: calc(var(--other-split-menu-open-width) + var(--other-split-menu-submenu-width));
   --other-split-menu-item-height: 44px;
   --other-split-menu-panel-top-padding: 10px;
   --other-split-menu-icon-text-gap: -2px;
@@ -639,10 +658,7 @@ body .ant-layout-sider .ant-layout-sider-children > div {
   height: 100%;
   min-height: 0;
   box-sizing: border-box;
-  padding: var(--other-split-menu-panel-top-padding)
-    var(--other-split-menu-list-padding-right)
-    0
-    var(--other-split-menu-list-padding-left);
+  padding: var(--other-split-menu-panel-top-padding) var(--other-split-menu-list-padding-right) 0 var(--other-split-menu-list-padding-left);
   border-radius: 16px 0 0 16px;
   background: transparent;
   display: flex;
@@ -694,8 +710,7 @@ body .ant-layout-sider .ant-layout-sider-children > div {
 }
 
 .other-menus-split-menu-list-open .other-menus-split-menu-icon-btn {
-  grid-template-columns: var(--other-split-menu-icon-content-width)
-    var(--other-split-menu-label-width);
+  grid-template-columns: var(--other-split-menu-icon-content-width) var(--other-split-menu-label-width);
 }
 
 .other-menus-split-menu-list-open .other-menus-split-menu-icon-btn:hover,
@@ -755,7 +770,7 @@ body .ant-layout-sider .ant-layout-sider-children > div {
   min-height: 0;
   padding: var(--other-split-menu-panel-top-padding) 0 0;
   border-radius: 0 16px 16px 0;
-  background: #fff;
+  background: #fafafa;
   border-left: 1px solid rgba(0, 0, 0, 0.04);
   box-shadow: none;
   overflow-y: auto;
@@ -769,12 +784,9 @@ body .ant-layout-sider .ant-layout-sider-children > div {
   will-change: width, opacity;
 }
 
-.other-menus-split-menu-submenu-panel
-  .other-menus-split-menu-submenu-ant.ant-menu,
-.other-menus-split-menu-submenu-panel
-  .other-menus-split-menu-submenu-ant
-  .ant-menu-sub.ant-menu-inline {
-  background: #fff !important;
+.other-menus-split-menu-submenu-panel .other-menus-split-menu-submenu-ant.ant-menu,
+.other-menus-split-menu-submenu-panel .other-menus-split-menu-submenu-ant .ant-menu-sub.ant-menu-inline {
+  background: #fafafa !important;
 }
 
 .other-menus-split-menu-submenu-panel-open {
@@ -802,8 +814,8 @@ body .ant-layout-sider .ant-layout-sider-children > div {
 }
 
 .other-menus-split-menu-ant .ant-menu-item-icon,
-.other-menus-split-menu-ant .ant-menu-title-content > .anticon,
-.other-menus-split-menu-ant .ant-menu-item > .anticon {
+.other-menus-split-menu-ant .ant-menu-title-content>.anticon,
+.other-menus-split-menu-ant .ant-menu-item>.anticon {
   display: none !important;
 }
 
@@ -834,7 +846,7 @@ body .ant-layout-sider .ant-layout-sider-children > div {
   font-size: 15px !important;
 }
 
-.other-menus-split-menu-ant > .ant-menu-submenu-inline > .ant-menu-submenu-title {
+.other-menus-split-menu-ant>.ant-menu-submenu-inline>.ant-menu-submenu-title {
   font-size: 15px !important;
   font-weight: 500;
 }
@@ -870,12 +882,9 @@ body .ant-layout-sider .ant-layout-sider-children > div {
 }
 
 /* 仅取消二级菜单（右侧树直接子级）的 hover 高亮，三级保持不变 */
-.other-menus-split-menu-ant > .ant-menu-item:hover .ant-menu-title-content,
-.other-menus-split-menu-ant > .ant-menu-item-active .ant-menu-title-content,
-.other-menus-split-menu-ant
-  > .ant-menu-submenu-inline
-  > .ant-menu-submenu-title:hover
-  .ant-menu-title-content {
+.other-menus-split-menu-ant>.ant-menu-item:hover .ant-menu-title-content,
+.other-menus-split-menu-ant>.ant-menu-item-active .ant-menu-title-content,
+.other-menus-split-menu-ant>.ant-menu-submenu-inline>.ant-menu-submenu-title:hover .ant-menu-title-content {
   color: inherit !important;
 }
 
@@ -949,7 +958,8 @@ body .ant-layout-sider .ant-layout-sider-children > div {
 }
 
 .plain-sider-split-content .other-menus-split-menu-submenu-panel {
-  background: var(--ant-color-bg-container);
+  // background: var(--ant-color-bg-container);
+  background: #fafafa;
   border-radius: 0 16px 16px 0;
   box-sizing: border-box;
   overflow-y: auto;
@@ -975,7 +985,7 @@ body .ant-layout-sider .ant-layout-sider-children > div {
   .mixin-hide-scrollbar();
 }
 
-.plain-sider-menu > .ant-menu,
+.plain-sider-menu>.ant-menu,
 .plain-sider-menu .ant-menu,
 .plain-sider-menu .ant-pro-base-menu {
   height: auto;
@@ -1029,25 +1039,16 @@ body .ant-layout-sider .ant-layout-sider-children > div {
 }
 
 /* 非工作台：父级菜单保持常规态（不加粗、不变强调色） */
-.plain-sider-menu-content .ant-menu-submenu-selected > .ant-menu-submenu-title,
-.plain-sider-menu-content .ant-menu-submenu-open > .ant-menu-submenu-title,
-.plain-sider-menu-content .ant-menu-submenu-active > .ant-menu-submenu-title {
+.plain-sider-menu-content .ant-menu-submenu-selected>.ant-menu-submenu-title,
+.plain-sider-menu-content .ant-menu-submenu-open>.ant-menu-submenu-title,
+.plain-sider-menu-content .ant-menu-submenu-active>.ant-menu-submenu-title {
   color: rgba(0, 0, 0, 0.88) !important;
   font-weight: 400 !important;
 }
 
-.plain-sider-menu-content
-  .ant-menu-submenu-selected
-  > .ant-menu-submenu-title
-  *,
-.plain-sider-menu-content
-  .ant-menu-submenu-open
-  > .ant-menu-submenu-title
-  *,
-.plain-sider-menu-content
-  .ant-menu-submenu-active
-  > .ant-menu-submenu-title
-  * {
+.plain-sider-menu-content .ant-menu-submenu-selected>.ant-menu-submenu-title *,
+.plain-sider-menu-content .ant-menu-submenu-open>.ant-menu-submenu-title *,
+.plain-sider-menu-content .ant-menu-submenu-active>.ant-menu-submenu-title * {
   color: rgba(0, 0, 0, 0.88) !important;
   font-weight: 400 !important;
 }
@@ -1112,22 +1113,22 @@ body .ant-layout-sider .ant-layout-sider-children > div {
 }
 
 /* 顶部横向菜单：菜单项高度/行高改为 60 */
-.ant-pro-top-nav-header-menu.ant-menu-horizontal > .ant-menu-item,
-.ant-pro-top-nav-header-menu.ant-menu-horizontal > .ant-menu-submenu {
+.ant-pro-top-nav-header-menu.ant-menu-horizontal>.ant-menu-item,
+.ant-pro-top-nav-header-menu.ant-menu-horizontal>.ant-menu-submenu {
   height: 60px !important;
   line-height: 60px !important;
 }
 
 /* 顶部横向菜单：子菜单标题也跟随 60（防止 submenu 仍是 48） */
-.ant-pro-top-nav-header-menu.ant-menu-horizontal > .ant-menu-submenu > .ant-menu-submenu-title {
+.ant-pro-top-nav-header-menu.ant-menu-horizontal>.ant-menu-submenu>.ant-menu-submenu-title {
   height: 60px !important;
   line-height: 60px !important;
 }
 
 /* 有些版本顶部菜单不是直接挂在 .ant-pro-top-nav-header-menu 上，而是其内部的 .ant-menu */
-.ant-pro-top-nav-header-menu .ant-menu-horizontal > .ant-menu-item,
-.ant-pro-top-nav-header-menu .ant-menu-horizontal > .ant-menu-submenu,
-.ant-pro-top-nav-header-menu .ant-menu-horizontal > .ant-menu-submenu > .ant-menu-submenu-title {
+.ant-pro-top-nav-header-menu .ant-menu-horizontal>.ant-menu-item,
+.ant-pro-top-nav-header-menu .ant-menu-horizontal>.ant-menu-submenu,
+.ant-pro-top-nav-header-menu .ant-menu-horizontal>.ant-menu-submenu>.ant-menu-submenu-title {
   height: 60px !important;
   line-height: 60px !important;
 }
@@ -1232,9 +1233,9 @@ body.theme-black-mode .business-switch-pill {
   box-shadow: 0 4px 12px rgba(4, 10, 22, 0.38);
 }
 
-.ant-layout-sider .ant-menu-submenu-selected > .ant-menu-submenu-title,
-.ant-layout-sider .ant-menu-submenu-active > .ant-menu-submenu-title,
-.ant-layout-sider .ant-menu-submenu-selected > .ant-menu-submenu-title::after {
+.ant-layout-sider .ant-menu-submenu-selected>.ant-menu-submenu-title,
+.ant-layout-sider .ant-menu-submenu-active>.ant-menu-submenu-title,
+.ant-layout-sider .ant-menu-submenu-selected>.ant-menu-submenu-title::after {
   background: transparent !important;
   background-color: transparent !important;
 }
@@ -1260,7 +1261,7 @@ body.theme-black-mode .business-switch-pill {
   background: transparent !important;
 }
 
-.ant-pro-top-nav-header-menu .ant-menu-submenu-selected > .ant-menu-submenu-title {
+.ant-pro-top-nav-header-menu .ant-menu-submenu-selected>.ant-menu-submenu-title {
   background: transparent !important;
 }
 
@@ -1345,35 +1346,58 @@ body.theme-black-mode .business-switch-pill {
 }
 
 .dashboard-common-actions-title {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.dashboard-common-actions-name {
+  color: rgba(0, 0, 0, 0.88);
+  font-weight: 500;
 }
 
 .dashboard-common-actions-drawer-trigger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 0;
-  padding: 0;
-  background: transparent;
+  gap: 4px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid #e4e9f5;
+  border-radius: 999px;
+  background: #fff;
   appearance: none;
-  font: inherit;
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  color: rgba(0, 0, 0, 0.72);
+  color: rgba(0, 0, 0, 0.88);
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
+.dashboard-common-actions-drawer-trigger .anticon {
+  font-size: 11px;
+}
+
 .dashboard-common-actions-drawer-trigger:hover {
-  color: #1d4ed8;
-  background: rgba(29, 78, 216, 0.1);
+  color: var(--ant-color-primary) !important;
+  border-color: var(--ant-color-primary) !important;
+}
+
+.dashboard-common-actions-footer {
+  flex: 0 0 auto;
+  padding: 10px 16px 0;
+}
+
+.dashboard-common-actions-footer .dashboard-common-actions-drawer-trigger {
+  width: 100%;
+  justify-content: center;
 }
 
 /* 我的常用数据折叠组样式 */
-.dashboard-home-split-menu-ant .ant-menu-submenu[data-menu-id*="common-actions"] > .ant-menu-submenu-title {
+.dashboard-home-split-menu-ant .ant-menu-submenu[data-menu-id*="common-actions"]>.ant-menu-submenu-title {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
@@ -1384,9 +1408,13 @@ body.theme-black-mode .business-switch-pill {
   color: #faad14;
 }
 
-.dashboard-home-split-menu-ant .ant-menu-submenu[data-menu-id*="common-actions"] > .ant-menu-submenu-title .ant-menu-title-content {
-  color: rgba(0, 0, 0, 0.88);
-  font-weight: 500;
+.dashboard-home-split-menu-ant .ant-menu-submenu[data-menu-id*="common-actions"]>.ant-menu-submenu-title .ant-menu-title-content {
+  max-width: none !important;
+}
+
+.dashboard-home-split-menu-ant .dashboard-home-workplace-font.ant-menu-submenu>.ant-menu-submenu-title .ant-menu-title-content,
+.dashboard-home-split-menu-ant .dashboard-home-workplace-font.ant-menu-item>.ant-menu-title-content {
+  font-size: 16px !important;
 }
 
 /* 子菜单 hover/选中：不要有任何背景块，只改文字颜色 */
@@ -1685,7 +1713,7 @@ body .ant-pro-layout .ant-pro-layout-content {
   box-sizing: border-box;
 }
 
-.pc-admin-subpage-wrap > * {
+.pc-admin-subpage-wrap>* {
   display: block;
   min-height: calc(100vh - 64px - 32px);
   padding: 24px;

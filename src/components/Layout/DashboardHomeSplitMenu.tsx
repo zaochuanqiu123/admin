@@ -5,7 +5,7 @@ import {
   DatabaseOutlined,
   FileTextOutlined,
   HomeOutlined,
-  MenuOutlined,
+  PlusOutlined,
   SettingOutlined,
   ShopOutlined,
   TagsOutlined,
@@ -37,6 +37,15 @@ type MenuNode = {
   targetId?: string;
   sourceSystem?: number;
   children?: MenuNode[];
+};
+
+type MenuMeta = {
+  items: MenuProps['items'];
+  pathByKey: Map<string, string>;
+  targetIdByKey: Map<string, string | undefined>;
+  sourceSystemByKey: Map<string, number | undefined>;
+  parentByKey: Map<string, string | undefined>;
+  submenuKeys: string[];
 };
 
 const OPEN_COMMON_ACTIONS_DRAWER_EVENT = 'pc-admin-open-common-actions-drawer';
@@ -101,7 +110,6 @@ function buildNodes(
       depth + 1,
     );
 
-    // 跳过重定向/占位类节点：无标题且无可展示子节点
     if (!rawName && children.length === 0) return;
 
     const targetId = (item as any)?.targetId;
@@ -119,23 +127,6 @@ function buildNodes(
     });
   });
   return result;
-}
-
-function hasPathInTree(node: MenuNode, pathname: string): boolean {
-  const stack: MenuNode[] = [node];
-  const visited = new Set<string>();
-  while (stack.length > 0) {
-    const current = stack.pop() as MenuNode;
-    if (visited.has(current.key)) continue;
-    visited.add(current.key);
-    if (current.path && isPathMatch(current.path, pathname)) return true;
-    if (current.children && current.children.length > 0) {
-      for (const child of current.children) {
-        stack.push(child);
-      }
-    }
-  }
-  return false;
 }
 
 function hasTargetIdInTree(node: MenuNode, targetId: string): boolean {
@@ -179,40 +170,6 @@ function getBestPathMatchScoreInTree(node: MenuNode, pathname: string): number {
   return bestScore;
 }
 
-function findFirstLeafNavigableNode(
-  node: MenuNode | undefined,
-  inheritedPath?: string,
-  inheritedTargetId?: string,
-  inheritedSourceSystem?: number,
-): { path?: string; targetId?: string; sourceSystem?: number } | undefined {
-  if (!node) return undefined;
-  const currentPath = node.path || inheritedPath;
-  const currentTargetId = node.targetId || inheritedTargetId;
-  const currentSourceSystem = node.sourceSystem ?? inheritedSourceSystem;
-
-  const children = node.children || [];
-  if (children.length === 0) {
-    if (!currentPath) return undefined;
-    return {
-      path: currentPath,
-      targetId: currentTargetId,
-      sourceSystem: currentSourceSystem,
-    };
-  }
-
-  for (const child of children) {
-    const leafTarget = findFirstLeafNavigableNode(
-      child,
-      currentPath,
-      currentTargetId,
-      currentSourceSystem,
-    );
-    if (leafTarget?.path) return leafTarget;
-  }
-
-  return undefined;
-}
-
 function collectParentKeys(
   currentKey: string,
   parentByKey: Map<string, string | undefined>,
@@ -253,6 +210,49 @@ function getMenuSourceNodes(node: MenuNode | undefined): MenuNode[] {
   return [node];
 }
 
+function getSelectedKeysFromMeta(
+  pathname: string,
+  currentTargetId: string | undefined,
+  menuMeta: MenuMeta,
+): string[] {
+  if (currentTargetId) {
+    let matchedByTargetKey = '';
+    let matchedByTargetDepth = -1;
+    menuMeta.targetIdByKey.forEach((nodeTargetId, key) => {
+      if (!nodeTargetId || nodeTargetId !== currentTargetId) return;
+      const depth = getMenuKeyDepth(key, menuMeta.parentByKey);
+      if (
+        depth > matchedByTargetDepth ||
+        (depth === matchedByTargetDepth &&
+          key.length > matchedByTargetKey.length)
+      ) {
+        matchedByTargetKey = key;
+        matchedByTargetDepth = depth;
+      }
+    });
+    if (matchedByTargetKey) return [matchedByTargetKey];
+  }
+
+  let matchedKey = '';
+  let matchedLength = -1;
+  let matchedDepth = -1;
+  menuMeta.pathByKey.forEach((itemPath, key) => {
+    if (!isPathMatch(itemPath, pathname)) return;
+    const score = normalizePath(itemPath).length;
+    const depth = getMenuKeyDepth(key, menuMeta.parentByKey);
+    if (
+      score < matchedLength ||
+      (score === matchedLength && depth <= matchedDepth)
+    ) {
+      return;
+    }
+    matchedLength = score;
+    matchedKey = key;
+    matchedDepth = depth;
+  });
+  return matchedKey ? [matchedKey] : [];
+}
+
 const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
   topMenus,
   pathname,
@@ -268,6 +268,7 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
   const [hoveredTopKey, setHoveredTopKey] = React.useState<string>('');
   const [hoverPanelOpen, setHoverPanelOpen] = React.useState(false);
   const [openKeys, setOpenKeys] = React.useState<string[]>([]);
+  const [hoverOpenKeys, setHoverOpenKeys] = React.useState<string[]>([]);
   const closeTimerRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {
@@ -312,154 +313,111 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
     return topNodes.find((node) => node.key === activeTopKey) || topNodes[0];
   }, [activeTopKey, topNodes]);
   const displayTopKey = hoveredTopKey || activeTopNode?.key || '';
+  const hoverTopNode = React.useMemo(() => {
+    if (topNodes.length === 0) return undefined;
+    return topNodes.find((node) => node.key === displayTopKey) || topNodes[0];
+  }, [displayTopKey, topNodes]);
 
-  const menuMeta = React.useMemo(() => {
-    const pathByKey = new Map<string, string>();
-    const targetIdByKey = new Map<string, string | undefined>();
-    const sourceSystemByKey = new Map<string, number | undefined>();
-    const parentByKey = new Map<string, string | undefined>();
-    const submenuKeys: string[] = [];
-    const menuSourceNodes = getMenuSourceNodes(activeTopNode);
+  const buildMenuMeta = React.useCallback(
+    (
+      menuSourceNodes: MenuNode[],
+      menuCommonActions: CommonAction[] = [],
+    ): MenuMeta => {
+      const pathByKey = new Map<string, string>();
+      const targetIdByKey = new Map<string, string | undefined>();
+      const sourceSystemByKey = new Map<string, number | undefined>();
+      const parentByKey = new Map<string, string | undefined>();
+      const submenuKeys: string[] = [];
 
-    const toMenuItem = (
-      node: MenuNode,
-      parentKey?: string,
-      inheritedPath?: string,
-    ): NonNullable<MenuProps['items']>[number] => {
-      parentByKey.set(node.key, parentKey);
-      const resolvedPath = node.path || inheritedPath;
-      if (resolvedPath) {
-        pathByKey.set(node.key, resolvedPath);
-      }
-      targetIdByKey.set(node.key, node.targetId);
-      sourceSystemByKey.set(node.key, node.sourceSystem);
-      const children =
-        node.children && node.children.length > 0
-          ? node.children.map((child) =>
-              toMenuItem(child, node.key, resolvedPath),
-            )
-          : undefined;
-      if (children && children.length > 0) {
-        submenuKeys.push(node.key);
+      const toMenuItem = (
+        node: MenuNode,
+        parentKey?: string,
+        inheritedPath?: string,
+      ): NonNullable<MenuProps['items']>[number] => {
+        parentByKey.set(node.key, parentKey);
+        const resolvedPath = node.path || inheritedPath;
+        if (resolvedPath) {
+          pathByKey.set(node.key, resolvedPath);
+        }
+        targetIdByKey.set(node.key, node.targetId);
+        sourceSystemByKey.set(node.key, node.sourceSystem);
+        const children =
+          node.children && node.children.length > 0
+            ? node.children.map((child) =>
+                toMenuItem(child, node.key, resolvedPath),
+              )
+            : undefined;
+        if (children && children.length > 0) {
+          submenuKeys.push(node.key);
+        }
+
+        return {
+          key: node.key,
+          label: node.name,
+          icon: undefined,
+          className:
+            node.name === '工作台'
+              ? 'dashboard-home-workplace-font'
+              : undefined,
+          children,
+        };
+      };
+
+      const items: MenuProps['items'] = menuSourceNodes.map((node) =>
+        toMenuItem(node),
+      );
+
+      if (menuCommonActions.length > 0) {
+        const commonActionsKey = 'common-actions-group';
+        submenuKeys.push(commonActionsKey);
+
+        const commonChildren: NonNullable<MenuProps['items']>[number][] =
+          menuCommonActions.map((action, index) => {
+            const childKey = `common-action-${action.id}-${index}`;
+            pathByKey.set(childKey, action.path);
+            parentByKey.set(childKey, commonActionsKey);
+            return {
+              key: childKey,
+              label: action.title,
+              icon: undefined,
+            };
+          });
+
+        items.push({
+          key: commonActionsKey,
+          label: (
+            <span className="dashboard-common-actions-name">常用数据</span>
+          ),
+          icon: undefined,
+          children: commonChildren,
+        });
       }
 
       return {
-        key: node.key,
-        label: node.name,
-        icon: undefined,
-        children,
+        items,
+        pathByKey,
+        targetIdByKey,
+        sourceSystemByKey,
+        parentByKey,
+        submenuKeys,
       };
-    };
+    },
+    [],
+  );
 
-    const items: MenuProps['items'] = menuSourceNodes.map((node) =>
-      toMenuItem(node),
-    );
-
-    // 添加"我的常用数据"折叠组
-    if (commonActions.length > 0) {
-      const commonActionsKey = 'common-actions-group';
-      submenuKeys.push(commonActionsKey);
-
-      const commonChildren: NonNullable<MenuProps['items']>[number][] =
-        commonActions.map((action, index) => {
-          const childKey = `common-action-${action.id}-${index}`;
-          pathByKey.set(childKey, action.path);
-          parentByKey.set(childKey, commonActionsKey);
-          return {
-            key: childKey,
-            label: action.title,
-            icon: undefined,
-          };
-        });
-
-      items.push({
-        key: commonActionsKey,
-        label: (
-          <span className="dashboard-common-actions-title">
-            <button
-              type="button"
-              className="dashboard-common-actions-drawer-trigger"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                window.dispatchEvent(
-                  new Event(OPEN_COMMON_ACTIONS_DRAWER_EVENT),
-                );
-              }}
-              onKeyDown={(event) => {
-                if (event.key !== 'Enter' && event.key !== ' ') return;
-                event.preventDefault();
-                event.stopPropagation();
-                window.dispatchEvent(
-                  new Event(OPEN_COMMON_ACTIONS_DRAWER_EVENT),
-                );
-              }}
-              aria-label="打开常用数据编辑抽屉"
-            >
-              <MenuOutlined />
-            </button>
-            <span>常用数据</span>
-          </span>
-        ),
-        icon: undefined,
-        children: commonChildren,
-      });
-    }
-
-    return {
-      items,
-      pathByKey,
-      targetIdByKey,
-      sourceSystemByKey,
-      parentByKey,
-      submenuKeys,
-    };
-  }, [activeTopNode, commonActions]);
+  const menuMeta = React.useMemo(() => {
+    return buildMenuMeta(getMenuSourceNodes(activeTopNode), commonActions);
+  }, [activeTopNode, buildMenuMeta, commonActions]);
+  const hoverMenuMeta = React.useMemo(() => {
+    return buildMenuMeta(getMenuSourceNodes(hoverTopNode));
+  }, [buildMenuMeta, hoverTopNode]);
 
   const selectedKeys = React.useMemo(() => {
-    if (currentTargetId) {
-      let matchedByTargetKey = '';
-      let matchedByTargetDepth = -1;
-      menuMeta.targetIdByKey.forEach((nodeTargetId, key) => {
-        if (!nodeTargetId || nodeTargetId !== currentTargetId) return;
-        const depth = getMenuKeyDepth(key, menuMeta.parentByKey);
-        if (
-          depth > matchedByTargetDepth ||
-          (depth === matchedByTargetDepth &&
-            key.length > matchedByTargetKey.length)
-        ) {
-          matchedByTargetKey = key;
-          matchedByTargetDepth = depth;
-        }
-      });
-      if (matchedByTargetKey) return [matchedByTargetKey];
-    }
-
-    let matchedKey = '';
-    let matchedLength = -1;
-    let matchedDepth = -1;
-    menuMeta.pathByKey.forEach((itemPath, key) => {
-      if (!isPathMatch(itemPath, pathname)) return;
-      const score = normalizePath(itemPath).length;
-      const depth = getMenuKeyDepth(key, menuMeta.parentByKey);
-      if (
-        score < matchedLength ||
-        (score === matchedLength && depth <= matchedDepth)
-      ) {
-        return;
-      }
-      matchedLength = score;
-      matchedKey = key;
-      matchedDepth = depth;
-    });
-    return matchedKey ? [matchedKey] : [];
-  }, [
-    currentTargetId,
-    menuMeta.parentByKey,
-    menuMeta.pathByKey,
-    menuMeta.targetIdByKey,
-    pathname,
-  ]);
+    return getSelectedKeysFromMeta(pathname, currentTargetId, menuMeta);
+  }, [currentTargetId, menuMeta, pathname]);
+  const hoverSelectedKeys = React.useMemo(() => {
+    return getSelectedKeysFromMeta(pathname, currentTargetId, hoverMenuMeta);
+  }, [currentTargetId, hoverMenuMeta, pathname]);
 
   React.useEffect(() => {
     if (menuMeta.submenuKeys.length === 0) {
@@ -474,30 +432,32 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
     setOpenKeys(Array.from(new Set([...menuMeta.submenuKeys, ...parentKeys])));
   }, [menuMeta.parentByKey, menuMeta.submenuKeys, selectedKeys]);
 
-  const handleTopClick = React.useCallback(
-    (node: MenuNode) => {
-      setActiveTopKey(node.key);
-      const defaultTarget = findFirstLeafNavigableNode(
-        node,
-        node.path,
-        node.targetId,
-        node.sourceSystem,
-      );
-      if (defaultTarget?.path) {
-        suppressMenuHoverAutoOpen();
-        onNavigate(
-          defaultTarget.path,
-          defaultTarget.targetId,
-          defaultTarget.sourceSystem,
-        );
-        return;
-      }
-      if (!node.path) return;
-      suppressMenuHoverAutoOpen();
-      onNavigate(node.path, node.targetId, node.sourceSystem);
-    },
-    [onNavigate],
-  );
+  React.useEffect(() => {
+    if (!hoverTopNode) {
+      setHoverOpenKeys([]);
+      return;
+    }
+    if (hoverMenuMeta.submenuKeys.length === 0) {
+      setHoverOpenKeys([]);
+      return;
+    }
+    if (hoverSelectedKeys.length === 0) {
+      setHoverOpenKeys(hoverMenuMeta.submenuKeys);
+      return;
+    }
+    const parentKeys = collectParentKeys(
+      hoverSelectedKeys[0],
+      hoverMenuMeta.parentByKey,
+    );
+    setHoverOpenKeys(
+      Array.from(new Set([...hoverMenuMeta.submenuKeys, ...parentKeys])),
+    );
+  }, [
+    hoverMenuMeta.parentByKey,
+    hoverMenuMeta.submenuKeys,
+    hoverSelectedKeys,
+    hoverTopNode,
+  ]);
 
   const handleItemClick: MenuProps['onClick'] = React.useCallback(
     (info: Parameters<NonNullable<MenuProps['onClick']>>[0]) => {
@@ -515,6 +475,28 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
       menuMeta.pathByKey,
       menuMeta.sourceSystemByKey,
       menuMeta.targetIdByKey,
+      onNavigate,
+    ],
+  );
+
+  const handleHoverItemClick: MenuProps['onClick'] = React.useCallback(
+    (info: Parameters<NonNullable<MenuProps['onClick']>>[0]) => {
+      const key = String(info.key || '');
+      const path = hoverMenuMeta.pathByKey.get(key);
+      if (!path) return;
+      setHoverPanelOpen(false);
+      setHoveredTopKey('');
+      suppressMenuHoverAutoOpen();
+      onNavigate(
+        path,
+        hoverMenuMeta.targetIdByKey.get(key),
+        hoverMenuMeta.sourceSystemByKey.get(key),
+      );
+    },
+    [
+      hoverMenuMeta.pathByKey,
+      hoverMenuMeta.sourceSystemByKey,
+      hoverMenuMeta.targetIdByKey,
       onNavigate,
     ],
   );
@@ -564,6 +546,12 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
     };
   }, [clearCloseTimer]);
 
+  const hasCommonActions = commonActions.length > 0;
+
+  const openCommonActionsDrawer = React.useCallback(() => {
+    window.dispatchEvent(new Event(OPEN_COMMON_ACTIONS_DRAWER_EVENT));
+  }, []);
+
   if (!activeTopNode) {
     return <div className="dashboard-home-split-menu-empty" />;
   }
@@ -597,11 +585,6 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
                   resumeMenuHoverAutoOpen();
                   openHoverPanel(node.key);
                 }}
-                onClick={() => {
-                  setHoverPanelOpen(false);
-                  setHoveredTopKey('');
-                  handleTopClick(node);
-                }}
               >
                 <span className="dashboard-home-split-menu-icon">{icon}</span>
                 <span className="dashboard-home-split-menu-icon-label">
@@ -610,6 +593,29 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
               </button>
             );
           })}
+        </div>
+
+        <div
+          className={
+            'dashboard-home-split-menu-hover-panel' +
+            (hoverPanelOpen && (hoverMenuMeta.items?.length ?? 0) > 0
+              ? ' dashboard-home-split-menu-hover-panel-open'
+              : '')
+          }
+          onMouseEnter={clearCloseTimer}
+          onMouseLeave={scheduleCloseHoverPanel}
+        >
+          <Menu
+            mode="inline"
+            items={hoverMenuMeta.items}
+            selectedKeys={hoverSelectedKeys}
+            openKeys={hoverOpenKeys}
+            onOpenChange={(keys) =>
+              setHoverOpenKeys((keys as React.Key[]).map((key) => String(key)))
+            }
+            onClick={handleHoverItemClick}
+            className="dashboard-home-split-menu-ant dashboard-home-split-menu-hover-panel-ant"
+          />
         </div>
       </div>
 
@@ -625,6 +631,19 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
           onClick={handleItemClick}
           className="dashboard-home-split-menu-ant"
         />
+        {hasCommonActions ? (
+          <div className="dashboard-common-actions-footer">
+            <button
+              type="button"
+              className="dashboard-common-actions-drawer-trigger"
+              onClick={openCommonActionsDrawer}
+              aria-label="打开常用数据编辑抽屉"
+            >
+              <PlusOutlined />
+              <span>管理常用</span>
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

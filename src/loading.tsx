@@ -19,25 +19,48 @@
  * 示例（启用后的代码）：
  * <Skeleton active paragraph={{ rows: 8 }} />
  */
-import { Skeleton, Spin, theme } from 'antd';
+import { Skeleton, Spin } from 'antd';
+
+const NAV_THEME_STORAGE_KEY = 'pc_admin_nav_theme';
+
+function readDarkMode() {
+  if (
+    typeof document !== 'undefined' &&
+    document.body.classList.contains('theme-black-mode')
+  ) {
+    return true;
+  }
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(NAV_THEME_STORAGE_KEY) === 'realDark';
+  } catch (error) {
+    return false;
+  }
+}
 
 const Loading: React.FC = () => {
-  const { token } = theme.useToken();
-  const isDarkMode =
-    typeof document !== 'undefined' &&
-    document.body.classList.contains('theme-black-mode');
+  const isDarkMode = readDarkMode();
   const pathname =
     typeof window !== 'undefined' ? window.location.pathname : '';
   const isLoginPage = pathname === '/user/login';
   const isNoDarkPage = isLoginPage || pathname === '/user/character';
-  const loadingBg =
-    !isDarkMode || isNoDarkPage ? '#E7EDFB' : token.colorBgLayout;
-  const loadingTextColor =
-    !isDarkMode || isNoDarkPage ? '#667289' : token.colorTextSecondary;
+  const shouldUseDarkLoading = isDarkMode && !isNoDarkPage;
+  const loadingBg = shouldUseDarkLoading ? '#141414' : '#E7EDFB';
+  const loadingTextColor = shouldUseDarkLoading
+    ? 'rgba(255, 255, 255, 0.65)'
+    : '#667289';
+  const skeletonColorVars = shouldUseDarkLoading
+    ? ({
+        '--ant-color-fill-content': 'rgba(255, 255, 255, 0.08)',
+        '--ant-color-fill': 'rgba(255, 255, 255, 0.14)',
+        '--suifida-admin-colorFillContent': 'rgba(255, 255, 255, 0.08)',
+        '--suifida-admin-colorFill': 'rgba(255, 255, 255, 0.14)',
+      } as any)
+    : undefined;
   if (isLoginPage) {
     return (
       <div
-        className="route-loading route-loading-login"
+        className={`route-loading route-loading-login${shouldUseDarkLoading ? ' route-loading-dark' : ''}`}
         style={{
           width: '100%',
           minHeight: '100vh',
@@ -64,13 +87,14 @@ const Loading: React.FC = () => {
 
   return (
     <div
-      className="route-loading"
+      className={`route-loading${shouldUseDarkLoading ? ' route-loading-dark' : ''}`}
       style={{
         width: '100%',
         minHeight: 'calc(100vh - 60px)', // 减去 header 高度，占满全屏
         background: loadingBg,
         padding: '24px 40px',
         boxSizing: 'border-box',
+        ...skeletonColorVars,
       }}
     >
       {/*
