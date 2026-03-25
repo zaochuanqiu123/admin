@@ -266,6 +266,17 @@ body.theme-black-mode .header-identity-dropdown__item {
   color: var(--pc-dark-text);
 }
 
+body.theme-black-mode .header-identity-dropdown__item.is-active {
+  border-color: #3fcb7b;
+  background: rgba(63, 203, 123, 0.16);
+  color: #7ff0aa;
+  box-shadow: inset 0 0 0 1px rgba(127, 240, 170, 0.18);
+}
+
+body.theme-black-mode .header-identity-dropdown__item.is-active .header-identity-dropdown__item-desc {
+  color: rgba(127, 240, 170, 0.82) !important;
+}
+
 /* 用户名触发器按钮：明文颜色适配 */
 body.theme-black-mode .header-identity-dropdown__trigger {
   color: var(--pc-dark-text);

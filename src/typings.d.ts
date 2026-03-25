@@ -24,6 +24,8 @@ declare const __TENCENT_MAP_KEY__: string | undefined;
 declare namespace API {
   type CurrentUser = {
     name?: string;
+    nickName?: string;
+    loginName?: string;
     avatar?: string;
     userid?: string;
     email?: string;

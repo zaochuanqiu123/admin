@@ -162,9 +162,20 @@ const Login: React.FC = () => {
       const name =
         str(userInfo?.name) ||
         str(userInfo?.userName) ||
-        str(userInfo?.nickName) ||
         str((res as any)?.name) ||
         str((res as any)?.userName) ||
+        str(values.username) ||
+        str(values.mobile);
+      const nickName =
+        str(userInfo?.nickName) ||
+        str(userInfo?.nickname) ||
+        str((res as any)?.nickName) ||
+        str((res as any)?.nickname) ||
+        name;
+      const loginName =
+        str(userInfo?.loginName) ||
+        str(userInfo?.account) ||
+        str((res as any)?.loginName) ||
         str(values.username) ||
         str(values.mobile);
 
@@ -176,13 +187,15 @@ const Login: React.FC = () => {
         str((res as any)?.avatar) ||
         str((res as any)?.headImg);
 
-      setLoginUserInfo({ name, avatar });
+      setLoginUserInfo({ name, nickName, loginName, avatar });
 
       setInitialState((s: any) => ({
         ...(s || {}),
         currentUser: {
           ...((s as any)?.currentUser || {}),
           name,
+          nickName,
+          loginName,
           avatar,
         },
       }));

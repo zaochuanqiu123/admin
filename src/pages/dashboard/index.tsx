@@ -1,4 +1,4 @@
-﻿import { InfoCircleOutlined } from '@ant-design/icons';
+import { InfoCircleOutlined } from '@ant-design/icons';
 import { Area, Pie } from '@ant-design/plots';
 import { DatePicker, Empty, message, Select } from 'antd';
 import type { Dayjs } from 'dayjs';

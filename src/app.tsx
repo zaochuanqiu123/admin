@@ -16,7 +16,7 @@ import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
 import '@ant-design/v5-patch-for-react-19';
 import { logout as requestLogout } from '@/api/auth';
-import { getPermContext } from '@/api/context';
+import { getPermContext, getUserLoginContext } from '@/api/context';
 import {
   clearBusinessList,
   clearCurrentBusinessCode,
@@ -217,6 +217,7 @@ class DashboardHomeMenuBoundary extends Component<
 export async function getInitialState(): Promise<{
   settings?: Partial<LayoutSettings>;
   currentUser?: API.CurrentUser;
+  loginContext?: any;
   loading?: boolean;
   fetchUserInfo?: () => Promise<API.CurrentUser | undefined>;
   currentOrgCode?: string;
@@ -251,9 +252,46 @@ export async function getInitialState(): Promise<{
   }
 
   const fetchUserInfo = async () => {
-    const cachedUser = getLoginUserInfo<API.CurrentUser>();
-    if (cachedUser && (cachedUser as any)?.name) {
-      return cachedUser;
+    const cachedUser = getLoginUserInfo<
+      API.CurrentUser & Record<string, any>
+    >();
+    let mergedUser = cachedUser ? { ...cachedUser } : undefined;
+
+    try {
+      const rawAuthUser = localStorage.getItem('auth_current_user');
+      if (rawAuthUser) {
+        const authUser = JSON.parse(rawAuthUser) as Record<string, any>;
+        mergedUser = {
+          ...(authUser || {}),
+          ...(mergedUser || {}),
+          name:
+            mergedUser?.name ||
+            authUser?.name ||
+            authUser?.userName ||
+            authUser?.nickName,
+          nickName:
+            mergedUser?.nickName ||
+            authUser?.nickName ||
+            authUser?.nickname ||
+            authUser?.name,
+          loginName:
+            mergedUser?.loginName ||
+            authUser?.loginName ||
+            authUser?.account ||
+            authUser?.userName,
+          avatar:
+            mergedUser?.avatar ||
+            authUser?.avatar ||
+            authUser?.headImg ||
+            authUser?.avatarUrl,
+        };
+      }
+    } catch {
+      // ignore cache parse errors
+    }
+
+    if (mergedUser && (mergedUser as any)?.name) {
+      return mergedUser as API.CurrentUser;
     }
     return undefined;
   };
@@ -291,8 +329,20 @@ export async function getInitialState(): Promise<{
 
     const currentUser = await fetchUserInfo();
 
-    // 从 localStorage 读取业态数据
-    const businessList = getBusinessList<any[]>() || [];
+    let loginContext: any;
+    try {
+      loginContext = await getUserLoginContext(selectedOrgCode);
+    } catch (error) {
+      console.error('getUserLoginContext failed:', error);
+    }
+
+    // 优先使用登录上下文里的业态数据，避免切换门店后头部昵称不同步
+    const businessList =
+      (Array.isArray(loginContext?.businessList)
+        ? loginContext.businessList
+        : undefined) ||
+      getBusinessList<any[]>() ||
+      [];
     let currentBusinessCode = getCurrentBusinessCode() || undefined;
 
     // 验证并获取有效的业态代码
@@ -312,6 +362,7 @@ export async function getInitialState(): Promise<{
     return {
       fetchUserInfo,
       currentUser,
+      loginContext,
       currentOrgCode: selectedOrgCode,
       businessList,
       currentBusinessCode,
@@ -800,6 +851,7 @@ export const layout: RunTimeLayoutConfig = ({
           <HeaderIdentityDropdown
             currentOrgCode={initialState?.currentOrgCode}
             currentUser={initialState?.currentUser}
+            loginContext={(initialState as any)?.loginContext}
             onLogout={handleLogout}
             setInitialState={setInitialState as any}
           />

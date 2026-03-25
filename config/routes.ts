@@ -163,12 +163,14 @@ const routes = [
     name: '二维码模板',
     path: '/platform/qr-template',
     component: './form/store-qr-template/index',
+    backendPathUrls: ['/device/qrcodeTemplate'],
     hideInMenu: true,
   },
   {
     name: '二维码列表',
     path: '/platform/qr-code',
     component: './form/store-qr-code/index',
+    backendPathUrls: ['/device/qrcode'],
     hideInMenu: true,
   },
   {

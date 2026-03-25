@@ -23,6 +23,7 @@ const HEADER_USER_AVATAR_SRC =
 export type HeaderIdentityDropdownProps = {
   currentOrgCode?: string;
   currentUser?: API.CurrentUser;
+  loginContext?: any;
   onLogout: () => Promise<void>;
   setInitialState: (
     updater: (state: Record<string, any> | undefined) => Record<string, any>,
@@ -32,6 +33,7 @@ export type HeaderIdentityDropdownProps = {
 const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
   currentOrgCode,
   currentUser,
+  loginContext,
   onLogout,
   setInitialState,
 }) => {
@@ -61,12 +63,20 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
     [filteredIdentityItems],
   );
 
-  const accountName = currentUser?.name || '用户';
-  const accountNo = currentUser?.phone || currentUser?.userid || '-';
+  const accountName =
+    loginContext?.userOrgNickName ||
+    (currentUser as any)?.nickName ||
+    currentUser?.name ||
+    '用户';
+  const accountNo =
+    (currentUser as any)?.loginName ||
+    currentUser?.userid ||
+    currentUser?.phone ||
+    '-';
   const accountRole =
     currentIdentity?.groupLabel || currentIdentity?.levelName || '未选择身份';
   const avatarSrc = currentUser?.avatar || HEADER_USER_AVATAR_SRC;
-  const triggerLabel = currentIdentity?.name || accountName;
+  const triggerLabel = accountName;
 
   const handleOpenProfileCenter = () => {
     setOpen(false);
@@ -130,8 +140,8 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
               </div>
               <div className="header-identity-dropdown__meta">
                 <span>{accountNo}</span>
-                <span>|</span>
-                <span>{accountRole}</span>
+                {/* <span>|</span>
+                <span>{accountRole}</span> */}
               </div>
             </div>
             <div className="header-identity-dropdown__actions">

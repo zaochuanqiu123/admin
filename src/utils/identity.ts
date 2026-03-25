@@ -92,12 +92,12 @@ function normalizeOrgToIdentityItem(org: any, index: number): IdentityItem {
     toStringSafe(org?.orgCode) ||
     toStringSafe(org?.code) ||
     `identity-${index}`;
-  const name =
+  const fullName =
     toStringSafe(org?.name) ||
     toStringSafe(org?.orgName) ||
     toStringSafe(org?.storeName) ||
-    toStringSafe(org?.title) ||
-    `未命名-${index + 1}`;
+    toStringSafe(org?.title);
+  const name = fullName || `未命名-${index + 1}`;
   const desc =
     toStringSafe(org?.desc) ||
     toStringSafe(org?.address) ||
