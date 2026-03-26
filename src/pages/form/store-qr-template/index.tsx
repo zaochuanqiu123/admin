@@ -5,6 +5,7 @@ import {
 } from '@ant-design/icons';
 import type { UploadProps } from 'antd';
 import {
+  Alert,
   Button,
   ColorPicker,
   DatePicker,
@@ -38,6 +39,8 @@ import {
   type QrCodeTemplateRecord,
   updateQrCodeTemplate,
 } from '@/api/qrCodeTemplate';
+import { PageSectionSkeleton, PermissionButton, PermissionVisible } from '@/components';
+import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
 import './index.less';
 
 // 临时挡板：前端假装上传成功并返回一个固定图片 URL
@@ -52,6 +55,11 @@ const mockUploadImage = async (base64Data: string): Promise<string> => {
 };
 
 const { RangePicker } = DatePicker;
+const QR_TEMPLATE_PERMS = {
+  add: 'device:admin:qrcodeTemplate:add',
+  update: 'device:admin:qrcodeTemplate:update',
+  delete: 'device:admin:qrcodeTemplate:delete',
+} as const;
 
 type QueryFilters = {
   name: string;
@@ -172,6 +180,8 @@ function showPendingEditorMessage() {
 
 const QrTemplateListPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
+  const [listInitialized, setListInitialized] = useState(false);
+  const [listError, setListError] = useState<string>();
   const [records, setRecords] = useState<QrCodeTemplateRecord[]>([]);
   const [serverTotal, setServerTotal] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -365,21 +375,26 @@ const QrTemplateListPage: React.FC = () => {
 
   const loadTemplates = useCallback(async () => {
     setLoading(true);
+    setListError(undefined);
     try {
       const res = await getQrCodeTemplatePageQuery({
         current,
         pageSize,
         name: filters.name.trim() || undefined,
+      }, {
+        skipErrorHandler: true,
       });
       setRecords(Array.isArray(res?.records) ? res.records : []);
       setServerTotal(Number(res?.total || 0));
     } catch (error) {
       console.error('load qr code templates failed:', error);
-      setRecords([]);
-      setServerTotal(0);
-      message.error('获取二维码模板列表失败');
+      const nextError = getErrorMessage(error, '获取二维码模板列表失败，请稍后重试');
+      setListError(nextError);
+      message.error(nextError);
+      return;
     } finally {
       setLoading(false);
+      setListInitialized(true);
     }
   }, [current, filters.name, pageSize, refreshKey]);
 
@@ -508,19 +523,23 @@ const QrTemplateListPage: React.FC = () => {
         fixed: 'right',
         render: (_, record) => (
           <div className="qr-template-action-links">
-            <a
-              onClick={() => {
-                openEditDrawer(record.id);
-              }}
-            >
-              编辑
-            </a>
-            <Popconfirm
-              title="确认删除该模板？"
-              onConfirm={() => handleDeleteTemplate(record.id)}
-            >
-              <a className="is-danger">删除</a>
-            </Popconfirm>
+            <PermissionVisible perm={QR_TEMPLATE_PERMS.update}>
+              <a
+                onClick={() => {
+                  openEditDrawer(record.id);
+                }}
+              >
+                编辑
+              </a>
+            </PermissionVisible>
+            <PermissionVisible perm={QR_TEMPLATE_PERMS.delete}>
+              <Popconfirm
+                title="确认删除该模板？"
+                onConfirm={() => handleDeleteTemplate(record.id)}
+              >
+                <a className="is-danger">删除</a>
+              </Popconfirm>
+            </PermissionVisible>
           </div>
         ),
       },
@@ -558,6 +577,8 @@ const QrTemplateListPage: React.FC = () => {
     filters.state || filters.showSn || filters.createTimeRange
       ? filteredRecords.length
       : serverTotal;
+  const initialListLoading = loading && !listInitialized;
+  const refreshingList = loading && listInitialized;
 
   const openCreateDrawer = () => {
     setEditingTemplateId(null);
@@ -574,7 +595,9 @@ const QrTemplateListPage: React.FC = () => {
 
   const openEditDrawer = async (id: string) => {
     try {
-      const res = await getQrCodeTemplateDetail(id);
+      const res = await getQrCodeTemplateDetail(id, {
+        skipErrorHandler: true,
+      });
       if (!res) throw new Error('Query detail empty');
       const data = res as any;
 
@@ -607,7 +630,7 @@ const QrTemplateListPage: React.FC = () => {
       setDrawerOpen(true);
     } catch (error) {
       console.error('Fetch template detail failed:', error);
-      message.error('获取模板详情失败');
+      message.error(getErrorMessage(error, '获取模板详情失败'));
     }
   };
 
@@ -832,11 +855,16 @@ const QrTemplateListPage: React.FC = () => {
       }
 
       if (editingTemplateId) {
-        await updateQrCodeTemplate({ ...payload, id: editingTemplateId });
-        message.success('修改成功！');
+        const res = await updateQrCodeTemplate(
+          { ...payload, id: editingTemplateId },
+          { skipErrorHandler: true },
+        );
+        message.success(getApiMessage(res, '修改成功'));
       } else {
-        await addQrCodeTemplate(payload);
-        message.success('保存成功！图片使用了临时 mock 链接。');
+        const res = await addQrCodeTemplate(payload, {
+          skipErrorHandler: true,
+        });
+        message.success(getApiMessage(res, '保存成功'));
       }
 
       setDrawerOpen(false);
@@ -845,19 +873,23 @@ const QrTemplateListPage: React.FC = () => {
       setPagination((prev) => ({ ...prev, current: 1 }));
     } catch (error: any) {
       if (error?.errorFields) return;
-      message.error('保存失败，请重试');
       console.error(error);
+      message.error(
+        getErrorMessage(error, editingTemplateId ? '修改模板失败' : '新增模板失败'),
+      );
     }
   };
 
   const handleDeleteTemplate = async (id: string) => {
     try {
-      await deleteQrCodeTemplate(id);
-      message.success('删除成功');
+      const res = await deleteQrCodeTemplate(id, {
+        skipErrorHandler: true,
+      });
+      message.success(getApiMessage(res, '删除成功'));
       setRefreshKey((prev) => prev + 1);
     } catch (error) {
       console.error('Delete template failed:', error);
-      message.error('删除失败');
+      message.error(getErrorMessage(error, '删除失败'));
     }
   };
 
@@ -973,7 +1005,8 @@ const QrTemplateListPage: React.FC = () => {
 
       <div className="content-card qr-template-table-card">
         <div className="qr-template-toolbar">
-          <Button
+          <PermissionButton
+            perm={QR_TEMPLATE_PERMS.add}
             type="primary"
             shape="round"
             icon={<PlusOutlined />}
@@ -981,15 +1014,20 @@ const QrTemplateListPage: React.FC = () => {
             onClick={openCreateDrawer}
           >
             添加模板
-          </Button>
+          </PermissionButton>
           <div className="qr-template-toolbar-note">
             当前列表基于模板名称走远程分页，状态/显示编号/创建时间按当前页结果过滤。
           </div>
         </div>
 
+        {initialListLoading ? (
+          <PageSectionSkeleton rows={7} />
+        ) : listError && records.length === 0 ? (
+          <Alert type="error" showIcon message={listError} />
+        ) : (
         <Table<QrCodeTemplateRecord>
           rowKey="id"
-          loading={loading}
+          loading={refreshingList}
           columns={columns}
           dataSource={filteredRecords}
           scroll={{ x: 1100 }}
@@ -1008,6 +1046,7 @@ const QrTemplateListPage: React.FC = () => {
             },
           }}
         />
+        )}
       </div>
 
       <Drawer

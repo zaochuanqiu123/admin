@@ -1,6 +1,7 @@
 import { InfoCircleFilled, PlusOutlined } from '@ant-design/icons';
 import { useModel } from '@umijs/max';
 import {
+  Alert,
   Button,
   Empty,
   Form,
@@ -27,6 +28,8 @@ import {
   searchRole,
   updateRoleState,
 } from '@/api/context';
+import { PageSectionSkeleton } from '@/components';
+import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
 import { extractPermContextNodes } from '@/utils/menu';
 import './index.less';
 
@@ -90,13 +93,6 @@ function toRoleTreeNodes(nodes: any[]): RoleTreeNode[] {
     .filter((item): item is RoleTreeNode => item !== null);
 }
 
-function getApiMessage(res: any, fallback: string): string {
-  const value = res?.message ?? res?.msg ?? res?.data;
-  if (value === undefined || value === null) return fallback;
-  const text = String(value).trim();
-  return text || fallback;
-}
-
 const RolePermissionPage: React.FC = () => {
   const { initialState } = useModel('@@initialState');
   const [loading, setLoading] = useState(false);
@@ -111,6 +107,8 @@ const RolePermissionPage: React.FC = () => {
   const [permTreeData, setPermTreeData] = useState<RoleTreeNode[]>([]);
   const [checkedPermIds, setCheckedPermIds] = useState<React.Key[]>([]);
   const [switchLoadingId, setSwitchLoadingId] = useState<string>();
+  const [listInitialized, setListInitialized] = useState(false);
+  const [listError, setListError] = useState<string>();
   const [form] = Form.useForm<CreateRoleFormValues>();
   const [pagination, setPagination] = useState<TablePaginationConfig>({
     current: 1,
@@ -124,37 +122,51 @@ const RolePermissionPage: React.FC = () => {
   const current = pagination.current || 1;
   const pageSize = pagination.pageSize || DEFAULT_PAGE_SIZE;
   const currentRoleType = Form.useWatch('roleType', form);
+  const initialListLoading = loading && !listInitialized;
+  const refreshingList = loading && listInitialized;
 
   const loadRoles = useCallback(async () => {
     if (!currentOrgCode) {
       setRoles([]);
       setServerTotal(0);
+      setListError(undefined);
       return;
     }
 
     setLoading(true);
+    setListError(undefined);
     try {
       const searchValue = searchKeyword.trim();
       if (searchMode && searchValue) {
-        const list = await searchRole(currentOrgCode, searchValue);
+        const list = await searchRole(currentOrgCode, searchValue, {
+          skipErrorHandler: true,
+        });
         setRoles(Array.isArray(list) ? list : []);
         setServerTotal(Array.isArray(list) ? list.length : 0);
         return;
       }
 
-      const pageRes = await getRolePageList({
-        current,
-        pageSize,
-        roleName: searchValue || undefined,
-      } as RolePageListParams);
+      const pageRes = await getRolePageList(
+        {
+          current,
+          pageSize,
+          roleName: searchValue || undefined,
+        } as RolePageListParams,
+        {
+          skipErrorHandler: true,
+        },
+      );
       setRoles(Array.isArray(pageRes?.records) ? pageRes.records : []);
       setServerTotal(Number(pageRes?.total || 0));
     } catch (error) {
       console.error('load roles failed:', error);
-      setRoles([]);
-      setServerTotal(0);
+      const nextError = getErrorMessage(error, '获取角色列表失败，请稍后重试');
+      setListError(nextError);
+      message.error(nextError);
+      return;
     } finally {
       setLoading(false);
+      setListInitialized(true);
     }
   }, [current, currentOrgCode, pageSize, searchKeyword, searchMode]);
 
@@ -181,10 +193,15 @@ const RolePermissionPage: React.FC = () => {
       const nextState = checked ? 1 : 0;
       setSwitchLoadingId(String(record.id));
       try {
-        const res = await updateRoleState({
-          id: String(record.id),
-          state: nextState,
-        });
+        const res = await updateRoleState(
+          {
+            id: String(record.id),
+            state: nextState,
+          },
+          {
+            skipErrorHandler: true,
+          },
+        );
         setRoles((prev) =>
           prev.map((item) =>
             String(item.id) === String(record.id)
@@ -200,6 +217,9 @@ const RolePermissionPage: React.FC = () => {
         );
       } catch (error) {
         console.error('updateRoleState failed:', error);
+        message.error(
+          getErrorMessage(error, nextState === 1 ? '启用角色失败' : '禁用角色失败'),
+        );
       } finally {
         setSwitchLoadingId(undefined);
       }
@@ -302,12 +322,15 @@ const RolePermissionPage: React.FC = () => {
     setCheckedPermIds([]);
     setPermTreeLoading(true);
     try {
-      const res = await getOrgMenuTree(currentOrgCode);
+      const res = await getOrgMenuTree(currentOrgCode, {
+        skipErrorHandler: true,
+      });
       const treeSource = extractPermContextNodes(res);
       setPermTreeData(toRoleTreeNodes(treeSource));
     } catch (error) {
       console.error('getOrgMenuTree failed:', error);
       setPermTreeData([]);
+      message.error(getErrorMessage(error, '获取权限树失败'));
     } finally {
       setPermTreeLoading(false);
     }
@@ -328,8 +351,12 @@ const RolePermissionPage: React.FC = () => {
     setPermTreeLoading(true);
     try {
       const [detailRes, treeRes] = await Promise.all([
-        getRoleDetail(String(record.id)),
-        getOrgMenuTree(currentOrgCode),
+        getRoleDetail(String(record.id), {
+          skipErrorHandler: true,
+        }),
+        getOrgMenuTree(currentOrgCode, {
+          skipErrorHandler: true,
+        }),
       ]);
       const detail = detailRes?.data ?? detailRes;
       setEditingRole({
@@ -353,6 +380,7 @@ const RolePermissionPage: React.FC = () => {
       setPermTreeData([]);
       setCreateOpen(false);
       setEditingRole(null);
+      message.error(getErrorMessage(error, '打开编辑角色失败'));
     } finally {
       setPermTreeLoading(false);
       setCreateLoading(false);
@@ -368,19 +396,29 @@ const RolePermissionPage: React.FC = () => {
           ? checkedPermIds.map((item) => String(item))
           : [];
       const res = editingRole?.id
-        ? await editRole({
-            id: editingRole.id,
-            roleName: values.roleName,
-            roleType: values.roleType,
-            state: values.state,
-            permIds,
-          })
-        : await saveRole({
-            roleName: values.roleName,
-            roleType: values.roleType,
-            state: values.state,
-            permIds,
-          });
+        ? await editRole(
+            {
+              id: editingRole.id,
+              roleName: values.roleName,
+              roleType: values.roleType,
+              state: values.state,
+              permIds,
+            },
+            {
+              skipErrorHandler: true,
+            },
+          )
+        : await saveRole(
+            {
+              roleName: values.roleName,
+              roleType: values.roleType,
+              state: values.state,
+              permIds,
+            },
+            {
+              skipErrorHandler: true,
+            },
+          );
       message.success(
         getApiMessage(res, editingRole?.id ? '编辑角色成功' : '新增角色成功'),
       );
@@ -390,6 +428,9 @@ const RolePermissionPage: React.FC = () => {
     } catch (error: any) {
       if (error?.errorFields) return;
       console.error('saveRole failed:', error);
+      message.error(
+        getErrorMessage(error, editingRole?.id ? '编辑角色失败' : '新增角色失败'),
+      );
     } finally {
       setCreateLoading(false);
     }
@@ -402,11 +443,14 @@ const RolePermissionPage: React.FC = () => {
     }
 
     try {
-      const res = await deleteRole(String(record.id));
+      const res = await deleteRole(String(record.id), {
+        skipErrorHandler: true,
+      });
       message.success(getApiMessage(res, '删除角色成功'));
       await loadRoles();
     } catch (error) {
       console.error('deleteRole failed:', error);
+      message.error(getErrorMessage(error, '删除角色失败'));
     }
   };
 
@@ -448,9 +492,14 @@ const RolePermissionPage: React.FC = () => {
           </Button>
         </div>
 
+        {initialListLoading ? (
+          <PageSectionSkeleton rows={7} />
+        ) : listError && roles.length === 0 ? (
+          <Alert type="error" showIcon message={listError} />
+        ) : (
         <Table<RoleItem>
           rowKey="id"
-          loading={loading}
+          loading={refreshingList}
           columns={columns}
           dataSource={pagedRoles}
           locale={{
@@ -472,6 +521,7 @@ const RolePermissionPage: React.FC = () => {
             },
           }}
         />
+        )}
       </div>
 
       <Modal

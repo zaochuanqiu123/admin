@@ -48,6 +48,7 @@ export function resetStoreScopedInitialState<
     currentOrgCode: undefined,
     loginContext: undefined,
     permContextMenu: undefined,
+    buttonPermissions: undefined,
     businessList: undefined,
     currentBusinessCode: undefined,
     commonActions: undefined,

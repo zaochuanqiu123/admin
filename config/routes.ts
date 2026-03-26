@@ -51,7 +51,7 @@ const routes = [
   },
   {
     path: '/dashboard',
-    name: '工作台',
+    name: '系统首页',
     routes: [
       {
         path: '/dashboard',
@@ -59,7 +59,7 @@ const routes = [
       },
       {
         path: '/dashboard/index',
-        name: '首页',
+        name: '系统首页',
         component: './dashboard/index',
       },
 
@@ -171,6 +171,20 @@ const routes = [
     path: '/platform/qr-code',
     component: './form/store-qr-code/index',
     backendPathUrls: ['/device/qrcode'],
+    hideInMenu: true,
+  },
+  {
+    name: '云音响列表',
+    path: '/device/speaker-list',
+    component: './device/speaker-list/index',
+    backendPathUrls: ['/device/speaker'],
+    hideInMenu: true,
+  },
+  {
+    name: '云音响品牌',
+    path: '/device/speaker-brand',
+    component: './device/speaker-brand/index',
+    backendPathUrls: ['/device/speakerChannel'],
     hideInMenu: true,
   },
   {

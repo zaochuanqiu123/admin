@@ -102,20 +102,22 @@
 
 .dashboard-card-tools {
   .mixin-flex-center();
-  gap: 16px;
+  gap: 18px;
   flex-wrap: wrap;
-  color: rgba(0, 0, 0, 0.72);
+  color: var(--ant-color-text-secondary);
 }
 
-.dashboard-card-tools .ant-select {
+.dashboard-card-tools__store-select.ant-select {
   width: auto;
+  min-width: 102px;
 }
 
-.dashboard-card-tools .ant-picker-range {
+.dashboard-card-tools__date-range.ant-picker-range {
   width: auto;
+  min-width: 256px;
 }
 
-.dashboard-card-tools .ant-select .ant-select-selector {
+.dashboard-card-tools__store-select.ant-select .ant-select-selector {
   border: none !important;
   background: transparent !important;
   box-shadow: none !important;
@@ -123,53 +125,84 @@
   height: auto !important;
 }
 
-.dashboard-card-tools .ant-select .ant-select-selection-wrap {
+.dashboard-card-tools__store-select.ant-select .ant-select-selection-wrap {
   align-items: center;
 }
 
-.dashboard-card-tools .ant-select .ant-select-selection-item {
-  padding-inline-end: 18px !important;
-  color: rgba(0, 0, 0, 0.72);
+.dashboard-card-tools__store-select.ant-select .ant-select-selection-item {
+  padding-inline-end: 24px !important;
+  color: var(--ant-color-text-secondary);
   font-size: 14px;
   line-height: 22px;
 }
 
-.dashboard-card-tools .ant-select .ant-select-arrow {
-  color: rgba(0, 0, 0, 0.35);
-  inset-inline-end: 0;
+.dashboard-card-tools__store-select.ant-select .ant-select-arrow {
+  color: var(--ant-color-text-tertiary);
+  inset-inline-end: 2px;
 }
 
-.dashboard-card-tools .ant-picker {
+.dashboard-card-tools__date-range.ant-picker {
+  display: inline-flex;
+  align-items: center;
   border: none !important;
   background: transparent !important;
   box-shadow: none !important;
   padding: 0 !important;
-  color: rgba(0, 0, 0, 0.72);
+  color: var(--ant-color-text-secondary);
 }
 
-.dashboard-card-tools .ant-picker-input>input {
-  color: rgba(0, 0, 0, 0.72);
+.dashboard-card-tools__date-range.ant-picker .ant-picker-input {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 88px;
+}
+
+.dashboard-card-tools__date-range.ant-picker .ant-picker-input:first-child>input {
+  text-align: right;
+}
+
+.dashboard-card-tools__date-range.ant-picker .ant-picker-input:last-child>input {
+  text-align: left;
+}
+
+.dashboard-card-tools__date-range.ant-picker .ant-picker-input>input {
+  color: var(--ant-color-text-secondary);
   font-size: 14px;
+  font-variant-numeric: tabular-nums;
 }
 
-.dashboard-card-tools .ant-picker-input>input::placeholder {
-  color: rgba(0, 0, 0, 0.45);
+.dashboard-card-tools__date-range.ant-picker .ant-picker-input>input::placeholder {
+  color: var(--ant-color-text-tertiary);
 }
 
-.dashboard-card-tools .ant-picker-range-separator {
-  padding-inline: 6px;
-  color: rgba(0, 0, 0, 0.35);
+.dashboard-card-tools__date-range.ant-picker .ant-picker-range-separator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  width: 28px;
+  padding: 0 10px;
+  color: var(--ant-color-text-tertiary);
 }
 
-.dashboard-card-tools .ant-picker-suffix,
-.dashboard-card-tools .ant-picker-clear {
-  color: rgba(0, 0, 0, 0.35);
+.dashboard-card-tools__range-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  line-height: 1;
+  color: inherit;
 }
 
-.dashboard-card-tools .ant-select-focused .ant-select-selector,
-.dashboard-card-tools .ant-picker-focused,
-.dashboard-card-tools .ant-picker:hover,
-.dashboard-card-tools .ant-select:hover .ant-select-selector {
+.dashboard-card-tools__date-range.ant-picker .ant-picker-suffix,
+.dashboard-card-tools__date-range.ant-picker .ant-picker-clear {
+  color: var(--ant-color-text-tertiary);
+}
+
+.dashboard-card-tools__store-select.ant-select-focused .ant-select-selector,
+.dashboard-card-tools__date-range.ant-picker-focused,
+.dashboard-card-tools__date-range.ant-picker:hover,
+.dashboard-card-tools__store-select.ant-select:hover .ant-select-selector {
   border: none !important;
   box-shadow: none !important;
   background: transparent !important;
@@ -855,8 +888,8 @@ body.theme-black-mode {
     width: 100%;
   }
 
-  .dashboard-card-tools .ant-select,
-  .dashboard-card-tools .ant-picker-range {
+  .dashboard-card-tools__store-select.ant-select,
+  .dashboard-card-tools__date-range.ant-picker-range {
     width: 100%;
   }
 

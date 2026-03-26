@@ -51,6 +51,7 @@ import {
 import { buildIframeRouteWithParams } from '@/utils/iframe';
 import {
   extractPermContextNodes,
+  extractButtonPermissionMap,
   findFirstLeafMenuTarget,
   findPathByTargetId,
   getValidBusinessCode,
@@ -222,31 +223,43 @@ export async function getInitialState(): Promise<{
   fetchUserInfo?: () => Promise<API.CurrentUser | undefined>;
   currentOrgCode?: string;
   permContextMenu?: MenuDataItem[];
+  buttonPermissions?: API.ButtonPermissionMap;
   businessList?: any[];
   currentBusinessCode?: string;
   commonActions?: any[];
   setCommonActions?: (actions: any[]) => void;
 }> {
-  const fetchPermMenu = async (businessCode?: string) => {
+  const fetchPermState = async (businessCode?: string) => {
     try {
       const res = await getPermContext(businessCode);
       const nodes = extractPermContextNodes(res);
       const menu = mapPermContextToMenuData(nodes);
-      return menu.length > 0 ? menu : undefined;
+      const buttonPermissions = extractButtonPermissionMap(res);
+      return {
+        permContextMenu: menu.length > 0 ? menu : undefined,
+        buttonPermissions:
+          buttonPermissions.length > 0 ? buttonPermissions : undefined,
+      };
     } catch (error) {
       console.error('getPermContext failed:', error);
-      return undefined;
+      return {
+        permContextMenu: undefined,
+        buttonPermissions: undefined,
+      };
     }
   };
   const resolvedSettings = getResolvedLayoutSettings();
 
   if (devBypassAuth) {
     const currentUser = getDevUser();
-    const permContextMenu = await fetchPermMenu(TEMP_BUSINESS_CODE);
+    const { permContextMenu, buttonPermissions } = await fetchPermState(
+      TEMP_BUSINESS_CODE,
+    );
     return {
       fetchUserInfo: async () => currentUser,
       currentUser,
       permContextMenu,
+      buttonPermissions,
       settings: resolvedSettings,
     };
   }
@@ -274,10 +287,11 @@ export async function getInitialState(): Promise<{
             authUser?.nickName ||
             authUser?.nickname ||
             authUser?.name,
-          loginName:
+          account:
+            mergedUser?.account ||
             mergedUser?.loginName ||
-            authUser?.loginName ||
             authUser?.account ||
+            authUser?.loginName ||
             authUser?.userName,
           avatar:
             mergedUser?.avatar ||
@@ -331,7 +345,7 @@ export async function getInitialState(): Promise<{
 
     let loginContext: any;
     try {
-      loginContext = await getUserLoginContext(selectedOrgCode);
+      loginContext = await getUserLoginContext(selectedOrgCode!);
     } catch (error) {
       console.error('getUserLoginContext failed:', error);
     }
@@ -357,7 +371,9 @@ export async function getInitialState(): Promise<{
     }
 
     // 使用 currentBusinessCode 调用 getPermContext
-    const permContextMenu = await fetchPermMenu(currentBusinessCode);
+    const { permContextMenu, buttonPermissions } = await fetchPermState(
+      currentBusinessCode,
+    );
 
     return {
       fetchUserInfo,
@@ -367,6 +383,7 @@ export async function getInitialState(): Promise<{
       businessList,
       currentBusinessCode,
       permContextMenu,
+      buttonPermissions,
       settings: resolvedSettings,
     };
   }
@@ -554,6 +571,7 @@ export const layout: RunTimeLayoutConfig = ({
           const permRes = await getPermContext(businessCode);
           const permNodes = extractPermContextNodes(permRes);
           const permContextMenu = mapPermContextToMenuData(permNodes);
+          const buttonPermissions = extractButtonPermissionMap(permRes);
 
           // 保存到 localStorage
           setCurrentBusinessCode(businessCode);
@@ -565,6 +583,8 @@ export const layout: RunTimeLayoutConfig = ({
               currentBusinessCode: businessCode,
               permContextMenu:
                 permContextMenu.length > 0 ? permContextMenu : undefined,
+              buttonPermissions:
+                buttonPermissions.length > 0 ? buttonPermissions : undefined,
             };
             if (typeof window !== 'undefined') {
               (window as any).g_initialState = next;

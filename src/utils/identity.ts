@@ -14,6 +14,7 @@ import {
 import { clearPostLoginRedirect } from '@/utils/auth-expired';
 import { buildIframeRouteWithParams } from '@/utils/iframe';
 import {
+  extractButtonPermissionMap,
   extractPermContextNodes,
   mapPermContextToMenuData,
   TEMP_BUSINESS_CODE,
@@ -252,6 +253,7 @@ export async function switchIdentityContext(
     });
     const permNodes = extractPermContextNodes(permResponse);
     const permContextMenu = mapPermContextToMenuData(permNodes);
+    const buttonPermissions = extractButtonPermissionMap(permResponse);
 
     setInitialState((state) => ({
       ...(state || {}),
@@ -260,6 +262,7 @@ export async function switchIdentityContext(
       businessList,
       currentBusinessCode: businessCode,
       permContextMenu: permContextMenu.length > 0 ? permContextMenu : undefined,
+      buttonPermissions: buttonPermissions.length > 0 ? buttonPermissions : undefined,
     }));
 
     clearPostLoginRedirect();
