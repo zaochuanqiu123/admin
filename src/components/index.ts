@@ -7,8 +7,21 @@
  */
 import Footer from './Footer';
 import MicroIframe from './MicroIframe';
+import PageSectionSkeleton from './Page/PageSectionSkeleton';
+import PermissionButton from './Permission/PermissionButton';
+import PermissionVisible from './Permission/PermissionVisible';
 import { Question, SelectLang } from './RightContent';
 import { AvatarName } from './RightContent/AvatarDropdown';
 import NoticeBell from './RightContent/NoticeBell';
 
-export { AvatarName, Footer, Question, SelectLang, NoticeBell, MicroIframe };
+export {
+  AvatarName,
+  Footer,
+  Question,
+  SelectLang,
+  NoticeBell,
+  MicroIframe,
+  PageSectionSkeleton,
+  PermissionButton,
+  PermissionVisible,
+};

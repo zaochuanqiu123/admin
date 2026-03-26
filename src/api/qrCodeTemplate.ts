@@ -1,4 +1,4 @@
-import { apiData } from '@/api/http';
+import { apiData, apiRequest } from '@/api/http';
 
 export type QrCodeTemplatePageQueryParams = {
   current: number;
@@ -86,7 +86,7 @@ export async function addQrCodeTemplate(
   data: QrCodeTemplateAddParams,
   options?: { [key: string]: any },
 ) {
-  return apiData<any>('/api/device/admin/qrcodeTemplate/add', {
+  return apiRequest<any>('/api/device/admin/qrcodeTemplate/add', {
     method: 'POST',
     data,
     ...(options || {}),
@@ -107,7 +107,7 @@ export async function updateQrCodeTemplate(
   data: QrCodeTemplateAddParams & { id: string },
   options?: { [key: string]: any },
 ) {
-  return apiData<any>('/api/device/admin/qrcodeTemplate/update', {
+  return apiRequest<any>('/api/device/admin/qrcodeTemplate/update', {
     method: 'POST', // 如果后端是 PUT 请求请自行更改
     data,
     ...(options || {}),
@@ -118,7 +118,7 @@ export async function deleteQrCodeTemplate(
   id: string,
   options?: { [key: string]: any },
 ) {
-  return apiData<any>(`/api/device/admin/qrcodeTemplate/${id}`, {
+  return apiRequest<any>(`/api/device/admin/qrcodeTemplate/${id}`, {
     method: 'DELETE',
     ...(options || {}),
   });

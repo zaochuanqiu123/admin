@@ -1,5 +1,6 @@
 import type { MenuDataItem } from '@ant-design/pro-components';
 import { resolveTopRoutePath } from '@/utils/route.utils';
+import { extractButtonPermissionTokens } from '@/utils/button-permission';
 import routes from '../../config/routes';
 
 export const TEMP_BUSINESS_CODE = 'DEFAULT';
@@ -293,6 +294,17 @@ export function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
 
   result.sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
   return result;
+}
+
+export function extractButtonPermissionMap(res: any): API.ButtonPermissionMap {
+  const tokenSet = new Set<string>();
+  const permCodes =
+    (Array.isArray(res?.data?.permCodes) && res.data.permCodes) ||
+    (Array.isArray(res?.permCodes) && res.permCodes) ||
+    [];
+
+  extractButtonPermissionTokens(permCodes).forEach((token) => tokenSet.add(token));
+  return Array.from(tokenSet);
 }
 
 export function validateBusinessCode(

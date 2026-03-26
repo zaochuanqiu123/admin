@@ -1,4 +1,4 @@
-import { InfoCircleOutlined } from '@ant-design/icons';
+﻿import { InfoCircleOutlined } from '@ant-design/icons';
 import { Area, Pie } from '@ant-design/plots';
 import { DatePicker, Empty, message, Select } from 'antd';
 import type { Dayjs } from 'dayjs';
@@ -74,13 +74,13 @@ const overviewStatMeta: Omit<StatItem, 'value'>[] = [
   {
     key: 'turnover',
     label: '营业额(元)',
+    active: true,
     icon: orderPrice,
     iconActive: orderPriceActive,
   },
   {
     key: 'orderAmount',
     label: '订单总金额(元)',
-    active: true,
     icon: orderPrice,
     iconActive: orderPriceActive,
   },
@@ -854,12 +854,20 @@ const DashboardIndexPage: React.FC = () => {
               </div>
               <div className="dashboard-card-tools">
                 <Select
+                  className="dashboard-card-tools__store-select"
                   defaultValue="all"
                   options={[{ value: 'all', label: '全部门店' }]}
+                  variant="borderless"
                 />
                 <DatePicker.RangePicker
+                  className="dashboard-card-tools__date-range"
                   value={dateRange}
                   allowClear={false}
+                  suffixIcon={null}
+                  separator={
+                    <span className="dashboard-card-tools__range-arrow">~</span>
+                  }
+                  variant="borderless"
                   onChange={(value) => {
                     if (value?.[0] && value?.[1]) {
                       setDateRange([value[0], value[1]]);

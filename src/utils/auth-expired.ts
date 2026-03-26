@@ -1,5 +1,5 @@
 import { history } from '@umijs/max';
-import { Modal } from 'antd';
+import { message, Modal } from 'antd';
 import {
   clearBusinessList,
   clearCurrentBusinessCode,
@@ -13,13 +13,14 @@ import {
 const loginPath = '/user/login';
 const redirectStorageKey = 'post_login_redirect';
 const logoutReasonStorageKey = 'auth_logout_reason';
+const logoutMessageStorageKey = 'auth_logout_message';
 const pendingIdentityStorageKey = 'auth_login_pending_identity';
 const devBypassAuth =
   typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
 
 let authRedirecting = false;
 
-export type AuthLogoutReason = 'mutual_login' | 'expired';
+export type AuthLogoutReason = 'mutual_login' | 'expired' | 'unauthorized';
 
 function getCurrentRelativePath(): string {
   if (typeof window !== 'undefined') {
@@ -68,7 +69,13 @@ export function clearPostLoginRedirect() {
 }
 
 function normalizeLogoutReason(raw: unknown): AuthLogoutReason | undefined {
-  if (raw === 'mutual_login' || raw === 'expired') return raw;
+  if (
+    raw === 'mutual_login' ||
+    raw === 'expired' ||
+    raw === 'unauthorized'
+  ) {
+    return raw;
+  }
   return undefined;
 }
 
@@ -87,6 +94,27 @@ export function consumeAuthLogoutReason(): AuthLogoutReason | undefined {
     const raw = sessionStorage.getItem(logoutReasonStorageKey);
     sessionStorage.removeItem(logoutReasonStorageKey);
     return normalizeLogoutReason(raw);
+  } catch {
+    return undefined;
+  }
+}
+
+export function setAuthLogoutMessage(raw?: unknown) {
+  if (typeof raw !== 'string') return;
+  const value = raw.trim();
+  if (!value) return;
+  try {
+    sessionStorage.setItem(logoutMessageStorageKey, value);
+  } catch {
+    // ignore
+  }
+}
+
+export function consumeAuthLogoutMessage(): string | undefined {
+  try {
+    const raw = sessionStorage.getItem(logoutMessageStorageKey)?.trim();
+    sessionStorage.removeItem(logoutMessageStorageKey);
+    return raw || undefined;
   } catch {
     return undefined;
   }
@@ -193,15 +221,28 @@ export function redirectToLogin(redirect?: string) {
 }
 
 export function isAuthExpiredCode(code: unknown): boolean {
-  return String(code ?? '') === '2011';
+  const normalized = String(code ?? '');
+  return normalized === '2011' || normalized === '401';
 }
 
 export function handleAuthExpiredByCode(
   code: unknown,
-  _errorMessage?: string,
+  errorMessage?: string,
 ): boolean {
   if (!isAuthExpiredCode(code)) return false;
   if (devBypassAuth) return true;
-  forceLogoutAndRedirect(getCurrentRelativePath(), 'mutual_login');
+  const normalizedCode = String(code ?? '');
+  const nextReason: AuthLogoutReason =
+    normalizedCode === '2011' ? 'mutual_login' : 'unauthorized';
+  const nextMessage =
+    typeof errorMessage === 'string' && errorMessage.trim()
+      ? errorMessage.trim()
+      : nextReason === 'mutual_login'
+        ? '登录状态已失效，您的账号已在其他设备登录，请重新登录。'
+        : '未认证，请重新登录。';
+
+  setAuthLogoutMessage(nextMessage);
+  message.warning(nextMessage);
+  forceLogoutAndRedirect(getCurrentRelativePath(), nextReason);
   return true;
 }

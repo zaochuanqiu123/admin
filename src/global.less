@@ -151,12 +151,25 @@ ol {
   padding: 0 !important;
 }
 
+.pc-admin-route-tabs-ops > *,
+.ant-pro-top-nav-header-actions > * {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  line-height: 1;
+}
+
 .pc-admin-header-circle-action.ant-btn:hover,
 .pc-admin-header-circle-action.ant-btn:focus,
 .pc-admin-header-circle-action.ant-btn:active {
   border-color: var(--ant-color-border-secondary) !important;
   background: var(--ant-color-fill-quaternary) !important;
   color: var(--ant-color-text) !important;
+}
+
+.pc-admin-header-circle-action--notice.ant-btn {
+  margin-left: 5px;
 }
 
 .pc-admin-route-tabs-bar-in-header .pc-admin-route-tabs-more.ant-btn {

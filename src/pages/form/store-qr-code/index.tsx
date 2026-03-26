@@ -1,11 +1,13 @@
 import { PlusOutlined } from '@ant-design/icons';
 import {
+  Alert,
   Button,
   DatePicker,
   Empty,
   Image,
   Input,
   message,
+  Modal,
   Select,
   Space,
   Switch,
@@ -15,12 +17,34 @@ import type { RangePickerProps } from 'antd/es/date-picker';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getQrCodePageQuery, type QrCodeRecord } from '@/api/qrCode';
+import {
+  bindQrCode,
+  batchAddQrCode,
+  changeQrCodeTemplate,
+  getQrCodePageQuery,
+  type QrCodeRecord,
+  unbindQrCode,
+} from '@/api/qrCode';
+import { BindQrCodeModal } from './components/BindQrCodeModal';
+import { PageSectionSkeleton, PermissionButton, PermissionVisible } from '@/components';
+import { BatchChangeTemplateModal } from './components/BatchChangeTemplateModal';
 import { CreateQrCodeModal } from './components/CreateQrCodeModal';
 import { TransferModal } from './components/TransferModal';
+import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
 import './index.less';
 
 const { RangePicker } = DatePicker;
+const QR_CODE_PERMS = {
+  bind: 'device:admin:qrcode:bind',
+  transfer: 'device:admin:qrcode:transfer',
+  batchAdd: 'device:admin:qrcode:batchAdd',
+  changeTemplate: 'device:admin:qrcode:changeTemplate',
+  updateState: 'device:admin:qrcode:updateState',
+  unbind: 'device:admin:qrcode:unbind',
+  exportData: 'device:admin:qrcode:exportData',
+  exportQrcode: 'device:admin:qrcode:exportQrcode',
+  exportCompose: 'device:admin:qrcode:exportCompose',
+} as const;
 
 type QueryFilters = {
   brandName?: string;
@@ -114,6 +138,8 @@ function showPendingActionMessage(label: string) {
 
 const StoreQrCodeListPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
+  const [listInitialized, setListInitialized] = useState(false);
+  const [listError, setListError] = useState<string>();
   const [records, setRecords] = useState<QrCodeRecord[]>([]);
   const [serverTotal, setServerTotal] = useState(0);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -122,7 +148,9 @@ const StoreQrCodeListPage: React.FC = () => {
 
   // Modals state
   const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [bindModalOpen, setBindModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [batchChangeTemplateOpen, setBatchChangeTemplateOpen] = useState(false);
 
   const [draftFilters, setDraftFilters] = useState<QueryFilters>({
     brandName: undefined,
@@ -209,6 +237,7 @@ const StoreQrCodeListPage: React.FC = () => {
 
   const loadQrCodes = useCallback(async () => {
     setLoading(true);
+    setListError(undefined);
     try {
       const res = await getQrCodePageQuery({
         current,
@@ -217,16 +246,19 @@ const StoreQrCodeListPage: React.FC = () => {
         batchSn: filters.batchSn.trim() || undefined,
         model: filters.model.trim() || undefined,
         qrcodeTemplateId: filters.qrcodeTemplateId || undefined,
+      }, {
+        skipErrorHandler: true,
       });
       setRecords(Array.isArray(res?.records) ? res.records : []);
       setServerTotal(Number(res?.total || 0));
     } catch (error) {
       console.error('load qr code list failed:', error);
-      setRecords([]);
-      setServerTotal(0);
-      message.error('获取收款码列表失败');
+      const nextError = getErrorMessage(error, '获取收款码列表失败，请稍后重试');
+      setListError(nextError);
+      message.error(nextError);
     } finally {
       setLoading(false);
+      setListInitialized(true);
     }
   }, [
     current,
@@ -240,6 +272,48 @@ const StoreQrCodeListPage: React.FC = () => {
   useEffect(() => {
     void loadQrCodes();
   }, [loadQrCodes]);
+
+  const handleOpenBindModal = useCallback(() => {
+    setBindModalOpen(true);
+  }, []);
+
+  const handleUnbind = useCallback(
+    async (record: QrCodeRecord) => {
+      const id = String(record?.id || '').trim();
+      const sn = String(record?.sn || '').trim();
+
+      if (!id && !sn) {
+        message.error('缺少二维码标识，无法解绑');
+        return;
+      }
+
+      Modal.confirm({
+        title: '确认解绑该二维码吗？',
+        content: sn ? `编号：${sn}` : undefined,
+        okText: '确认',
+        cancelText: '取消',
+        okButtonProps: { danger: true },
+        onOk: async () => {
+          try {
+            const res = await unbindQrCode(
+              {
+                id: id || undefined,
+                sn: sn || undefined,
+              },
+              { skipErrorHandler: true },
+            );
+            message.success(getApiMessage(res, '解绑成功'));
+            await loadQrCodes();
+          } catch (error) {
+            console.error('unbindQrCode failed:', error);
+            message.error(getErrorMessage(error, '解绑失败'));
+            throw error;
+          }
+        },
+      });
+    },
+    [loadQrCodes],
+  );
 
   const filteredRecords = useMemo(() => {
     return records.filter((record) => {
@@ -445,26 +519,31 @@ const StoreQrCodeListPage: React.FC = () => {
         dataIndex: 'state',
         width: 120,
         render: (value, record) => (
-          <Switch
-            checked={Number(value) === 1}
-            checkedChildren="启用"
-            unCheckedChildren="禁用"
-            onChange={(checked) => {
-              setRecords((prev) =>
-                prev.map((item) =>
-                  String(item.id) === String(record.id)
-                    ? {
-                        ...item,
-                        state: checked ? 1 : 0,
-                      }
-                    : item,
-                ),
-              );
-              message.info(
-                `状态切换为${checked ? '启用' : '禁用'}，后续再接真实接口。`,
-              );
-            }}
-          />
+          <PermissionVisible
+            perm={QR_CODE_PERMS.updateState}
+            fallback={<span>{Number(value) === 1 ? '启用' : '禁用'}</span>}
+          >
+            <Switch
+              checked={Number(value) === 1}
+              checkedChildren="启用"
+              unCheckedChildren="禁用"
+              onChange={(checked) => {
+                setRecords((prev) =>
+                  prev.map((item) =>
+                    String(item.id) === String(record.id)
+                      ? {
+                          ...item,
+                          state: checked ? 1 : 0,
+                        }
+                      : item,
+                  ),
+                );
+                message.info(
+                  `状态切换为${checked ? '启用' : '禁用'}，后续再接真实接口。`,
+                );
+              }}
+            />
+          </PermissionVisible>
         ),
       },
       {
@@ -472,23 +551,32 @@ const StoreQrCodeListPage: React.FC = () => {
         key: 'action',
         width: 120,
         fixed: 'right',
-        render: (_, record) => (
-          <div className="qr-code-action-links">
-            <a
-              onClick={() => {
-                showPendingActionMessage(record?.targetId ? '解绑' : '查看');
-              }}
-            >
-              {record?.targetId ? '解绑' : '查看'}
-            </a>
-          </div>
-        ),
+        render: (_, record) => {
+          const hasMerchantOrgId = Boolean(
+            String(record?.merchantOrgId || '').trim(),
+          );
+
+          return (
+            <div className="qr-code-action-links">
+              {hasMerchantOrgId ? (
+                <PermissionVisible perm={QR_CODE_PERMS.unbind}>
+                  <a
+                    className="is-danger"
+                    onClick={() => {
+                      void handleUnbind(record);
+                    }}
+                  >
+                    解绑
+                  </a>
+                </PermissionVisible>
+              ) : null}
+            </div>
+          );
+        },
       },
     ],
-    [],
+    [handleUnbind],
   );
-
-  const selectedCount = selectedRowKeys.length;
 
   const handleSearch = () => {
     setPagination((prev) => ({
@@ -544,6 +632,8 @@ const StoreQrCodeListPage: React.FC = () => {
     filters.keyword
       ? filteredRecords.length
       : serverTotal;
+  const initialListLoading = loading && !listInitialized;
+  const refreshingList = loading && listInitialized;
 
   return (
     <div className="qr-code-page">
@@ -771,7 +861,16 @@ const StoreQrCodeListPage: React.FC = () => {
       <div className="content-card qr-code-table-card">
         <div className="qr-code-toolbar">
           <Space wrap size={12}>
-            <Button
+            <PermissionButton
+              perm={QR_CODE_PERMS.bind}
+              type="primary"
+              className="qr-code-primary-action-btn"
+              onClick={handleOpenBindModal}
+            >
+              绑定
+            </PermissionButton>
+            <PermissionButton
+              perm={QR_CODE_PERMS.transfer}
               type="primary"
               className="qr-code-primary-action-btn"
               onClick={() => {
@@ -779,8 +878,9 @@ const StoreQrCodeListPage: React.FC = () => {
               }}
             >
               划拨/回调
-            </Button>
-            <Button
+            </PermissionButton>
+            <PermissionButton
+              perm={QR_CODE_PERMS.batchAdd}
               type="primary"
               icon={<PlusOutlined />}
               className="qr-code-primary-action-btn"
@@ -789,44 +889,53 @@ const StoreQrCodeListPage: React.FC = () => {
               }}
             >
               生成收款码
-            </Button>
-            <Button
+            </PermissionButton>
+            <PermissionButton
+              perm={QR_CODE_PERMS.changeTemplate}
               onClick={() => {
-                showPendingActionMessage('批量修改模板');
+                setBatchChangeTemplateOpen(true);
               }}
             >
               批量修改模板
-            </Button>
-            <Button
+            </PermissionButton>
+            <PermissionButton
+              perm={QR_CODE_PERMS.exportData}
               onClick={() => {
                 showPendingActionMessage('导出收款码数据');
               }}
             >
               导出收款码数据
-            </Button>
-            <Button
+            </PermissionButton>
+            <PermissionButton
+              perm={QR_CODE_PERMS.exportQrcode}
               onClick={() => {
                 showPendingActionMessage('导出二维码');
               }}
             >
               导出二维码
-            </Button>
-            <Button
+            </PermissionButton>
+            <PermissionButton
+              perm={QR_CODE_PERMS.exportCompose}
               onClick={() => {
                 showPendingActionMessage('导出合成码');
               }}
             >
               导出合成码
-            </Button>
+            </PermissionButton>
           </Space>
           <div className="qr-code-toolbar-note">
             当前页已补齐参考图中的筛选区和工具按钮，已确认字段走真实响应结构，未确认查询项先按返回记录过滤。
           </div>
         </div>
 
+        {initialListLoading ? (
+          <PageSectionSkeleton rows={8} />
+        ) : listError && records.length === 0 ? (
+          <Alert type="error" showIcon message={listError} />
+        ) : (
         <Table<QrCodeRecord>
           rowKey="id"
-          loading={loading}
+          loading={refreshingList}
           rowSelection={{
             selectedRowKeys,
             onChange: setSelectedRowKeys,
@@ -849,6 +958,7 @@ const StoreQrCodeListPage: React.FC = () => {
             },
           }}
         />
+        )}
       </div>
 
       <TransferModal
@@ -863,15 +973,47 @@ const StoreQrCodeListPage: React.FC = () => {
         }}
       />
 
+      <BindQrCodeModal
+        open={bindModalOpen}
+        onCancel={() => {
+          setBindModalOpen(false);
+        }}
+        onOk={async (values) => {
+          const res = await bindQrCode(values, {
+            skipErrorHandler: true,
+          });
+          message.success(getApiMessage(res, '绑定成功'));
+          setBindModalOpen(false);
+          setSelectedRowKeys([]);
+          await loadQrCodes();
+        }}
+      />
+
       <CreateQrCodeModal
         open={createModalOpen}
         onCancel={() => setCreateModalOpen(false)}
-        brandOptions={brandOptions}
         templateOptions={templateOptions}
-        onOk={(values) => {
-          console.log('Create QR code values:', values);
-          message.success('生成收款码成功 (Mock)');
+        onOk={async (values) => {
+          const res = await batchAddQrCode(values, {
+            skipErrorHandler: true,
+          });
+          message.success(getApiMessage(res, '生成收款码成功'));
           setCreateModalOpen(false);
+          await loadQrCodes();
+        }}
+      />
+
+      <BatchChangeTemplateModal
+        open={batchChangeTemplateOpen}
+        onCancel={() => setBatchChangeTemplateOpen(false)}
+        templateOptions={templateOptions}
+        onOk={async (values) => {
+          const res = await changeQrCodeTemplate(values, {
+            skipErrorHandler: true,
+          });
+          message.success(getApiMessage(res, '批量修改模板成功'));
+          setBatchChangeTemplateOpen(false);
+          await loadQrCodes();
         }}
       />
 
