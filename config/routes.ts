@@ -188,6 +188,13 @@ const routes = [
     hideInMenu: true,
   },
   {
+    name: '设备流转',
+    path: '/device/transfer-record',
+    component: './device/transfer-record/index',
+    backendPathUrls: ['/device/transfer'],
+    hideInMenu: true,
+  },
+  {
     path: '/set/role-permission',
     redirect: '/permission/role-list',
   },

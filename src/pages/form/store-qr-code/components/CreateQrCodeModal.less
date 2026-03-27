@@ -4,13 +4,68 @@
     padding-bottom: 24px;
   }
 
-  /* 使表单的 Label 更靠近图纸的样式 */
-  .ant-form-item-label > label {
-    color: var(--ant-color-text);
+  .qr-code-create-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 24px;
+    align-items: stretch;
   }
 
-  /* 扫码打开方式 radio 群组垂直对齐 */
-  .ant-radio-wrapper {
-    margin-right: 24px;
+  .qr-code-create-form-pane {
+    padding: 24px 24px 8px;
+    border: 1px solid var(--ant-color-border-secondary);
+    border-radius: 16px;
+    background: var(--ant-color-bg-container);
+
+    .ant-form {
+      max-width: 560px;
+    }
+  }
+
+  .ant-form-item-label > label {
+    color: var(--ant-color-text);
+    font-weight: 500;
+  }
+
+  .qr-code-create-open-type-item {
+    .ant-form-item-row {
+      align-items: center;
+    }
+
+    .ant-form-item-control-input-content {
+      display: flex;
+      align-items: center;
+      min-height: 32px;
+    }
+
+    .ant-radio-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 28px;
+      flex-wrap: wrap;
+    }
+
+    .ant-radio-wrapper {
+      margin-right: 0;
+    }
+  }
+}
+
+body.theme-black-mode .qr-code-create-modal {
+  .qr-code-create-form-pane {
+    background: var(--pc-dark-bg-surface);
+    border-color: var(--pc-dark-border);
+  }
+
+  .ant-form-item-label > label {
+    color: var(--pc-dark-text);
+  }
+}
+
+@media (max-width: 960px) {
+  .qr-code-create-modal {
+    .qr-code-create-layout {
+      grid-template-columns: 1fr;
+    }
   }
 }

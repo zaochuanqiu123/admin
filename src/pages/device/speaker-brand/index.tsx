@@ -1,16 +1,35 @@
-import { Alert, Button, DatePicker, Empty, Input, Modal, Select, Space, Switch, Table, message } from 'antd';
+import {
+  Alert,
+  Button,
+  DatePicker,
+  Empty,
+  Input,
+  Modal,
+  message,
+  Select,
+  Space,
+  Switch,
+  Table,
+} from 'antd';
 import type { RangePickerProps } from 'antd/es/date-picker';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  getSpeakerChannelDetail,
   getSpeakerChannelPageQuery,
   type SpeakerChannelRecord,
+  updateSpeakerChannel,
 } from '@/api/speaker';
-import { PageSectionSkeleton, PermissionButton, PermissionVisible } from '@/components';
 import {
-  SpeakerBrandModal,
+  PageSectionSkeleton,
+  PermissionButton,
+  PermissionVisible,
+} from '@/components';
+import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
+import {
   type SpeakerBrandFormValues,
+  SpeakerBrandModal,
 } from './components/SpeakerBrandModal';
 import './index.less';
 
@@ -24,22 +43,11 @@ const SPEAKER_BRAND_PERMS = {
 } as const;
 
 type QueryFilters = {
-  belongBrandName?: string;
   createTimeRange?: RangePickerProps['value'];
   state?: string;
   name: string;
   code: string;
 };
-
-function getBelongBrandName(record: SpeakerChannelRecord) {
-  return (
-    String(record?.belongBrandName || record?.brandName || '').trim() || '-'
-  );
-}
-
-function getSortValue(record: SpeakerChannelRecord) {
-  return Number(record?.sort ?? record?.sortNum ?? record?.orderNum ?? 0);
-}
 
 function buildLocalRecordFromForm(
   values: SpeakerBrandFormValues,
@@ -48,13 +56,14 @@ function buildLocalRecordFromForm(
   return {
     ...(currentRecord || {}),
     id: String(currentRecord?.id || Date.now()),
-    belongBrandName: values.belongBrandName,
     name: values.name.trim(),
     code: values.code.trim(),
+    logo: String(values.logo || '').trim() || undefined,
+    remark: String(values.remark || '').trim() || undefined,
     config: String(values.config || '').trim(),
-    sort: Number(values.sort || 0),
     state: values.state ? 1 : 0,
-    createTime: currentRecord?.createTime || dayjs().format('YYYY-MM-DD HH:mm:ss'),
+    createTime:
+      currentRecord?.createTime || dayjs().format('YYYY-MM-DD HH:mm:ss'),
     updateTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
   };
 }
@@ -67,15 +76,14 @@ const SpeakerBrandPage: React.FC = () => {
   const [serverTotal, setServerTotal] = useState(0);
   const [brandModalOpen, setBrandModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<SpeakerChannelRecord>();
+  const [detailLoadingId, setDetailLoadingId] = useState<string>();
   const [draftFilters, setDraftFilters] = useState<QueryFilters>({
-    belongBrandName: undefined,
     createTimeRange: undefined,
     state: undefined,
     name: '',
     code: '',
   });
   const [filters, setFilters] = useState<QueryFilters>({
-    belongBrandName: undefined,
     createTimeRange: undefined,
     state: undefined,
     name: '',
@@ -90,16 +98,6 @@ const SpeakerBrandPage: React.FC = () => {
 
   const current = pagination.current || 1;
   const pageSize = pagination.pageSize || DEFAULT_PAGE_SIZE;
-
-  const belongBrandOptions = useMemo(() => {
-    const optionMap = new Map<string, { label: string; value: string }>();
-    records.forEach((record) => {
-      const value = getBelongBrandName(record);
-      if (!value || value === '-') return;
-      optionMap.set(value, { label: value, value });
-    });
-    return Array.from(optionMap.values());
-  }, [records]);
 
   const loadBrandPage = useCallback(async () => {
     setLoading(true);
@@ -120,7 +118,7 @@ const SpeakerBrandPage: React.FC = () => {
       setServerTotal(Number(res?.total || 0));
     } catch (error) {
       console.error('load speaker brand list failed:', error);
-      const nextError = '获取云音响品牌列表失败，请稍后重试';
+      const nextError = '获取音响通道列表失败，请稍后重试';
       setListError(nextError);
       message.error(nextError);
     } finally {
@@ -135,18 +133,7 @@ const SpeakerBrandPage: React.FC = () => {
 
   const filteredRecords = useMemo(() => {
     return records.filter((record) => {
-      if (
-        filters.belongBrandName &&
-        getBelongBrandName(record) !== filters.belongBrandName
-      ) {
-        return false;
-      }
-
-      if (
-        filters.createTimeRange &&
-        filters.createTimeRange[0] &&
-        filters.createTimeRange[1]
-      ) {
+      if (filters.createTimeRange?.[0] && filters.createTimeRange[1]) {
         const createTime = dayjs(record?.createTime);
         if (!createTime.isValid()) return false;
         const start = filters.createTimeRange[0].startOf('day');
@@ -158,12 +145,11 @@ const SpeakerBrandPage: React.FC = () => {
 
       return true;
     });
-  }, [filters.belongBrandName, filters.createTimeRange, records]);
+  }, [filters.createTimeRange, records]);
 
-  const filteredTotal =
-    filters.belongBrandName || filters.createTimeRange
-      ? filteredRecords.length
-      : serverTotal;
+  const filteredTotal = filters.createTimeRange
+    ? filteredRecords.length
+    : serverTotal;
 
   const initialListLoading = loading && !listInitialized;
   const refreshingList = loading && listInitialized;
@@ -177,60 +163,47 @@ const SpeakerBrandPage: React.FC = () => {
         render: (value) => value || '-',
       },
       {
-        title: '所属品牌',
-        key: 'belongBrandName',
-        width: 140,
-        render: (_, record) => getBelongBrandName(record),
-      },
-      {
-        title: '品牌名称',
+        title: '通道名称',
         dataIndex: 'name',
         width: 200,
         render: (value) => value || '-',
       },
       {
-        title: '品牌标识',
+        title: '通道编码',
         dataIndex: 'code',
         width: 180,
         render: (value) => value || '-',
       },
       {
-        title: '排序',
-        key: 'sort',
-        width: 100,
-        render: (_, record) => getSortValue(record),
+        title: 'LOGO',
+        dataIndex: 'logo',
+        width: 180,
+        render: (value) => value || '-',
+      },
+      {
+        title: '备注',
+        dataIndex: 'remark',
+        width: 220,
+        render: (value) => value || '-',
+      },
+      {
+        title: '通道配置',
+        dataIndex: 'config',
+        width: 260,
+        ellipsis: true,
+        render: (value) => value || '-',
       },
       {
         title: '是否启用',
         dataIndex: 'state',
         width: 120,
-        render: (value, record) => (
-          <PermissionVisible
-            perm={SPEAKER_BRAND_PERMS.updateState}
-            fallback={<span>{Number(value) === 1 ? '启用' : '禁用'}</span>}
-          >
-            <Switch
-              checked={Number(value) === 1}
-              checkedChildren="启用"
-              unCheckedChildren="禁用"
-              onChange={(checked) => {
-                setRecords((prev) =>
-                  prev.map((item) =>
-                    String(item.id) === String(record.id)
-                      ? {
-                          ...item,
-                          state: checked ? 1 : 0,
-                          updateTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
-                        }
-                      : item,
-                  ),
-                );
-                message.info(
-                  `状态切换为${checked ? '启用' : '禁用'}，后续再接真实接口。`,
-                );
-              }}
-            />
-          </PermissionVisible>
+        render: (value) => (
+          <Switch
+            checked={Number(value) === 1}
+            checkedChildren="启用"
+            unCheckedChildren="禁用"
+            disabled
+          />
         ),
       },
       {
@@ -253,26 +226,30 @@ const SpeakerBrandPage: React.FC = () => {
         render: (_, record) => (
           <div className="speaker-brand-action-links">
             <PermissionVisible perm={SPEAKER_BRAND_PERMS.update}>
-              <a
+              <Button
+                type="link"
+                size="small"
+                loading={detailLoadingId === String(record.id)}
                 onClick={() => {
-                  setEditingRecord(record);
-                  setBrandModalOpen(true);
+                  void handleOpenEdit(record);
                 }}
               >
-                编辑
-              </a>
+                修改
+              </Button>
             </PermissionVisible>
             <PermissionVisible perm={SPEAKER_BRAND_PERMS.delete}>
               <a
                 className="is-danger"
                 onClick={() => {
                   Modal.confirm({
-                    title: '确认删除该云音响品牌吗？',
+                    title: '确认删除该音响通道吗？',
                     okText: '确认',
                     cancelText: '取消',
                     onOk: () => {
                       setRecords((prev) =>
-                        prev.filter((item) => String(item.id) !== String(record.id)),
+                        prev.filter(
+                          (item) => String(item.id) !== String(record.id),
+                        ),
                       );
                       setServerTotal((prev) => Math.max(prev - 1, 0));
                       message.success('已删除，删除接口后续再补。');
@@ -287,7 +264,7 @@ const SpeakerBrandPage: React.FC = () => {
         ),
       },
     ],
-    [],
+    [detailLoadingId, handleOpenEdit],
   );
 
   const handleSearch = () => {
@@ -305,7 +282,6 @@ const SpeakerBrandPage: React.FC = () => {
 
   const handleReset = () => {
     const nextFilters: QueryFilters = {
-      belongBrandName: undefined,
       createTimeRange: undefined,
       state: undefined,
       name: '',
@@ -319,7 +295,59 @@ const SpeakerBrandPage: React.FC = () => {
     }));
   };
 
+  async function handleOpenEdit(record: SpeakerChannelRecord) {
+    if (!record?.id) {
+      message.warning('缺少通道ID，无法修改');
+      return;
+    }
+
+    const recordId = String(record.id);
+    setDetailLoadingId(recordId);
+    try {
+      const detail = await getSpeakerChannelDetail(recordId, {
+        skipErrorHandler: true,
+      });
+      setEditingRecord({
+        ...record,
+        ...detail,
+      });
+      setBrandModalOpen(true);
+    } catch (error) {
+      console.error('open speaker channel edit failed:', error);
+      message.error(getErrorMessage(error, '获取音响通道详情失败'));
+    } finally {
+      setDetailLoadingId(undefined);
+    }
+  }
+
   const handleSave = async (values: SpeakerBrandFormValues) => {
+    if (editingRecord?.id) {
+      try {
+        const res = await updateSpeakerChannel(
+          {
+            id: String(editingRecord.id),
+            name: values.name.trim(),
+            code: values.code.trim(),
+            logo: String(values.logo || '').trim() || undefined,
+            remark: String(values.remark || '').trim() || undefined,
+            config: String(values.config || '').trim(),
+            state: values.state ? 1 : 0,
+          },
+          {
+            skipErrorHandler: true,
+          },
+        );
+        message.success(getApiMessage(res, '修改成功'));
+        setBrandModalOpen(false);
+        setEditingRecord(undefined);
+        await loadBrandPage();
+      } catch (error) {
+        console.error('update speaker channel failed:', error);
+        message.error(getErrorMessage(error, '修改音响通道失败'));
+      }
+      return;
+    }
+
     const nextRecord = buildLocalRecordFromForm(values, editingRecord);
     setRecords((prev) => {
       const hasEditing = prev.some(
@@ -336,7 +364,9 @@ const SpeakerBrandPage: React.FC = () => {
       setServerTotal((prev) => prev + 1);
     }
     message.success(
-      editingRecord ? '品牌已更新，保存接口后续再补。' : '品牌已添加，保存接口后续再补。',
+      editingRecord
+        ? '通道已更新，保存接口后续再补。'
+        : '通道已添加，保存接口后续再补。',
     );
     setBrandModalOpen(false);
     setEditingRecord(undefined);
@@ -346,22 +376,6 @@ const SpeakerBrandPage: React.FC = () => {
     <div className="speaker-brand-page">
       <div className="content-card speaker-brand-filter-card">
         <div className="speaker-brand-filter-grid">
-          <div className="field">
-            <span className="field-label">所属品牌</span>
-            <Select
-              allowClear
-              placeholder="请选择"
-              value={draftFilters.belongBrandName}
-              options={belongBrandOptions}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  belongBrandName: value,
-                }));
-              }}
-            />
-          </div>
-
           <div className="field">
             <span className="field-label">创建时间</span>
             <RangePicker
@@ -395,10 +409,10 @@ const SpeakerBrandPage: React.FC = () => {
           </div>
 
           <div className="field">
-            <span className="field-label">品牌名称</span>
+            <span className="field-label">通道名称</span>
             <Input
               allowClear
-              placeholder="请输入品牌名称"
+              placeholder="请输入通道名称"
               value={draftFilters.name}
               onChange={(event) => {
                 setDraftFilters((prev) => ({
@@ -411,10 +425,10 @@ const SpeakerBrandPage: React.FC = () => {
           </div>
 
           <div className="field">
-            <span className="field-label">品牌标识</span>
+            <span className="field-label">通道编码</span>
             <Input
               allowClear
-              placeholder="请输入品牌标识"
+              placeholder="请输入通道编码"
               value={draftFilters.code}
               onChange={(event) => {
                 setDraftFilters((prev) => ({
@@ -448,7 +462,7 @@ const SpeakerBrandPage: React.FC = () => {
               setBrandModalOpen(true);
             }}
           >
-            添加音响品牌
+            添加音响通道
           </PermissionButton>
         </div>
 
@@ -464,7 +478,7 @@ const SpeakerBrandPage: React.FC = () => {
             dataSource={filteredRecords}
             scroll={{ x: 1280 }}
             locale={{
-              emptyText: <Empty description="暂无云音响品牌数据" />,
+              emptyText: <Empty description="暂无音响通道数据" />,
             }}
             pagination={{
               ...pagination,
@@ -483,9 +497,8 @@ const SpeakerBrandPage: React.FC = () => {
 
       <SpeakerBrandModal
         open={brandModalOpen}
-        title={editingRecord ? '编辑音响品牌' : '添加音响品牌'}
+        title={editingRecord ? '修改音响通道' : '添加音响通道'}
         initialValues={editingRecord}
-        belongBrandOptions={belongBrandOptions}
         onCancel={() => {
           setBrandModalOpen(false);
           setEditingRecord(undefined);

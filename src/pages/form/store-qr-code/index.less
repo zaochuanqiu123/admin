@@ -35,7 +35,12 @@
 
   .actions {
     grid-column: 3;
+    justify-self: end;
     justify-content: flex-end;
+
+    .ant-space {
+      justify-content: flex-end;
+    }
   }
 
   .qr-code-table-card {
@@ -51,10 +56,6 @@
 
   .qr-code-primary-action-btn.ant-btn {
     .mixin-page-create-btn();
-  }
-
-  .qr-code-toolbar-note {
-    color: var(--ant-color-text-secondary);
   }
 
   .qr-code-table-card {
@@ -144,6 +145,12 @@
 
   .qr-code-bind-lines {
     line-height: 1.8;
+
+    .is-secondary {
+      color: var(--ant-color-text-description);
+      font-size: 12px;
+      line-height: 1.6;
+    }
   }
 }
 
@@ -156,10 +163,6 @@ body.theme-black-mode .qr-code-page {
   .field-label {
     color: var(--pc-dark-text) !important;
   }
-
-  .qr-code-toolbar-note {
-    color: var(--pc-dark-text-secondary) !important;
-  }
 }
 
 @media (max-width: 1360px) {
@@ -170,6 +173,13 @@ body.theme-black-mode .qr-code-page {
 
     .actions {
       grid-column: auto;
+      justify-self: stretch;
+      width: 100%;
+    }
+
+    .actions .ant-space {
+      width: 100%;
+      justify-content: flex-end;
     }
   }
 }

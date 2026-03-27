@@ -1,12 +1,14 @@
-import { LeftOutlined, RightOutlined } from '@ant-design/icons';
-import { Button, Input, Modal, Radio, Table, message } from 'antd';
+import { LeftOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
+import { Button, Input, Modal, message, Radio, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import React, { useMemo, useState } from 'react';
+import type { AgentOrgRecord } from '@/api/org';
 import {
   getSpeakerListQuery,
   type SpeakerListQueryParams,
   type SpeakerRecord,
 } from '@/api/speaker';
+import { OrganizationPickerModal } from '@/components';
 import { getErrorMessage } from '@/utils/apiMessage';
 import { getSpeakerNameLines } from '../helpers';
 import './SpeakerTransferModal.less';
@@ -16,12 +18,21 @@ type SpeakerTransferModalProps = {
   onCancel: () => void;
   onOk: (values: {
     actionType: 'transfer' | 'callback';
-    targetOrgName?: string;
+    orgId?: string;
+    targetOrg?: AgentOrgRecord;
     searchMode: 'custom' | 'range' | 'batch';
     items: SpeakerRecord[];
   }) => Promise<void> | void;
   selectedRecords?: SpeakerRecord[];
 };
+
+function getOrgDisplayText(record?: AgentOrgRecord | null) {
+  const orgName = String(record?.orgName || '').trim();
+  const orgId = String(record?.id || '').trim();
+
+  if (orgName && orgId) return `${orgName}（ID: ${orgId}）`;
+  return orgName || orgId || '';
+}
 
 export const SpeakerTransferModal: React.FC<SpeakerTransferModalProps> = ({
   open,
@@ -32,7 +43,8 @@ export const SpeakerTransferModal: React.FC<SpeakerTransferModalProps> = ({
   const [actionType, setActionType] = useState<'transfer' | 'callback'>(
     'transfer',
   );
-  const [targetOrgName, setTargetOrgName] = useState('');
+  const [targetOrg, setTargetOrg] = useState<AgentOrgRecord | null>(null);
+  const [orgPickerOpen, setOrgPickerOpen] = useState(false);
   const [searchMode, setSearchMode] = useState<'custom' | 'range' | 'batch'>(
     'custom',
   );
@@ -54,7 +66,8 @@ export const SpeakerTransferModal: React.FC<SpeakerTransferModalProps> = ({
   React.useEffect(() => {
     if (open) {
       setActionType('transfer');
-      setTargetOrgName('');
+      setTargetOrg(null);
+      setOrgPickerOpen(false);
       setSearchMode('custom');
       setCustomKeyword('');
       setRangeStart('');
@@ -176,8 +189,8 @@ export const SpeakerTransferModal: React.FC<SpeakerTransferModalProps> = ({
   };
 
   const handleOk = async () => {
-    if (actionType === 'transfer' && !targetOrgName.trim()) {
-      message.warning('请填写目标机构');
+    if (actionType === 'transfer' && !targetOrg?.id) {
+      message.warning('请选择目标机构');
       return;
     }
 
@@ -190,7 +203,8 @@ export const SpeakerTransferModal: React.FC<SpeakerTransferModalProps> = ({
     try {
       await onOk({
         actionType,
-        targetOrgName: targetOrgName.trim() || undefined,
+        orgId: targetOrg?.id,
+        targetOrg: targetOrg || undefined,
         searchMode,
         items: rightData,
       });
@@ -231,13 +245,31 @@ export const SpeakerTransferModal: React.FC<SpeakerTransferModalProps> = ({
         {actionType === 'transfer' && (
           <div className="filter-row">
             <div className="filter-label">目标机构</div>
-            <div className="filter-content">
+            <div className="filter-content target-org-picker">
               <Input
-                value={targetOrgName}
-                onChange={(event) => setTargetOrgName(event.target.value)}
-                placeholder="请填写机构"
+                readOnly
+                value={getOrgDisplayText(targetOrg)}
+                placeholder="请选择机构"
                 style={{ width: 260 }}
               />
+              <Button
+                icon={<SearchOutlined />}
+                onClick={() => {
+                  setOrgPickerOpen(true);
+                }}
+              >
+                选择机构
+              </Button>
+              {targetOrg ? (
+                <Button
+                  type="link"
+                  onClick={() => {
+                    setTargetOrg(null);
+                  }}
+                >
+                  清空
+                </Button>
+              ) : null}
             </div>
           </div>
         )}
@@ -381,6 +413,15 @@ export const SpeakerTransferModal: React.FC<SpeakerTransferModalProps> = ({
           <div className="speaker-shuttle-footer">共计：{rightData.length}</div>
         </div>
       </div>
+      <OrganizationPickerModal
+        open={orgPickerOpen}
+        onCancel={() => setOrgPickerOpen(false)}
+        onSelect={(record) => {
+          setTargetOrg(record);
+          setOrgPickerOpen(false);
+        }}
+        selectedOrg={targetOrg}
+      />
     </Modal>
   );
 };

@@ -28,6 +28,14 @@
         display: flex;
         align-items: center;
         gap: 16px;
+
+        &.target-org-picker {
+          gap: 12px;
+
+          .ant-input {
+            max-width: 360px;
+          }
+        }
       }
     }
   }
@@ -55,19 +63,18 @@
         flex: 1;
         overflow: auto;
 
-        // Hide standard pagination as we'll use a custom footer
         .ant-table-pagination {
           display: none;
         }
 
-        .ant-table-thead>tr>th {
+        .ant-table-thead > tr > th {
           background: #f0f5ff;
           color: rgba(0, 0, 0, 0.88);
           font-weight: 500;
           padding: 8px 16px;
         }
 
-        .ant-table-tbody>tr>td {
+        .ant-table-tbody > tr > td {
           padding: 8px 16px;
         }
       }
@@ -112,6 +119,40 @@
   }
 }
 
+.qr-code-org-picker-modal {
+  .org-picker-filter-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .org-picker-filter-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .org-picker-filter-item-keyword {
+    flex: 1;
+    min-width: 320px;
+
+    .ant-input {
+      min-width: 280px;
+    }
+  }
+
+  .filter-item-label {
+    color: rgba(0, 0, 0, 0.88);
+    font-weight: 500;
+  }
+
+  .ant-table-thead > tr > th {
+    background: #f0f5ff;
+  }
+}
+
 body.theme-black-mode .qr-code-transfer-modal {
   .transfer-filter-area {
     .filter-row .filter-label {
@@ -121,7 +162,7 @@ body.theme-black-mode .qr-code-transfer-modal {
 
   .transfer-shuttle-area {
     background: var(--pc-dark-bg-page);
-    
+
     .shuttle-panel {
       background: var(--pc-dark-bg-surface);
       border-color: var(--pc-dark-border);
@@ -161,5 +202,21 @@ body.theme-black-mode .qr-code-transfer-modal {
         }
       }
     }
+  }
+}
+
+body.theme-black-mode .qr-code-org-picker-modal {
+  .filter-item-label {
+    color: var(--pc-dark-text);
+  }
+
+  .ant-table-thead > tr > th {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--pc-dark-text);
+  }
+
+  .ant-table-tbody > tr > td,
+  .ant-empty-description {
+    color: var(--pc-dark-text);
   }
 }

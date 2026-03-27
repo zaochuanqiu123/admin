@@ -12,6 +12,15 @@ export type QrCodePageQueryParams = {
 export type QrCodeTemplateInfo = {
   name?: string;
   prevImageUrl?: string;
+  [key: string]: any;
+};
+
+export type QrCodeOrgInfo = {
+  id?: string;
+  orgCode?: string;
+  orgLevelCode?: string;
+  orgName?: string;
+  [key: string]: any;
 };
 
 export type QrCodeRecord = {
@@ -34,11 +43,18 @@ export type QrCodeRecord = {
   state?: number;
   transferTime?: string;
   bindTime?: string;
+  bindName?: string;
+  bindRemark?: string;
   createTime?: string;
   createUserId?: string;
   updateTime?: string;
   updateUserId?: string;
   qrcodeTemplate?: QrCodeTemplateInfo;
+  agentOrg?: QrCodeOrgInfo;
+  groupOrg?: QrCodeOrgInfo;
+  merchantOrg?: QrCodeOrgInfo;
+  storeOrg?: QrCodeOrgInfo;
+  [key: string]: any;
 };
 
 export type QrCodePageResult = {
@@ -104,6 +120,13 @@ export type QrCodeBindParams = {
   bindRemark?: string;
 };
 
+export type QrCodeTransferParams = {
+  transferType: 'ISSUE' | 'RETURN';
+  orgId?: string;
+  snList: string[];
+  remark?: string;
+};
+
 export async function getQrCodeListQuery(
   data?: QrCodeListQueryParams,
   options?: { [key: string]: any },
@@ -164,6 +187,17 @@ export async function bindQrCode(
   options?: { [key: string]: any },
 ) {
   return apiRequest<any>('/api/device/admin/qrcode/bind', {
+    method: 'POST',
+    data,
+    ...(options || {}),
+  });
+}
+
+export async function transferQrCode(
+  data: QrCodeTransferParams,
+  options?: { [key: string]: any },
+) {
+  return apiRequest<any>('/api/device/admin/qrcode/transfer', {
     method: 'POST',
     data,
     ...(options || {}),

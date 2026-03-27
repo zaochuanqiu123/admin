@@ -1024,9 +1024,6 @@ const QrTemplateListPage: React.FC = () => {
           >
             添加模板
           </PermissionButton>
-          <div className="qr-template-toolbar-note">
-            当前列表基于模板名称走远程分页，状态/显示编号/创建时间按当前页结果过滤。
-          </div>
         </div>
 
         {initialListLoading ? (

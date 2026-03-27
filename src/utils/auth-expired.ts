@@ -1,5 +1,5 @@
 import { history } from '@umijs/max';
-import { message, Modal } from 'antd';
+import { Modal, message } from 'antd';
 import {
   clearBusinessList,
   clearCurrentBusinessCode,
@@ -19,6 +19,8 @@ const devBypassAuth =
   typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
 
 let authRedirecting = false;
+let lastAuthExpiredFeedbackAt = 0;
+const AUTH_EXPIRED_FEEDBACK_DEDUP_MS = 1500;
 
 export type AuthLogoutReason = 'mutual_login' | 'expired' | 'unauthorized';
 
@@ -69,11 +71,7 @@ export function clearPostLoginRedirect() {
 }
 
 function normalizeLogoutReason(raw: unknown): AuthLogoutReason | undefined {
-  if (
-    raw === 'mutual_login' ||
-    raw === 'expired' ||
-    raw === 'unauthorized'
-  ) {
+  if (raw === 'mutual_login' || raw === 'expired' || raw === 'unauthorized') {
     return raw;
   }
   return undefined;
@@ -242,7 +240,11 @@ export function handleAuthExpiredByCode(
         : '未认证，请重新登录。';
 
   setAuthLogoutMessage(nextMessage);
-  message.warning(nextMessage);
+  const now = Date.now();
+  if (now - lastAuthExpiredFeedbackAt > AUTH_EXPIRED_FEEDBACK_DEDUP_MS) {
+    lastAuthExpiredFeedbackAt = now;
+    message.warning(nextMessage);
+  }
   forceLogoutAndRedirect(getCurrentRelativePath(), nextReason);
   return true;
 }

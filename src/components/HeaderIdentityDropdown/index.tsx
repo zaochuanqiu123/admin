@@ -63,11 +63,17 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
     [filteredIdentityItems],
   );
 
-  const accountName =
-    loginContext?.userOrgNickName ||
-    (currentUser as any)?.nickName ||
+  const loginUserName =
     currentUser?.name ||
+    (currentUser as any)?.userName ||
+    (currentUser as any)?.nickName ||
     '用户';
+  const currentOrgName =
+    currentIdentity?.name ||
+    loginContext?.userOrgName ||
+    loginContext?.orgName ||
+    loginContext?.userOrgNickName ||
+    '未选择机构';
   const accountNo =
     (currentUser as any)?.account ||
     (currentUser as any)?.account ||
@@ -77,7 +83,7 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
   const accountRole =
     currentIdentity?.groupLabel || currentIdentity?.levelName || '未选择身份';
   const avatarSrc = currentUser?.avatar || HEADER_USER_AVATAR_SRC;
-  const triggerLabel = accountName;
+  const triggerLabel = currentOrgName;
 
   const handleOpenProfileCenter = () => {
     setOpen(false);
@@ -137,7 +143,7 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
             />
             <div className="header-identity-dropdown__account">
               <div className="header-identity-dropdown__name">
-                {accountName}
+                {loginUserName}
               </div>
               <div className="header-identity-dropdown__meta">
                 <span>{accountNo}</span>

@@ -1,4 +1,4 @@
-import { apiData } from '@/api/http';
+import { apiData, apiRequest } from '@/api/http';
 
 export type SpeakerOrgInfo = {
   id?: string;
@@ -137,6 +137,34 @@ export type SpeakerChannelPageResult = {
   countId?: string;
 };
 
+export type SpeakerChannelSaveParams = {
+  id?: string;
+  code: string;
+  name: string;
+  logo?: string;
+  remark?: string;
+  config: string;
+  state: number;
+};
+
+export type SpeakerBroadcastParams = {
+  speakerSn: string;
+  qrcodeSn: string;
+  type: 'CONTENT' | 'PAY_METHOD' | 'CANCEL';
+  content?: string;
+  payMethod?: string;
+  payAmount?: string;
+};
+
+type CommonApiResponse<T = any> = {
+  code?: number | string;
+  msg?: string;
+  message?: string;
+  data?: T;
+  success?: boolean;
+  errorMessage?: string;
+};
+
 export async function getSpeakerPageQuery(
   data: SpeakerPageParams,
   options?: { [key: string]: any },
@@ -165,6 +193,47 @@ export async function getSpeakerChannelPageQuery(
 ) {
   return apiData<SpeakerChannelPageResult>(
     '/api/device/admin/speakerChannel/page',
+    {
+      method: 'POST',
+      data,
+      ...(options || {}),
+    },
+  );
+}
+
+export async function getSpeakerChannelDetail(
+  id: string,
+  options?: { [key: string]: any },
+) {
+  return apiData<SpeakerChannelRecord>(
+    `/api/device/admin/speakerChannel/${id}`,
+    {
+      method: 'GET',
+      ...(options || {}),
+    },
+  );
+}
+
+export async function updateSpeakerChannel(
+  data: SpeakerChannelSaveParams,
+  options?: { [key: string]: any },
+) {
+  return apiRequest<CommonApiResponse<boolean>>(
+    '/api/device/admin/speakerChannel/update',
+    {
+      method: 'POST',
+      data,
+      ...(options || {}),
+    },
+  );
+}
+
+export async function broadcastSpeaker(
+  data: SpeakerBroadcastParams,
+  options?: { [key: string]: any },
+) {
+  return apiRequest<CommonApiResponse<boolean>>(
+    '/api/device/admin/speaker/broadcast',
     {
       method: 'POST',
       data,

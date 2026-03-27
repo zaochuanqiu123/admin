@@ -1308,35 +1308,33 @@ const DashboardIndexPage: React.FC = () => {
         </div>
 
         <aside className="dashboard-index-side">
-          <div className="dashboard-org-card-stack">
-            <section className="dashboard-local-card dashboard-org-image-card">
-              <img
-                className="dashboard-org-image"
-                src={suifudaCard}
-                alt="随付达服务卡片"
-              />
-            </section>
+          <section className="dashboard-local-card dashboard-org-image-card">
+            <img
+              className="dashboard-org-image"
+              src={suifudaCard}
+              alt="随付达服务卡片"
+            />
+          </section>
 
-            <section className="dashboard-local-card dashboard-org-card-bottom">
-              <div className="dashboard-org-block">
-                <div className="dashboard-org-block-head u-flex-between">
-                  <span>门店数量</span>
-                  <button type="button">管理</button>
-                </div>
-                <div className="dashboard-org-block-value">10 / 10</div>
+          <section className="dashboard-local-card dashboard-org-card-bottom">
+            <div className="dashboard-org-block">
+              <div className="dashboard-org-block-head u-flex-between">
+                <span>门店数量</span>
+                <button type="button">管理</button>
               </div>
+              <div className="dashboard-org-block-value">10 / 10</div>
+            </div>
 
-              <div className="dashboard-org-divider" />
+            <div className="dashboard-org-divider" />
 
-              <div className="dashboard-org-block">
-                <div className="dashboard-org-block-head u-flex-between">
-                  <span>插件数量</span>
-                  <button type="button">详情</button>
-                </div>
-                <div className="dashboard-org-block-value">40 / 41</div>
+            <div className="dashboard-org-block">
+              <div className="dashboard-org-block-head u-flex-between">
+                <span>插件数量</span>
+                <button type="button">详情</button>
               </div>
-            </section>
-          </div>
+              <div className="dashboard-org-block-value">40 / 41</div>
+            </div>
+          </section>
 
           <section className="dashboard-local-card">
             <div className="dashboard-card-head">

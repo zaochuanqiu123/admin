@@ -1,4 +1,4 @@
-import { CloseOutlined, UserOutlined } from '@ant-design/icons';
+import { CloseOutlined, SendOutlined } from '@ant-design/icons';
 import type { UniqueIdentifier } from '@dnd-kit/core';
 import {
   closestCenter,
@@ -16,16 +16,10 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { useModel } from '@umijs/max';
-import {
-  Avatar,
-  Button,
-  Drawer,
-  message,
-  Space,
-  Typography,
-  theme,
-} from 'antd';
+import { Button, Drawer, Input, message, Space, Typography, theme } from 'antd';
 import React, { useEffect } from 'react';
+import aijiqiren from '@/assets/aijiqiren.png';
+import shendusousuo from '@/assets/shendusousuo.png';
 import {
   COMMON_ACTION_MAX,
   COMMON_GROUPS,
@@ -44,8 +38,6 @@ import GroupRow from './GroupRow';
 import SubGroupRow from './SubGroupRow';
 
 const OPEN_COMMON_ACTIONS_DRAWER_EVENT = 'pc-admin-open-common-actions-drawer';
-const DEMO_AVATAR_SRC =
-  'https://api.dicebear.com/7.x/miniavs/svg?seed=antd-yangkun';
 
 const WorkplaceCommonMenu: React.FC<{
   storageKey: string;
@@ -70,6 +62,7 @@ const WorkplaceCommonMenu: React.FC<{
   const [activeSubGroupId, setActiveSubGroupId] = React.useState<string>(
     COMMON_GROUPS[0]?.children?.[0]?.id ?? '',
   );
+  const [assistantQuestion, setAssistantQuestion] = React.useState('');
   const isDarkMode = (initialState?.settings as any)?.navTheme === 'realDark';
   const drawerSurfaceBg = isDarkMode ? token.colorBgLayout : '#E7EDFB';
   const drawerPanelBg = isDarkMode ? token.colorBgContainer : '#FFFFFF';
@@ -235,16 +228,8 @@ const WorkplaceCommonMenu: React.FC<{
     activeGroup?.children?.find((x) => x.id === activeSubGroupId) ??
     activeGroup?.children?.[0];
 
-  // 获取时间段问候语
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 6) return '凌晨好';
-    if (hour < 9) return '早上好';
-    if (hour < 12) return '上午好';
-    if (hour < 14) return '中午好';
-    if (hour < 18) return '下午好';
-    if (hour < 22) return '晚上好';
-    return '夜深了';
+  const handleAssistantSend = () => {
+    message.info('功能正在开发中~');
   };
 
   return (
@@ -252,21 +237,55 @@ const WorkplaceCommonMenu: React.FC<{
       <div className="workplace-common pc-admin-workplace-common">
         <div className="workplace-common-card workplace-user-info-card">
           <div className="workplace-user-info-content">
-            <Avatar
-              size={48}
-              icon={<UserOutlined />}
-              src={DEMO_AVATAR_SRC}
-              className="workplace-user-avatar"
-            />
-            <div className="workplace-user-text">
-              <div className="workplace-user-greeting">
-                {getGreeting()}！尊敬的杨坤
-              </div>
-              <div className="workplace-user-ukey-block">
-                <div className="workplace-user-ukey-serial">
-                  U盾序号 283****738
+            <div className="workplace-ai-card">
+              <div className="workplace-ai-card__hero">
+                <div className="workplace-ai-card__copy">
+                  <div className="workplace-ai-card__title">Hi～我是小达!</div>
+                  <div className="workplace-ai-card__desc">
+                    您可以向我咨询任何
+                    <br />
+                    经营问题哦！
+                  </div>
                 </div>
-                <div className="workplace-user-ukey-action">财务提交</div>
+                <img
+                  className="workplace-ai-card__robot"
+                  src={aijiqiren}
+                  alt="小达机器人"
+                />
+              </div>
+
+              <div className="workplace-ai-card__editor">
+                <Input.TextArea
+                  className="workplace-ai-card__textarea"
+                  value={assistantQuestion}
+                  maxLength={200}
+                  autoSize={{ minRows: 2, maxRows: 2 }}
+                  placeholder="请输入您想了解的问题！"
+                  onChange={(event) => setAssistantQuestion(event.target.value)}
+                />
+                <div className="workplace-ai-card__toolbar">
+                  <span className="workplace-ai-card__search">
+                    <img
+                      className="workplace-ai-card__search-icon"
+                      src={shendusousuo}
+                      alt=""
+                    />
+                    <span>深度搜索</span>
+                  </span>
+                  <div className="workplace-ai-card__actions">
+                    <span className="workplace-ai-card__count">
+                      {assistantQuestion.length}/200
+                    </span>
+                    <Button
+                      type="primary"
+                      className="workplace-ai-card__send"
+                      onClick={handleAssistantSend}
+                      aria-label="发送问题"
+                    >
+                      <SendOutlined />
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

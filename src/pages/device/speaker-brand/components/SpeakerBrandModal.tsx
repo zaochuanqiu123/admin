@@ -1,4 +1,4 @@
-import { Button, Form, Input, InputNumber, Modal, Select, Space, Switch, message } from 'antd';
+import { Form, Input, Modal, message, Switch } from 'antd';
 import React from 'react';
 import type { SpeakerChannelRecord } from '@/api/speaker';
 import { getErrorMessage } from '@/utils/apiMessage';
@@ -9,16 +9,15 @@ type SpeakerBrandModalProps = {
   title: string;
   onCancel: () => void;
   onOk: (values: SpeakerBrandFormValues) => Promise<void> | void;
-  belongBrandOptions: { label: string; value: string }[];
   initialValues?: Partial<SpeakerChannelRecord>;
 };
 
 export type SpeakerBrandFormValues = {
-  belongBrandName?: string;
   name: string;
   code: string;
-  config?: string;
-  sort?: number;
+  logo?: string;
+  remark?: string;
+  config: string;
   state?: boolean;
 };
 
@@ -26,16 +25,11 @@ function normalizeInitialValues(
   values?: Partial<SpeakerChannelRecord>,
 ): Partial<SpeakerBrandFormValues> {
   return {
-    belongBrandName:
-      String(values?.belongBrandName || values?.brandName || '').trim() ||
-      undefined,
     name: String(values?.name || '').trim(),
     code: String(values?.code || '').trim(),
-    config: String(values?.config || '').trim() || undefined,
-    sort:
-      Number(
-        values?.sort ?? values?.sortNum ?? values?.orderNum ?? 0,
-      ) || 0,
+    logo: String(values?.logo || '').trim() || undefined,
+    remark: String(values?.remark || '').trim() || undefined,
+    config: String(values?.config || '').trim(),
     state: Number(values?.state ?? 1) === 1,
   };
 }
@@ -45,7 +39,6 @@ export const SpeakerBrandModal: React.FC<SpeakerBrandModalProps> = ({
   title,
   onCancel,
   onOk,
-  belongBrandOptions,
   initialValues,
 }) => {
   const [form] = Form.useForm<SpeakerBrandFormValues>();
@@ -67,7 +60,7 @@ export const SpeakerBrandModal: React.FC<SpeakerBrandModalProps> = ({
       if ((error as any)?.errorFields) {
         return;
       }
-      message.error(getErrorMessage(error, '保存音响品牌失败'));
+      message.error(getErrorMessage(error, '保存音响通道失败'));
     } finally {
       setSubmitting(false);
     }
@@ -93,60 +86,45 @@ export const SpeakerBrandModal: React.FC<SpeakerBrandModalProps> = ({
         wrapperCol={{ flex: 'auto' }}
       >
         <Form.Item
-          label="所属品牌"
-          name="belongBrandName"
-          rules={[{ required: true, message: '请选择所属品牌' }]}
-        >
-          <Select allowClear placeholder="请选择" options={belongBrandOptions} />
-        </Form.Item>
-
-        <Form.Item
-          label="品牌名称"
+          label="通道名称"
           name="name"
-          rules={[{ required: true, message: '请输入品牌名称' }]}
+          rules={[{ required: true, message: '请输入通道名称' }]}
         >
-          <Input placeholder="请输入品牌名称" />
+          <Input placeholder="请输入通道名称" />
         </Form.Item>
 
         <Form.Item
-          label="品牌标识"
+          label="通道编码"
           name="code"
-          rules={[{ required: true, message: '请输入品牌标识' }]}
+          rules={[{ required: true, message: '请输入通道编码' }]}
         >
-          <Input placeholder="请输入品牌标识" />
+          <Input placeholder="请输入通道编码" />
         </Form.Item>
 
-        <Form.Item label="API参数" name="config">
+        <Form.Item label="通道LOGO" name="logo">
+          <Input placeholder="请输入通道LOGO" />
+        </Form.Item>
+
+        <Form.Item label="备注" name="remark">
           <Input.TextArea
-            rows={3}
-            placeholder="请输入 API 参数"
+            rows={2}
+            placeholder="请输入备注"
             showCount
-            maxLength={500}
+            maxLength={200}
           />
         </Form.Item>
 
-        <Form.Item label="排序" required>
-          <Space.Compact>
-            <Button
-              onClick={() => {
-                const currentValue = Number(form.getFieldValue('sort') || 0);
-                form.setFieldValue('sort', currentValue - 1);
-              }}
-            >
-              -
-            </Button>
-            <Form.Item name="sort" noStyle initialValue={0}>
-              <InputNumber min={-9999} max={9999} controls={false} />
-            </Form.Item>
-            <Button
-              onClick={() => {
-                const currentValue = Number(form.getFieldValue('sort') || 0);
-                form.setFieldValue('sort', currentValue + 1);
-              }}
-            >
-              +
-            </Button>
-          </Space.Compact>
+        <Form.Item
+          label="通道配置"
+          name="config"
+          rules={[{ required: true, message: '请输入通道配置' }]}
+        >
+          <Input.TextArea
+            rows={3}
+            placeholder='请输入通道配置，例如：{"appKey":"xxx","appSecret":"yyy"}'
+            showCount
+            maxLength={500}
+          />
         </Form.Item>
 
         <Form.Item label="是否启用" name="state" valuePropName="checked">

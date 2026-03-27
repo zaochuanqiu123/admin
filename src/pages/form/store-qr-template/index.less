@@ -35,7 +35,10 @@
   }
 
   .actions {
+    grid-column: 3;
+    justify-self: end;
     justify-content: flex-end;
+    gap: 12px;
   }
 
   .qr-template-table-card {
@@ -44,19 +47,12 @@
 
   .qr-template-toolbar {
     display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    gap: 10px;
+    align-items: center;
     padding-bottom: 10px;
   }
 
   .qr-template-add-btn.ant-btn {
     .mixin-page-create-btn();
-  }
-
-  .qr-template-toolbar-note {
-    margin-top: 2px;
-    color: var(--ant-color-text-secondary);
   }
 
   .qr-template-table-card {
@@ -664,10 +660,6 @@ body.theme-black-mode .qr-template-page {
     border-bottom-color: transparent;
   }
 
-  .qr-template-toolbar-note {
-    color: var(--pc-dark-text-secondary) !important;
-  }
-
   .qr-template-drawer {
     .qr-template-editor-card {
       background: rgba(20, 26, 38, 0.98);
@@ -932,6 +924,13 @@ body.theme-black-mode .qr-template-crop-modal {
   .qr-template-page {
     .filter-grid {
       grid-template-columns: 1fr;
+    }
+
+    .actions {
+      grid-column: auto;
+      justify-self: stretch;
+      width: 100%;
+      justify-content: flex-end;
     }
 
     .qr-template-editor-layout {

@@ -29,11 +29,13 @@
   background: rgba(0, 0, 0, 0.04);
 }
 
+.header-identity-dropdown__trigger > .ant-avatar {
+  border: 2px solid #fff;
+  box-sizing: border-box;
+}
+
 .header-identity-dropdown__trigger-name {
-  max-width: 96px;
-  overflow: hidden;
   font-size: 14px;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -50,6 +52,8 @@
 
 .header-identity-dropdown__avatar {
   flex: none;
+  border: 2px solid #b8c2cf;
+  box-sizing: border-box;
 }
 
 .header-identity-dropdown__account {
@@ -232,6 +236,10 @@ body.theme-black-mode .header-identity-dropdown__panel {
   border-color: rgba(255, 255, 255, 0.08);
   background: rgba(20, 26, 38, 0.98);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+}
+
+body.theme-black-mode .header-identity-dropdown__avatar {
+  border-color: #7d899a;
 }
 
 body.theme-black-mode .header-identity-dropdown__name,

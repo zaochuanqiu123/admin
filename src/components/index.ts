@@ -7,6 +7,7 @@
  */
 import Footer from './Footer';
 import MicroIframe from './MicroIframe';
+import OrganizationPickerModal from './OrganizationPickerModal';
 import PageSectionSkeleton from './Page/PageSectionSkeleton';
 import PermissionButton from './Permission/PermissionButton';
 import PermissionVisible from './Permission/PermissionVisible';
@@ -21,6 +22,7 @@ export {
   SelectLang,
   NoticeBell,
   MicroIframe,
+  OrganizationPickerModal,
   PageSectionSkeleton,
   PermissionButton,
   PermissionVisible,

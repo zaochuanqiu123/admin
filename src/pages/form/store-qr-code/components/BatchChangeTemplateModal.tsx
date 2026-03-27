@@ -1,14 +1,21 @@
-import { Form, Input, Modal, Radio, Select, Space, message } from 'antd';
+import { Form, Input, Modal, message, Radio } from 'antd';
 import React from 'react';
 import type { QrCodeChangeTemplateParams } from '@/api/qrCode';
 import { getErrorMessage } from '@/utils/apiMessage';
+import {
+  findTemplateOption,
+  TemplatePreviewCard,
+  TemplatePreviewSelect,
+  type TemplateSelectOption,
+} from './TemplatePreviewSelect';
 import './BatchChangeTemplateModal.less';
 
 type BatchChangeTemplateModalProps = {
   open: boolean;
   onCancel: () => void;
   onOk: (values: QrCodeChangeTemplateParams) => Promise<void> | void;
-  templateOptions: { label: string; value: string }[];
+  templateOptions: TemplateSelectOption[];
+  templateLoading?: boolean;
 };
 
 type FormValues = {
@@ -20,15 +27,17 @@ type FormValues = {
   qrcodeTemplateId?: string;
 };
 
-export const BatchChangeTemplateModal: React.FC<BatchChangeTemplateModalProps> = ({
-  open,
-  onCancel,
-  onOk,
-  templateOptions,
-}) => {
+export const BatchChangeTemplateModal: React.FC<
+  BatchChangeTemplateModalProps
+> = ({ open, onCancel, onOk, templateOptions, templateLoading = false }) => {
   const [form] = Form.useForm<FormValues>();
   const [submitting, setSubmitting] = React.useState(false);
   const operationType = Form.useWatch('operationType', form) || 'SN_LIST';
+  const selectedTemplateId = Form.useWatch('qrcodeTemplateId', form);
+  const selectedTemplate = React.useMemo(
+    () => findTemplateOption(templateOptions, selectedTemplateId),
+    [selectedTemplateId, templateOptions],
+  );
 
   React.useEffect(() => {
     if (open) {
@@ -85,95 +94,114 @@ export const BatchChangeTemplateModal: React.FC<BatchChangeTemplateModalProps> =
       okText="确定"
       cancelText="取消"
       confirmLoading={submitting}
-      width={720}
+      width={960}
       className="qr-code-batch-template-modal"
       destroyOnClose
     >
-      <div className="batch-template-form-card">
-        <Form
-          form={form}
-          layout="horizontal"
-          labelCol={{ flex: '88px' }}
-          wrapperCol={{ flex: 'auto' }}
-          initialValues={{
-            operationType: 'SN_LIST',
-          }}
-        >
-          <Form.Item
-            label="修改方式"
-            name="operationType"
-            className="batch-template-mode-item"
+      <div className="batch-template-layout">
+        <div className="batch-template-form-card">
+          <Form
+            form={form}
+            layout="horizontal"
+            labelCol={{ flex: '88px' }}
+            wrapperCol={{ flex: 'auto' }}
+            initialValues={{
+              operationType: 'SN_LIST',
+            }}
           >
-            <Radio.Group>
-              <Radio value="SN_LIST">自定义编号</Radio>
-              <Radio value="SN_RANGE">按编号区间</Radio>
-              <Radio value="BATCH_SN">按批次号</Radio>
-            </Radio.Group>
-          </Form.Item>
-
-          {operationType === 'SN_LIST' && (
             <Form.Item
-              label="自定义编号"
-              name="snInput"
-              rules={[
-                { required: true, message: '请输入自定义编号' },
-                {
-                  validator: async (_, value) => {
-                    const snList = String(value || '')
-                      .split(/[\n,，]+/)
-                      .map((item) => item.trim())
-                      .filter(Boolean);
-                    if (!snList.length) {
-                      throw new Error('请输入至少一个编号');
-                    }
+              label="修改方式"
+              name="operationType"
+              className="batch-template-mode-item"
+            >
+              <Radio.Group>
+                <Radio value="SN_LIST">自定义编号</Radio>
+                <Radio value="SN_RANGE">按编号区间</Radio>
+                <Radio value="BATCH_SN">按批次号</Radio>
+              </Radio.Group>
+            </Form.Item>
+
+            {operationType === 'SN_LIST' && (
+              <Form.Item
+                label="自定义编号"
+                name="snInput"
+                rules={[
+                  { required: true, message: '请输入自定义编号' },
+                  {
+                    validator: async (_, value) => {
+                      const snList = String(value || '')
+                        .split(/[\n,，]+/)
+                        .map((item) => item.trim())
+                        .filter(Boolean);
+                      if (!snList.length) {
+                        throw new Error('请输入至少一个编号');
+                      }
+                    },
                   },
-                },
-              ]}
-            >
-              <Input placeholder="多个用英文,隔开" allowClear />
-            </Form.Item>
-          )}
+                ]}
+              >
+                <Input placeholder="多个用英文,隔开" allowClear />
+              </Form.Item>
+            )}
 
-          {operationType === 'SN_RANGE' && (
-            <Form.Item label="编号区间" required className="batch-template-range-item">
-              <Space.Compact block>
-                <Form.Item
-                  name="startSn"
-                  noStyle
-                  rules={[{ required: true, message: '请输入起始编号' }]}
-                >
-                  <Input placeholder="请输入起始编号" allowClear />
-                </Form.Item>
-                <Input className="batch-template-range-separator" value="-" disabled />
-                <Form.Item
-                  name="endSn"
-                  noStyle
-                  rules={[{ required: true, message: '请输入结束编号' }]}
-                >
-                  <Input placeholder="请输入结束编号" allowClear />
-                </Form.Item>
-              </Space.Compact>
-            </Form.Item>
-          )}
+            {operationType === 'SN_RANGE' && (
+              <Form.Item
+                label="编号区间"
+                required
+                className="batch-template-range-item"
+              >
+                <div className="batch-template-range-row">
+                  <Form.Item
+                    name="startSn"
+                    rules={[{ required: true, message: '请输入起始编号' }]}
+                    className="batch-template-range-input-item"
+                  >
+                    <Input placeholder="请输入起始编号" allowClear />
+                  </Form.Item>
+                  <div className="batch-template-range-separator">-</div>
+                  <Form.Item
+                    name="endSn"
+                    rules={[{ required: true, message: '请输入结束编号' }]}
+                    className="batch-template-range-input-item"
+                  >
+                    <Input placeholder="请输入结束编号" allowClear />
+                  </Form.Item>
+                </div>
+              </Form.Item>
+            )}
 
-          {operationType === 'BATCH_SN' && (
+            {operationType === 'BATCH_SN' && (
+              <Form.Item
+                label="批次号"
+                name="batchSn"
+                rules={[{ required: true, message: '请输入批次号' }]}
+              >
+                <Input placeholder="请输入批次号" allowClear />
+              </Form.Item>
+            )}
+
             <Form.Item
-              label="批次号"
-              name="batchSn"
-              rules={[{ required: true, message: '请输入批次号' }]}
+              label="新模板"
+              name="qrcodeTemplateId"
+              rules={[{ required: true, message: '请选择新模板' }]}
             >
-              <Input placeholder="请输入批次号" allowClear />
+              <TemplatePreviewSelect
+                placeholder="请选择新模板"
+                options={templateOptions}
+                loading={templateLoading}
+              />
             </Form.Item>
-          )}
+          </Form>
+        </div>
 
-          <Form.Item
-            label="新模板"
-            name="qrcodeTemplateId"
-            rules={[{ required: true, message: '请选择新模板' }]}
-          >
-            <Select placeholder="请选择" options={templateOptions} allowClear />
-          </Form.Item>
-        </Form>
+        <div className="batch-template-preview-pane">
+          <TemplatePreviewCard
+            template={selectedTemplate}
+            title="新模板预览"
+            size="compact"
+            emptyText={templateLoading ? '模板加载中...' : '请选择模板查看预览'}
+          />
+        </div>
       </div>
     </Modal>
   );

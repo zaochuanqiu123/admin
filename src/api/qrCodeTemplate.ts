@@ -44,12 +44,31 @@ export type QrCodeTemplatePageResult = {
   countId?: string;
 };
 
+export type QrCodeTemplateListQueryParams = {
+  name?: string;
+  state?: number;
+};
+
 export async function getQrCodeTemplatePageQuery(
   data: QrCodeTemplatePageQueryParams,
   options?: { [key: string]: any },
 ) {
   return apiData<QrCodeTemplatePageResult>(
     '/api/device/admin/qrcodeTemplate/page',
+    {
+      method: 'POST',
+      data,
+      ...(options || {}),
+    },
+  );
+}
+
+export async function getQrCodeTemplateList(
+  data?: QrCodeTemplateListQueryParams,
+  options?: { [key: string]: any },
+) {
+  return apiData<QrCodeTemplateRecord[]>(
+    '/api/device/admin/qrcodeTemplate/list',
     {
       method: 'POST',
       data,

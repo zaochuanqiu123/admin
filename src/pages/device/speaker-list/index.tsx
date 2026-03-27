@@ -5,6 +5,7 @@ import {
   DatePicker,
   Empty,
   Input,
+  Modal,
   message,
   Select,
   Space,
@@ -16,6 +17,7 @@ import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  broadcastSpeaker,
   getSpeakerListQuery,
   getSpeakerPageQuery,
   type SpeakerRecord,
@@ -25,6 +27,7 @@ import {
   PermissionButton,
   PermissionVisible,
 } from '@/components';
+import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
 import { SpeakerImportModal } from './components/SpeakerImportModal';
 import { SpeakerTransferModal } from './components/SpeakerTransferModal';
 import {
@@ -65,6 +68,12 @@ type QueryFilters = {
 
 const DEFAULT_PAGE_SIZE = 10;
 
+function buildRandomBroadcastContent() {
+  return `播报测试-${dayjs().format('YYYYMMDDHHmmss')}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
+}
+
 function renderMultiLines(lines: string[], secondaryStartIndex = 1) {
   const lineKeyCount = new Map<string, number>();
 
@@ -103,6 +112,7 @@ const SpeakerListPage: React.FC = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [broadcastingId, setBroadcastingId] = useState<string>();
   const [draftFilters, setDraftFilters] = useState<QueryFilters>({
     belongBrand: undefined,
     transferTimeRange: undefined,
@@ -207,6 +217,56 @@ const SpeakerListPage: React.FC = () => {
     if (listMode !== 'page') return;
     void loadSpeakerPage();
   }, [listMode, loadSpeakerPage]);
+
+  const handleBroadcast = useCallback(async (record: SpeakerRecord) => {
+    const speakerSn = String(record?.sn || '').trim();
+    const qrcodeSn = String(
+      record?.qrcodeSn || record?.qrcode?.qrcodeSn || '',
+    ).trim();
+
+    if (!speakerSn) {
+      message.warning('缺少音箱编号，无法播报测试');
+      return;
+    }
+
+    const content = buildRandomBroadcastContent();
+
+    Modal.confirm({
+      title: '确认播报测试',
+      content: (
+        <div>
+          <div>音箱编号：{speakerSn}</div>
+          <div>二维码编号：{qrcodeSn}</div>
+          <div>播报内容：{content}</div>
+        </div>
+      ),
+      okText: '确认',
+      cancelText: '取消',
+      onOk: async () => {
+        setBroadcastingId(String(record.id));
+        try {
+          const res = await broadcastSpeaker(
+            {
+              speakerSn,
+              qrcodeSn,
+              type: 'CONTENT',
+              content,
+            },
+            {
+              skipErrorHandler: true,
+            },
+          );
+          message.success(getApiMessage(res, '播报成功'));
+        } catch (error) {
+          console.error('broadcast speaker failed:', error);
+          message.error(getErrorMessage(error, '播报失败'));
+          throw error;
+        } finally {
+          setBroadcastingId(undefined);
+        }
+      },
+    });
+  }, []);
 
   const filteredRecords = useMemo(() => {
     return records.filter((record) => {
@@ -357,32 +417,13 @@ const SpeakerListPage: React.FC = () => {
         title: '是否启用',
         dataIndex: 'state',
         width: 120,
-        render: (value, record) => (
-          <PermissionVisible
-            perm={SPEAKER_PERMS.updateState}
-            fallback={<span>{Number(value) === 1 ? '启用' : '禁用'}</span>}
-          >
-            <Switch
-              checked={Number(value) === 1}
-              checkedChildren="启用"
-              unCheckedChildren="禁用"
-              onChange={(checked) => {
-                setRecords((prev) =>
-                  prev.map((item) =>
-                    String(item.id) === String(record.id)
-                      ? {
-                          ...item,
-                          state: checked ? 1 : 0,
-                        }
-                      : item,
-                  ),
-                );
-                message.info(
-                  `状态切换为${checked ? '启用' : '禁用'}，后续再接真实接口。`,
-                );
-              }}
-            />
-          </PermissionVisible>
+        render: (value) => (
+          <Switch
+            checked={Number(value) === 1}
+            checkedChildren="启用"
+            unCheckedChildren="禁用"
+            disabled
+          />
         ),
       },
       {
@@ -393,13 +434,16 @@ const SpeakerListPage: React.FC = () => {
         render: (_, record) => (
           <div className="speaker-action-links">
             <PermissionVisible perm={SPEAKER_PERMS.broadcast}>
-              <a
+              <Button
+                type="link"
+                size="small"
+                loading={broadcastingId === String(record.id)}
                 onClick={() => {
-                  showPendingActionMessage('播报测试');
+                  void handleBroadcast(record);
                 }}
               >
                 播报测试
-              </a>
+              </Button>
             </PermissionVisible>
             {isSpeakerBound(record) ? (
               <PermissionVisible perm={SPEAKER_PERMS.unbind}>
@@ -416,7 +460,7 @@ const SpeakerListPage: React.FC = () => {
         ),
       },
     ],
-    [],
+    [broadcastingId, handleBroadcast],
   );
 
   const handleSearch = () => {
@@ -688,11 +732,6 @@ const SpeakerListPage: React.FC = () => {
               划拨/回调
             </PermissionButton>
           </Space>
-
-          <div className="speaker-toolbar-note">
-            默认分页走 `/api/device/admin/speaker/page`，顶部搜索和弹窗搜索都走
-            `/api/device/admin/speaker/list`，其余提交动作待接口补齐。
-          </div>
         </div>
 
         {initialListLoading ? (

@@ -348,6 +348,8 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
         key: node.key,
         label: node.name,
         icon: undefined,
+        className:
+          node.name === '工作台' ? 'other-menus-workplace-font' : undefined,
         children,
       };
     };
@@ -713,7 +715,14 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
                 }}
               >
                 <span className="other-menus-split-menu-item-icon">{icon}</span>
-                <span className="other-menus-split-menu-item-label">
+                <span
+                  className={
+                    'other-menus-split-menu-item-label' +
+                    (node.name === '工作台'
+                      ? ' other-menus-workplace-font-label'
+                      : '')
+                  }
+                >
                   {node.name}
                 </span>
               </button>

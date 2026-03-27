@@ -12,6 +12,7 @@ import {
 } from 'antd';
 import type { FC } from 'react';
 import React, { useEffect, useMemo, useState } from 'react';
+import { logout as requestLogout } from '@/api/auth';
 import {
   getPermContext,
   getRoleVOList,
@@ -26,6 +27,7 @@ import {
 } from '@/api/storage';
 import CharacterTv from '@/assets/character.png';
 import {
+  clearAuthStorage,
   clearPostLoginRedirect,
   consumeLoginPendingIdentity,
   getPostLoginRedirect,
@@ -43,6 +45,7 @@ import {
 import { getAllowedTopPaths } from '@/utils/route.utils';
 import {
   clearStoreScopedStorage,
+  clearWorkplaceCommonActionsCache,
   resetStoreScopedInitialState,
 } from '@/utils/store-switch';
 import './index.less';
@@ -173,6 +176,7 @@ const Character: FC = () => {
   const [selectedStoreId, setSelectedStoreId] = useState<string | undefined>();
   const [roleMap, setRoleMap] = useState<Record<string, any[]>>({});
   const [loadingRoles, setLoadingRoles] = useState<Record<string, boolean>>({});
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const storeData = useMemo<StoreItem[]>(() => {
     console.log('=== useMemo computing storeData ===');
@@ -352,6 +356,39 @@ const Character: FC = () => {
     history.replace(nextPath);
   };
 
+  const handleBackToLogin = async () => {
+    if (loggingOut) return;
+
+    setLoggingOut(true);
+    let logoutApiFailed = false;
+
+    try {
+      await requestLogout({
+        skipErrorHandler: true,
+      });
+    } catch (error) {
+      logoutApiFailed = true;
+      console.error('requestLogout failed:', error);
+    } finally {
+      clearAuthStorage();
+      clearPostLoginRedirect();
+      clearWorkplaceCommonActionsCache();
+      setInitialState((s: any) =>
+        resetStoreScopedInitialState({
+          ...(s || {}),
+          currentUser: undefined,
+        }),
+      );
+      history.replace('/user/login');
+      if (logoutApiFailed) {
+        message.warning('退出接口调用失败，已清理本地登录态');
+      } else {
+        message.success('已退出登录');
+      }
+      setLoggingOut(false);
+    }
+  };
+
   return (
     <div className="characterPage">
       <div className="bgContainer">
@@ -361,7 +398,20 @@ const Character: FC = () => {
       <div className="characterOverlay u-flex-center">
         <div className="glassMask" />
         <div className="cardWrap">
-          <Card className="characterSelectCard" title="请选择登录身份">
+          <Card
+            className="characterSelectCard"
+            title="请选择登录身份"
+            extra={
+              <Button
+                type="link"
+                className="characterBackLoginBtn"
+                loading={loggingOut}
+                onClick={() => void handleBackToLogin()}
+              >
+                返回登录
+              </Button>
+            }
+          >
             <Form
               form={form}
               layout="inline"

@@ -23,8 +23,10 @@ import {
   changeQrCodeTemplate,
   getQrCodePageQuery,
   type QrCodeRecord,
+  transferQrCode,
   unbindQrCode,
 } from '@/api/qrCode';
+import { getQrCodeTemplateList } from '@/api/qrCodeTemplate';
 import {
   PageSectionSkeleton,
   PermissionButton,
@@ -34,6 +36,7 @@ import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
 import { BatchChangeTemplateModal } from './components/BatchChangeTemplateModal';
 import { BindQrCodeModal } from './components/BindQrCodeModal';
 import { CreateQrCodeModal } from './components/CreateQrCodeModal';
+import type { TemplateSelectOption } from './components/TemplatePreviewSelect';
 import { TransferModal } from './components/TransferModal';
 import './index.less';
 
@@ -68,6 +71,13 @@ type QueryFilters = {
 };
 
 const DEFAULT_PAGE_SIZE = 10;
+function readText(...values: unknown[]) {
+  for (const value of values) {
+    const text = String(value ?? '').trim();
+    if (text) return text;
+  }
+  return '';
+}
 
 function formatOpenType(value?: string) {
   const normalized = String(value || '')
@@ -91,11 +101,11 @@ function formatBizType(value?: string) {
 }
 
 function getTemplateName(record: QrCodeRecord) {
-  return String(record?.qrcodeTemplate?.name || '').trim();
+  return readText(record?.qrcodeTemplate?.name);
 }
 
 function getPreviewImage(record: QrCodeRecord) {
-  return String(record?.qrcodeTemplate?.prevImageUrl || '').trim();
+  return readText(record?.qrcodeTemplate?.prevImageUrl);
 }
 
 function getBrandName(record: QrCodeRecord) {
@@ -104,36 +114,73 @@ function getBrandName(record: QrCodeRecord) {
     (record as any)?.belongBrandName ||
     (record as any)?.brand ||
     (record as any)?.brandLabel;
-  return String(rawValue || '').trim();
+  return readText(rawValue);
 }
 
 function isBound(record: QrCodeRecord) {
   return Boolean(
-    String(record?.targetId || '').trim() ||
-      String(record?.bindTime || '').trim() ||
-      String(record?.merchantOrgId || '').trim() ||
-      String(record?.storeOrgId || '').trim() ||
-      String(record?.storeOrgUserId || '').trim(),
+    readText(
+      record?.targetId,
+      record?.bindTime,
+      record?.bindName,
+      record?.merchantOrg?.orgName,
+      record?.storeOrg?.orgName,
+      record?.merchantOrgId,
+      record?.storeOrgId,
+      record?.storeOrgUserId,
+    ),
   );
 }
 
 function isTransferred(record: QrCodeRecord) {
-  return Boolean(String(record?.transferTime || '').trim());
+  return Boolean(readText(record?.transferTime));
 }
 
 function getOrgDisplay(record: QrCodeRecord) {
   return (
-    [record?.agentOrgId, record?.groupOrgId].filter(Boolean).join(' / ') || '-'
+    [readText(record?.agentOrg?.orgName), readText(record?.groupOrg?.orgName)]
+      .filter(Boolean)
+      .join(' / ') ||
+    readText(record?.agentOrgId, record?.groupOrgId) ||
+    '-'
   );
 }
 
 function getBindDisplay(record: QrCodeRecord) {
-  const items = [
-    record?.merchantOrgId ? `商户ID：${record.merchantOrgId}` : '',
-    record?.storeOrgId ? `门店ID：${record.storeOrgId}` : '',
-    record?.storeOrgUserId ? `员工ID：${record.storeOrgUserId}` : '',
+  const merchantName = readText(record?.merchantOrg?.orgName);
+  const merchantId = readText(record?.merchantOrgId);
+  return [
+    merchantName || merchantId || '-',
+    merchantName && merchantId ? merchantId : '',
   ].filter(Boolean);
-  return items;
+}
+
+function getStoreDisplay(record: QrCodeRecord) {
+  const storeName = readText(record?.storeOrg?.orgName);
+  const storeId = readText(record?.storeOrgId);
+  return [
+    storeName || storeId || '-',
+    storeName && storeId ? storeId : '',
+  ].filter(Boolean);
+}
+
+function getKeywordSource(record: QrCodeRecord) {
+  return [
+    readText(record?.merchantOrg?.orgName),
+    readText(record?.storeOrg?.orgName),
+    readText(record?.agentOrg?.orgName),
+    readText(record?.groupOrg?.orgName),
+    readText(record?.bindName),
+    readText(record?.merchantOrgId),
+    readText(record?.storeOrgId),
+    readText(record?.storeOrgUserId),
+    readText(record?.agentOrgId),
+    readText(record?.groupOrgId),
+    readText(record?.targetId),
+    getTemplateName(record),
+  ]
+    .filter(Boolean)
+    .join(' ');
 }
 
 function showPendingActionMessage(label: string) {
@@ -146,6 +193,10 @@ const StoreQrCodeListPage: React.FC = () => {
   const [listError, setListError] = useState<string>();
   const [records, setRecords] = useState<QrCodeRecord[]>([]);
   const [serverTotal, setServerTotal] = useState(0);
+  const [templateLoading, setTemplateLoading] = useState(false);
+  const [templateOptionsSource, setTemplateOptionsSource] = useState<
+    TemplateSelectOption[]
+  >([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState('');
@@ -199,15 +250,28 @@ const StoreQrCodeListPage: React.FC = () => {
   const pageSize = pagination.pageSize || DEFAULT_PAGE_SIZE;
 
   const templateOptions = useMemo(() => {
-    const templateMap = new Map<string, { label: string; value: string }>();
+    const templateMap = new Map<string, TemplateSelectOption>();
+    templateOptionsSource.forEach((item) => {
+      const templateId = readText(item?.value);
+      const templateName = readText(item?.label);
+      if (!templateId || !templateName) return;
+      templateMap.set(templateId, item);
+    });
     records.forEach((record) => {
-      const templateId = String(record?.qrcodeTemplateId || '').trim();
+      const templateId = readText(record?.qrcodeTemplateId);
       const templateName = getTemplateName(record);
       if (!templateId || !templateName) return;
-      templateMap.set(templateId, { label: templateName, value: templateId });
+      const currentOption = templateMap.get(templateId);
+      templateMap.set(templateId, {
+        label: templateName,
+        value: templateId,
+        previewImageUrl:
+          getPreviewImage(record) || currentOption?.previewImageUrl,
+        brandName: getBrandName(record) || currentOption?.brandName,
+      });
     });
     return Array.from(templateMap.values());
-  }, [records]);
+  }, [records, templateOptionsSource]);
 
   const brandOptions = useMemo(() => {
     const brandMap = new Map<string, { label: string; value: string }>();
@@ -238,6 +302,39 @@ const StoreQrCodeListPage: React.FC = () => {
     });
     return Array.from(optionMap.values());
   }, [records]);
+
+  const loadTemplateOptions = useCallback(async () => {
+    setTemplateLoading(true);
+    try {
+      const res = await getQrCodeTemplateList(
+        {
+          state: 1,
+        },
+        {
+          skipErrorHandler: true,
+        },
+      );
+      const nextOptions = (Array.isArray(res) ? res : [])
+        .map((record) => {
+          const templateId = readText(record?.id);
+          const templateName = readText(record?.name);
+          if (!templateId || !templateName) return null;
+          return {
+            label: templateName,
+            value: templateId,
+            previewImageUrl: readText(record?.prevImageUrl, record?.prevImage),
+            brandName: readText(record?.brandName),
+          } satisfies TemplateSelectOption;
+        })
+        .filter(Boolean) as TemplateSelectOption[];
+      setTemplateOptionsSource(nextOptions);
+    } catch (error) {
+      console.error('load qr code template options failed:', error);
+      message.error(getErrorMessage(error, '获取模板列表失败'));
+    } finally {
+      setTemplateLoading(false);
+    }
+  }, []);
 
   const loadQrCodes = useCallback(async () => {
     setLoading(true);
@@ -282,6 +379,10 @@ const StoreQrCodeListPage: React.FC = () => {
   useEffect(() => {
     void loadQrCodes();
   }, [loadQrCodes]);
+
+  useEffect(() => {
+    void loadTemplateOptions();
+  }, [loadTemplateOptions]);
 
   const handleOpenBindModal = useCallback(() => {
     setBindModalOpen(true);
@@ -386,17 +487,7 @@ const StoreQrCodeListPage: React.FC = () => {
 
       const keyword = filters.keyword.trim();
       if (keyword) {
-        const keywordSource = [
-          record?.merchantOrgId,
-          record?.storeOrgId,
-          record?.storeOrgUserId,
-          record?.agentOrgId,
-          record?.groupOrgId,
-          record?.targetId,
-          getTemplateName(record),
-        ]
-          .filter(Boolean)
-          .join(' ');
+        const keywordSource = getKeywordSource(record);
         if (!keywordSource.includes(keyword)) {
           return false;
         }
@@ -496,11 +587,35 @@ const StoreQrCodeListPage: React.FC = () => {
         width: 220,
         render: (_, record) => {
           const bindInfo = getBindDisplay(record);
-          if (!bindInfo.length) return '-';
           return (
             <div className="qr-code-bind-lines">
-              {bindInfo.map((item) => (
-                <div key={item}>{item}</div>
+              {bindInfo.map((item, index) => (
+                <div
+                  key={`${String(record.id)}-merchant-${index}-${item}`}
+                  className={index === 0 ? '' : 'is-secondary'}
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+          );
+        },
+      },
+      {
+        title: '门店',
+        key: 'storeInfo',
+        width: 220,
+        render: (_, record) => {
+          const storeInfo = getStoreDisplay(record);
+          return (
+            <div className="qr-code-bind-lines">
+              {storeInfo.map((item, index) => (
+                <div
+                  key={`${String(record.id)}-store-${index}-${item}`}
+                  className={index === 0 ? '' : 'is-secondary'}
+                >
+                  {item}
+                </div>
               ))}
             </div>
           );
@@ -524,32 +639,13 @@ const StoreQrCodeListPage: React.FC = () => {
         title: '状态',
         dataIndex: 'state',
         width: 120,
-        render: (value, record) => (
-          <PermissionVisible
-            perm={QR_CODE_PERMS.updateState}
-            fallback={<span>{Number(value) === 1 ? '启用' : '禁用'}</span>}
-          >
-            <Switch
-              checked={Number(value) === 1}
-              checkedChildren="启用"
-              unCheckedChildren="禁用"
-              onChange={(checked) => {
-                setRecords((prev) =>
-                  prev.map((item) =>
-                    String(item.id) === String(record.id)
-                      ? {
-                          ...item,
-                          state: checked ? 1 : 0,
-                        }
-                      : item,
-                  ),
-                );
-                message.info(
-                  `状态切换为${checked ? '启用' : '禁用'}，后续再接真实接口。`,
-                );
-              }}
-            />
-          </PermissionVisible>
+        render: (value) => (
+          <Switch
+            checked={Number(value) === 1}
+            checkedChildren="启用"
+            unCheckedChildren="禁用"
+            disabled
+          />
         ),
       },
       {
@@ -558,13 +654,11 @@ const StoreQrCodeListPage: React.FC = () => {
         width: 120,
         fixed: 'right',
         render: (_, record) => {
-          const hasMerchantOrgId = Boolean(
-            String(record?.merchantOrgId || '').trim(),
-          );
+          const hasBindInfo = isBound(record);
 
           return (
             <div className="qr-code-action-links">
-              {hasMerchantOrgId ? (
+              {hasBindInfo ? (
                 <PermissionVisible perm={QR_CODE_PERMS.unbind}>
                   <a
                     className="is-danger"
@@ -784,6 +878,7 @@ const StoreQrCodeListPage: React.FC = () => {
             <Select
               allowClear
               placeholder="请选择"
+              loading={templateLoading}
               value={draftFilters.qrcodeTemplateId}
               options={templateOptions}
               onChange={(value) => {
@@ -929,9 +1024,6 @@ const StoreQrCodeListPage: React.FC = () => {
               导出合成码
             </PermissionButton>
           </Space>
-          <div className="qr-code-toolbar-note">
-            当前页已补齐参考图中的筛选区和工具按钮，已确认字段走真实响应结构，未确认查询项先按返回记录过滤。
-          </div>
         </div>
 
         {initialListLoading ? (
@@ -948,7 +1040,7 @@ const StoreQrCodeListPage: React.FC = () => {
             }}
             columns={columns}
             dataSource={filteredRecords}
-            scroll={{ x: 1760 }}
+            scroll={{ x: 1940 }}
             locale={{
               emptyText: <Empty description="暂无收款码数据" />,
             }}
@@ -971,11 +1063,33 @@ const StoreQrCodeListPage: React.FC = () => {
         open={transferModalOpen}
         onCancel={() => setTransferModalOpen(false)}
         selectedRecords={records.filter((r) => selectedRowKeys.includes(r.id))}
-        onOk={(values) => {
-          console.log('Transfer values:', values);
-          message.success('操作成功 (Mock)');
+        onOk={async (values) => {
+          const snList = (Array.isArray(values?.items) ? values.items : [])
+            .map((item: QrCodeRecord) => String(item?.sn || '').trim())
+            .filter(Boolean);
+
+          if (!snList.length) {
+            message.warning('请选择有效的设备编号');
+            return;
+          }
+
+          const res = await transferQrCode(
+            {
+              transferType:
+                values?.actionType === 'callback' ? 'RETURN' : 'ISSUE',
+              orgId:
+                values?.actionType === 'callback' ? undefined : values?.orgId,
+              snList,
+            },
+            {
+              skipErrorHandler: true,
+            },
+          );
+
+          message.success(getApiMessage(res, '操作成功'));
           setTransferModalOpen(false);
           setSelectedRowKeys([]);
+          await loadQrCodes();
         }}
       />
 
@@ -999,6 +1113,7 @@ const StoreQrCodeListPage: React.FC = () => {
         open={createModalOpen}
         onCancel={() => setCreateModalOpen(false)}
         templateOptions={templateOptions}
+        templateLoading={templateLoading}
         onOk={async (values) => {
           const res = await batchAddQrCode(values, {
             skipErrorHandler: true,
@@ -1013,6 +1128,7 @@ const StoreQrCodeListPage: React.FC = () => {
         open={batchChangeTemplateOpen}
         onCancel={() => setBatchChangeTemplateOpen(false)}
         templateOptions={templateOptions}
+        templateLoading={templateLoading}
         onOk={async (values) => {
           const res = await changeQrCodeTemplate(values, {
             skipErrorHandler: true,
