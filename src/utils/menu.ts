@@ -1,6 +1,6 @@
 import type { MenuDataItem } from '@ant-design/pro-components';
-import { resolveTopRoutePath } from '@/utils/route.utils';
 import { extractButtonPermissionTokens } from '@/utils/button-permission';
+import { resolveTopRoutePath } from '@/utils/route.utils';
 import routes from '../../config/routes';
 
 export const TEMP_BUSINESS_CODE = 'DEFAULT';
@@ -154,7 +154,7 @@ function pickPath(node: any, menuName: string): string | undefined {
 
   // 按菜单名称回退查找
   const fallbackRoutePath = ROUTE_NAME_TO_PATH_MAP[menuName];
-  if (fallbackRoutePath && fallbackRoutePath.startsWith('/')) {
+  if (fallbackRoutePath?.startsWith('/')) {
     return fallbackRoutePath;
   }
 
@@ -303,7 +303,9 @@ export function extractButtonPermissionMap(res: any): API.ButtonPermissionMap {
     (Array.isArray(res?.permCodes) && res.permCodes) ||
     [];
 
-  extractButtonPermissionTokens(permCodes).forEach((token) => tokenSet.add(token));
+  extractButtonPermissionTokens(permCodes).forEach((token) => {
+    tokenSet.add(token);
+  });
   return Array.from(tokenSet);
 }
 

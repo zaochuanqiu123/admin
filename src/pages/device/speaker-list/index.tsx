@@ -20,7 +20,13 @@ import {
   getSpeakerPageQuery,
   type SpeakerRecord,
 } from '@/api/speaker';
-import { PageSectionSkeleton, PermissionButton, PermissionVisible } from '@/components';
+import {
+  PageSectionSkeleton,
+  PermissionButton,
+  PermissionVisible,
+} from '@/components';
+import { SpeakerImportModal } from './components/SpeakerImportModal';
+import { SpeakerTransferModal } from './components/SpeakerTransferModal';
 import {
   getBelongBrandName,
   getBindDisplayLines,
@@ -33,8 +39,6 @@ import {
   isSpeakerBound,
   isSpeakerTransferred,
 } from './helpers';
-import { SpeakerImportModal } from './components/SpeakerImportModal';
-import { SpeakerTransferModal } from './components/SpeakerTransferModal';
 import './index.less';
 
 const { RangePicker } = DatePicker;
@@ -62,16 +66,25 @@ type QueryFilters = {
 const DEFAULT_PAGE_SIZE = 10;
 
 function renderMultiLines(lines: string[], secondaryStartIndex = 1) {
+  const lineKeyCount = new Map<string, number>();
+
   return (
     <div className="speaker-lines">
-      {lines.map((item, index) => (
-        <div
-          key={`${item}-${index}`}
-          className={index >= secondaryStartIndex ? 'speaker-sub-text' : ''}
-        >
-          {item}
-        </div>
-      ))}
+      {lines.map((item, index) => {
+        const duplicateCount = lineKeyCount.get(item) ?? 0;
+        lineKeyCount.set(item, duplicateCount + 1);
+        const itemKey =
+          duplicateCount === 0 ? item : `${item}-${duplicateCount}`;
+
+        return (
+          <div
+            key={itemKey}
+            className={index >= secondaryStartIndex ? 'speaker-sub-text' : ''}
+          >
+            {item}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -227,16 +240,14 @@ const SpeakerListPage: React.FC = () => {
       }
 
       if (filters.isBound !== undefined && filters.isBound !== '') {
-        if (String(Number(isSpeakerBound(record))) !== String(filters.isBound)) {
+        if (
+          String(Number(isSpeakerBound(record))) !== String(filters.isBound)
+        ) {
           return false;
         }
       }
 
-      if (
-        filters.transferTimeRange &&
-        filters.transferTimeRange[0] &&
-        filters.transferTimeRange[1]
-      ) {
+      if (filters.transferTimeRange?.[0] && filters.transferTimeRange[1]) {
         const transferTime = dayjs(record?.transferTime);
         if (!transferTime.isValid()) return false;
         const start = filters.transferTimeRange[0].startOf('day');
@@ -450,8 +461,10 @@ const SpeakerListPage: React.FC = () => {
   const filteredRecordsForRender =
     listMode === 'list'
       ? filteredRecords.slice(
-          ((pagination.current || 1) - 1) * (pagination.pageSize || DEFAULT_PAGE_SIZE),
-          (pagination.current || 1) * (pagination.pageSize || DEFAULT_PAGE_SIZE),
+          ((pagination.current || 1) - 1) *
+            (pagination.pageSize || DEFAULT_PAGE_SIZE),
+          (pagination.current || 1) *
+            (pagination.pageSize || DEFAULT_PAGE_SIZE),
         )
       : filteredRecords;
 
@@ -718,7 +731,9 @@ const SpeakerListPage: React.FC = () => {
       <SpeakerTransferModal
         open={transferModalOpen}
         onCancel={() => setTransferModalOpen(false)}
-        selectedRecords={records.filter((item) => selectedRowKeys.includes(item.id))}
+        selectedRecords={records.filter((item) =>
+          selectedRowKeys.includes(item.id),
+        )}
         onOk={async (values) => {
           console.log('speaker transfer values:', values);
           message.info('划拨/回调接口待补充，当前先保留弹窗与搜索交互。');

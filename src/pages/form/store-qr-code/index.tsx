@@ -6,8 +6,8 @@ import {
   Empty,
   Image,
   Input,
-  message,
   Modal,
+  message,
   Select,
   Space,
   Switch,
@@ -18,19 +18,23 @@ import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  bindQrCode,
   batchAddQrCode,
+  bindQrCode,
   changeQrCodeTemplate,
   getQrCodePageQuery,
   type QrCodeRecord,
   unbindQrCode,
 } from '@/api/qrCode';
-import { BindQrCodeModal } from './components/BindQrCodeModal';
-import { PageSectionSkeleton, PermissionButton, PermissionVisible } from '@/components';
+import {
+  PageSectionSkeleton,
+  PermissionButton,
+  PermissionVisible,
+} from '@/components';
+import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
 import { BatchChangeTemplateModal } from './components/BatchChangeTemplateModal';
+import { BindQrCodeModal } from './components/BindQrCodeModal';
 import { CreateQrCodeModal } from './components/CreateQrCodeModal';
 import { TransferModal } from './components/TransferModal';
-import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
 import './index.less';
 
 const { RangePicker } = DatePicker;
@@ -239,21 +243,27 @@ const StoreQrCodeListPage: React.FC = () => {
     setLoading(true);
     setListError(undefined);
     try {
-      const res = await getQrCodePageQuery({
-        current,
-        pageSize,
-        sn: filters.sn.trim() || undefined,
-        batchSn: filters.batchSn.trim() || undefined,
-        model: filters.model.trim() || undefined,
-        qrcodeTemplateId: filters.qrcodeTemplateId || undefined,
-      }, {
-        skipErrorHandler: true,
-      });
+      const res = await getQrCodePageQuery(
+        {
+          current,
+          pageSize,
+          sn: filters.sn.trim() || undefined,
+          batchSn: filters.batchSn.trim() || undefined,
+          model: filters.model.trim() || undefined,
+          qrcodeTemplateId: filters.qrcodeTemplateId || undefined,
+        },
+        {
+          skipErrorHandler: true,
+        },
+      );
       setRecords(Array.isArray(res?.records) ? res.records : []);
       setServerTotal(Number(res?.total || 0));
     } catch (error) {
       console.error('load qr code list failed:', error);
-      const nextError = getErrorMessage(error, '获取收款码列表失败，请稍后重试');
+      const nextError = getErrorMessage(
+        error,
+        '获取收款码列表失败，请稍后重试',
+      );
       setListError(nextError);
       message.error(nextError);
     } finally {
@@ -356,11 +366,7 @@ const StoreQrCodeListPage: React.FC = () => {
         }
       }
 
-      if (
-        filters.transferTimeRange &&
-        filters.transferTimeRange[0] &&
-        filters.transferTimeRange[1]
-      ) {
+      if (filters.transferTimeRange?.[0] && filters.transferTimeRange[1]) {
         const transferTime = dayjs(record?.transferTime);
         if (!transferTime.isValid()) return false;
         const start = filters.transferTimeRange[0].startOf('day');
@@ -933,31 +939,31 @@ const StoreQrCodeListPage: React.FC = () => {
         ) : listError && records.length === 0 ? (
           <Alert type="error" showIcon message={listError} />
         ) : (
-        <Table<QrCodeRecord>
-          rowKey="id"
-          loading={refreshingList}
-          rowSelection={{
-            selectedRowKeys,
-            onChange: setSelectedRowKeys,
-          }}
-          columns={columns}
-          dataSource={filteredRecords}
-          scroll={{ x: 1760 }}
-          locale={{
-            emptyText: <Empty description="暂无收款码数据" />,
-          }}
-          pagination={{
-            ...pagination,
-            total: filteredTotal,
-            onChange: (nextCurrent, nextPageSize) => {
-              setPagination((prev) => ({
-                ...prev,
-                current: nextCurrent,
-                pageSize: nextPageSize,
-              }));
-            },
-          }}
-        />
+          <Table<QrCodeRecord>
+            rowKey="id"
+            loading={refreshingList}
+            rowSelection={{
+              selectedRowKeys,
+              onChange: setSelectedRowKeys,
+            }}
+            columns={columns}
+            dataSource={filteredRecords}
+            scroll={{ x: 1760 }}
+            locale={{
+              emptyText: <Empty description="暂无收款码数据" />,
+            }}
+            pagination={{
+              ...pagination,
+              total: filteredTotal,
+              onChange: (nextCurrent, nextPageSize) => {
+                setPagination((prev) => ({
+                  ...prev,
+                  current: nextCurrent,
+                  pageSize: nextPageSize,
+                }));
+              },
+            }}
+          />
         )}
       </div>
 

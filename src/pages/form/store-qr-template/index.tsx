@@ -39,12 +39,16 @@ import {
   type QrCodeTemplateRecord,
   updateQrCodeTemplate,
 } from '@/api/qrCodeTemplate';
-import { PageSectionSkeleton, PermissionButton, PermissionVisible } from '@/components';
+import {
+  PageSectionSkeleton,
+  PermissionButton,
+  PermissionVisible,
+} from '@/components';
 import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
 import './index.less';
 
 // 临时挡板：前端假装上传成功并返回一个固定图片 URL
-const mockUploadImage = async (base64Data: string): Promise<string> => {
+const mockUploadImage = async (_base64Data: string): Promise<string> => {
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve(
@@ -155,7 +159,7 @@ function loadImage(url: string) {
 }
 
 function revokeObjectUrl(url?: string | null) {
-  if (url && url.startsWith('blob:')) {
+  if (url?.startsWith('blob:')) {
     URL.revokeObjectURL(url);
   }
 }
@@ -172,10 +176,6 @@ function getStateLabel(state?: number) {
 
 function buildPreviewImage(record: QrCodeTemplateRecord) {
   return String(record?.prevImageUrl || record?.prevImage || '').trim();
-}
-
-function showPendingEditorMessage() {
-  message.info('编辑模板接口待接入，当前先完成添加模板抽屉页面。');
 }
 
 const QrTemplateListPage: React.FC = () => {
@@ -377,18 +377,24 @@ const QrTemplateListPage: React.FC = () => {
     setLoading(true);
     setListError(undefined);
     try {
-      const res = await getQrCodeTemplatePageQuery({
-        current,
-        pageSize,
-        name: filters.name.trim() || undefined,
-      }, {
-        skipErrorHandler: true,
-      });
+      const res = await getQrCodeTemplatePageQuery(
+        {
+          current,
+          pageSize,
+          name: filters.name.trim() || undefined,
+        },
+        {
+          skipErrorHandler: true,
+        },
+      );
       setRecords(Array.isArray(res?.records) ? res.records : []);
       setServerTotal(Number(res?.total || 0));
     } catch (error) {
       console.error('load qr code templates failed:', error);
-      const nextError = getErrorMessage(error, '获取二维码模板列表失败，请稍后重试');
+      const nextError = getErrorMessage(
+        error,
+        '获取二维码模板列表失败，请稍后重试',
+      );
       setListError(nextError);
       message.error(nextError);
       return;
@@ -420,7 +426,7 @@ const QrTemplateListPage: React.FC = () => {
       }
 
       const range = filters.createTimeRange;
-      if (range && range[0] && range[1] && record?.createTime) {
+      if (range?.[0] && range[1] && record?.createTime) {
         const createTime = dayjs(record.createTime);
         if (createTime.isValid()) {
           const start = range[0].startOf('day');
@@ -875,7 +881,10 @@ const QrTemplateListPage: React.FC = () => {
       if (error?.errorFields) return;
       console.error(error);
       message.error(
-        getErrorMessage(error, editingTemplateId ? '修改模板失败' : '新增模板失败'),
+        getErrorMessage(
+          error,
+          editingTemplateId ? '修改模板失败' : '新增模板失败',
+        ),
       );
     }
   };
@@ -1025,27 +1034,27 @@ const QrTemplateListPage: React.FC = () => {
         ) : listError && records.length === 0 ? (
           <Alert type="error" showIcon message={listError} />
         ) : (
-        <Table<QrCodeTemplateRecord>
-          rowKey="id"
-          loading={refreshingList}
-          columns={columns}
-          dataSource={filteredRecords}
-          scroll={{ x: 1100 }}
-          locale={{
-            emptyText: <Empty description="暂无二维码模板" />,
-          }}
-          pagination={{
-            ...pagination,
-            total: filteredTotal,
-            onChange: (nextCurrent, nextPageSize) => {
-              setPagination((prev) => ({
-                ...prev,
-                current: nextCurrent,
-                pageSize: nextPageSize,
-              }));
-            },
-          }}
-        />
+          <Table<QrCodeTemplateRecord>
+            rowKey="id"
+            loading={refreshingList}
+            columns={columns}
+            dataSource={filteredRecords}
+            scroll={{ x: 1100 }}
+            locale={{
+              emptyText: <Empty description="暂无二维码模板" />,
+            }}
+            pagination={{
+              ...pagination,
+              total: filteredTotal,
+              onChange: (nextCurrent, nextPageSize) => {
+                setPagination((prev) => ({
+                  ...prev,
+                  current: nextCurrent,
+                  pageSize: nextPageSize,
+                }));
+              },
+            }}
+          />
         )}
       </div>
 

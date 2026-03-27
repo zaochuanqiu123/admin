@@ -1,4 +1,6 @@
-export function normalizeButtonPermissionToken(value: unknown): string | undefined {
+export function normalizeButtonPermissionToken(
+  value: unknown,
+): string | undefined {
   if (value === undefined || value === null) return undefined;
   const normalized = String(value).trim().toLowerCase();
   return normalized || undefined;
@@ -8,7 +10,9 @@ export function extractButtonPermissionTokens(value: unknown): string[] {
   if (Array.isArray(value)) {
     const tokenSet = new Set<string>();
     value.forEach((item) => {
-      extractButtonPermissionTokens(item).forEach((token) => tokenSet.add(token));
+      extractButtonPermissionTokens(item).forEach((token) => {
+        tokenSet.add(token);
+      });
     });
     return Array.from(tokenSet);
   }
