@@ -848,7 +848,7 @@ const RouteTabsKeepAlive: React.FC<{
     ? {
         ...barInlineStyle,
         margin: 0,
-        minHeight: 32,
+        minHeight: 28,
       }
     : barInlineStyle;
 

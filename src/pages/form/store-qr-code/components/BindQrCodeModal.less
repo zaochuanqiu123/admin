@@ -1,0 +1,42 @@
+.qr-code-bind-modal {
+  .ant-modal-body {
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+
+  .bind-form-card {
+    padding: 24px 24px 8px;
+    background: #f8f9fc;
+    border: 1px solid #f0f0f0;
+    border-radius: 10px;
+  }
+
+  .ant-form-item-label > label {
+    color: var(--ant-color-text);
+    font-weight: 500;
+  }
+
+  .ant-input[disabled],
+  .ant-input-textarea-disabled textarea {
+    color: var(--ant-color-text-secondary);
+    background: var(--ant-color-fill-tertiary);
+  }
+}
+
+body.theme-black-mode .qr-code-bind-modal {
+  .bind-form-card {
+    background: var(--pc-dark-bg-page);
+    border-color: var(--pc-dark-border);
+  }
+
+  .ant-form-item-label > label {
+    color: var(--pc-dark-text);
+  }
+
+  .ant-input[disabled],
+  .ant-input-textarea-disabled textarea {
+    color: var(--pc-dark-text-secondary);
+    background: var(--pc-dark-bg-surface);
+    border-color: var(--pc-dark-border);
+  }
+}

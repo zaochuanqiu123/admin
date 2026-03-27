@@ -1,12 +1,12 @@
-import { Form, Input, InputNumber, Modal, Radio, Select } from 'antd';
+import { Form, Input, InputNumber, Modal, Radio, Select, message } from 'antd';
 import React from 'react';
+import { getErrorMessage } from '@/utils/apiMessage';
 import './CreateQrCodeModal.less';
 
 type CreateQrCodeModalProps = {
   open: boolean;
   onCancel: () => void;
-  onOk: (values: any) => void;
-  brandOptions: { label: string; value: string }[];
+  onOk: (values: any) => Promise<void> | void;
   templateOptions: { label: string; value: string }[];
 };
 
@@ -14,24 +14,31 @@ export const CreateQrCodeModal: React.FC<CreateQrCodeModalProps> = ({
   open,
   onCancel,
   onOk,
-  brandOptions,
   templateOptions,
 }) => {
   const [form] = Form.useForm();
+  const [submitting, setSubmitting] = React.useState(false);
 
   // Reset form when modal opens
   React.useEffect(() => {
     if (open) {
       form.resetFields();
+      setSubmitting(false);
     }
   }, [form, open]);
 
   const handleOk = async () => {
     try {
       const values = await form.validateFields();
-      onOk(values);
+      setSubmitting(true);
+      await onOk(values);
     } catch (error) {
-      console.error('Validate failed:', error);
+      if ((error as any)?.errorFields) {
+        return;
+      }
+      message.error(getErrorMessage(error, '生成收款码失败'));
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -45,6 +52,7 @@ export const CreateQrCodeModal: React.FC<CreateQrCodeModalProps> = ({
       className="qr-code-create-modal"
       okText="确定"
       cancelText="取消"
+      confirmLoading={submitting}
       destroyOnClose
     >
       <Form
@@ -55,17 +63,9 @@ export const CreateQrCodeModal: React.FC<CreateQrCodeModalProps> = ({
         initialValues={{
           bizType: 'RECEIPT_CODE', // Default to 电子码牌/收款码
           openType: 'MINI',
-          count: 10,
+          quantity: 10,
         }}
       >
-        <Form.Item
-          label="所属品牌"
-          name="brandName"
-          rules={[{ required: true, message: '请选择所属品牌' }]}
-        >
-          <Select placeholder="请选择" options={brandOptions} allowClear />
-        </Form.Item>
-
         <Form.Item
           label="模板"
           name="qrcodeTemplateId"
@@ -75,16 +75,16 @@ export const CreateQrCodeModal: React.FC<CreateQrCodeModalProps> = ({
         </Form.Item>
 
         <Form.Item
-          label="类别"
+          label="业务类型"
           name="bizType"
-          rules={[{ required: true, message: '请选择类别' }]}
+          rules={[{ required: true, message: '请选择业务类型' }]}
         >
           <Select
             placeholder="请选择"
             options={[
-              { label: '电子码牌', value: 'RECEIPT_CODE' },
+              { label: '收款码', value: 'RECEIPT_CODE' },
               { label: '餐饮桌台', value: 'CATER_TABLE' },
-              { label: '其他', value: 'OTHER' },
+              { label: '其他业务', value: 'OTHER' },
             ]}
           />
         </Form.Item>
@@ -110,11 +110,11 @@ export const CreateQrCodeModal: React.FC<CreateQrCodeModalProps> = ({
 
         <Form.Item
           label="生成数量"
-          name="count"
+          name="quantity"
           rules={[{ required: true, message: '请输入生成数量' }]}
-          extra="生成数量：1 ~ 500"
+          extra="生成数量：1 ~ 10000"
         >
-          <InputNumber min={1} max={500} style={{ width: 120 }} />
+          <InputNumber min={1} max={10000} style={{ width: 120 }} />
         </Form.Item>
       </Form>
     </Modal>

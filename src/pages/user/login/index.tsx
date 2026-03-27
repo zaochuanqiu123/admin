@@ -33,6 +33,7 @@ import LogoDark from '@/assets/logo-dark.png';
 import { Footer } from '@/components';
 import {
   clearPostLoginRedirect,
+  consumeAuthLogoutMessage,
   consumeAuthLogoutReason,
   getPostLoginRedirect,
   getRedirectFromSearch,
@@ -86,11 +87,20 @@ const Login: React.FC = () => {
 
   useEffect(() => {
     Modal.destroyAll();
+    const logoutMessage = consumeAuthLogoutMessage();
     const reason = consumeAuthLogoutReason();
+    if (logoutMessage) {
+      setLogoutReasonText(logoutMessage);
+      return;
+    }
     if (reason === 'mutual_login') {
       setLogoutReasonText(
         '登录状态已失效，您的账号已在其他设备登录，请重新登录。',
       );
+      return;
+    }
+    if (reason === 'unauthorized') {
+      setLogoutReasonText('未认证，请重新登录。');
       return;
     }
     if (reason === 'expired') {
@@ -109,7 +119,7 @@ const Login: React.FC = () => {
       }
       // 登录
       const res = await login({
-        loginName: type === 'mobile' ? values.mobile : values.username,
+        account: type === 'mobile' ? values.mobile : values.account,
         password: type === 'mobile' ? values.captcha : values.password,
         loginType: 'PC',
       } as any);
@@ -164,7 +174,7 @@ const Login: React.FC = () => {
         str(userInfo?.userName) ||
         str((res as any)?.name) ||
         str((res as any)?.userName) ||
-        str(values.username) ||
+        str(values.account) ||
         str(values.mobile);
       const nickName =
         str(userInfo?.nickName) ||
@@ -172,11 +182,12 @@ const Login: React.FC = () => {
         str((res as any)?.nickName) ||
         str((res as any)?.nickname) ||
         name;
-      const loginName =
-        str(userInfo?.loginName) ||
+      const account =
         str(userInfo?.account) ||
+        str((res as any)?.account) ||
+        str(userInfo?.loginName) ||
         str((res as any)?.loginName) ||
-        str(values.username) ||
+        str(values.account) ||
         str(values.mobile);
 
       const avatar =
@@ -187,7 +198,13 @@ const Login: React.FC = () => {
         str((res as any)?.avatar) ||
         str((res as any)?.headImg);
 
-      setLoginUserInfo({ name, nickName, loginName, avatar });
+      setLoginUserInfo({
+        name,
+        nickName,
+        account,
+        loginName: account,
+        avatar,
+      });
 
       setInitialState((s: any) => ({
         ...(s || {}),
@@ -195,7 +212,8 @@ const Login: React.FC = () => {
           ...((s as any)?.currentUser || {}),
           name,
           nickName,
-          loginName,
+          account,
+          loginName: account,
           avatar,
         },
       }));
@@ -381,11 +399,11 @@ const Login: React.FC = () => {
                   {type === 'account' && (
                     <>
                       <Form.Item
-                        name="username"
+                        name="account"
                         rules={[
                           {
                             required: true,
-                            message: '请输入用户名',
+                            message: '请输入账号',
                           },
                         ]}
                       >

@@ -34,6 +34,7 @@ import {
 } from '@/utils/auth-expired';
 import { buildIframeRouteWithParams } from '@/utils/iframe';
 import {
+  extractButtonPermissionMap,
   extractPermContextNodes,
   findPathByTargetId,
   mapPermContextToMenuData,
@@ -278,6 +279,7 @@ const Character: FC = () => {
         });
         const permNodes = extractPermContextNodes(permRes);
         const permContextMenu = mapPermContextToMenuData(permNodes);
+        const buttonPermissions = extractButtonPermissionMap(permRes);
         const defaultPath = buildIframeRouteWithParams('/dashboard/index');
         nextPath = defaultPath;
 
@@ -323,6 +325,8 @@ const Character: FC = () => {
           currentBusinessCode: businessCode, // 保存当前选中的业态
           permContextMenu:
             permContextMenu.length > 0 ? permContextMenu : undefined,
+          buttonPermissions:
+            buttonPermissions.length > 0 ? buttonPermissions : undefined,
         }));
       } catch (error) {
         if ((error as any)?.info?.authHandled) {

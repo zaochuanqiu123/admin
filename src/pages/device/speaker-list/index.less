@@ -1,0 +1,134 @@
+@import (reference) '../../../styles/utilities.less';
+
+.speaker-page {
+  min-height: calc(100vh - 112px);
+
+  .content-card {
+    padding: 22px 24px 18px;
+    border: 1px solid var(--ant-color-border-secondary);
+    border-radius: 14px;
+    background: var(--ant-color-bg-container);
+  }
+
+  .speaker-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 16px 24px;
+  }
+
+  .field {
+    .mixin-flex-center();
+    gap: 12px;
+  }
+
+  .field-label {
+    flex-shrink: 0;
+    width: 72px;
+    color: #1f2837;
+  }
+
+  .field .ant-input,
+  .field .ant-select,
+  .field .ant-picker {
+    width: 100%;
+  }
+
+  .actions {
+    grid-column: 6;
+    justify-content: flex-end;
+  }
+
+  .speaker-table-card {
+    margin-top: 16px;
+  }
+
+  .speaker-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 12px;
+  }
+
+  .speaker-primary-action-btn.ant-btn {
+    .mixin-page-create-btn();
+  }
+
+  .speaker-toolbar-note {
+    color: var(--ant-color-text-secondary);
+  }
+
+  .speaker-table-card {
+    .ant-table-thead > tr > th {
+      color: var(--ant-color-text-heading, var(--ant-color-text));
+      font-weight: 600;
+    }
+
+    .ant-table-tbody > tr > td {
+      color: var(--ant-color-text);
+      vertical-align: middle;
+    }
+  }
+
+  .speaker-multi-lines,
+  .speaker-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    line-height: 1.6;
+  }
+
+  .speaker-sub-text {
+    color: var(--ant-color-text-secondary);
+  }
+
+  .speaker-action-links {
+    .mixin-flex-center();
+    gap: 10px;
+
+    a {
+      color: var(--ant-color-primary);
+      white-space: nowrap;
+    }
+  }
+}
+
+body.theme-black-mode .speaker-page {
+  .content-card {
+    background: var(--pc-dark-bg-surface) !important;
+    border-color: var(--pc-dark-border);
+  }
+
+  .field-label {
+    color: var(--pc-dark-text) !important;
+  }
+
+  .speaker-toolbar-note,
+  .speaker-sub-text {
+    color: var(--pc-dark-text-secondary) !important;
+  }
+}
+
+@media (max-width: 1680px) {
+  .speaker-page {
+    .speaker-filter-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .actions {
+      grid-column: 3;
+    }
+  }
+}
+
+@media (max-width: 1280px) {
+  .speaker-page {
+    .speaker-filter-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .actions {
+      grid-column: auto;
+      justify-content: flex-start;
+    }
+  }
+}

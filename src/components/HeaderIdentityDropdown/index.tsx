@@ -69,7 +69,8 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
     currentUser?.name ||
     '用户';
   const accountNo =
-    (currentUser as any)?.loginName ||
+    (currentUser as any)?.account ||
+    (currentUser as any)?.account ||
     currentUser?.userid ||
     currentUser?.phone ||
     '-';

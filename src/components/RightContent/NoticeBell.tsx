@@ -197,7 +197,7 @@ const NoticeBell: React.FC = () => {
         <Button
           type="text"
           shape="circle"
-          className="pc-admin-header-circle-action"
+          className="pc-admin-header-circle-action pc-admin-header-circle-action--notice"
           icon={<BellOutlined />}
           onClick={() => setOpen(true)}
         />

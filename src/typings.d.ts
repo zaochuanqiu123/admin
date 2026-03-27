@@ -22,10 +22,13 @@ declare const __PHP_API_BASE__: string | undefined;
 declare const __TENCENT_MAP_KEY__: string | undefined;
 
 declare namespace API {
+  type ButtonPermissionMap = string[];
+
   type CurrentUser = {
     name?: string;
     nickName?: string;
-    loginName?: string;
+    account?: string;
+    account?: string;
     avatar?: string;
     userid?: string;
     email?: string;
@@ -92,7 +95,8 @@ declare namespace API {
     type?: string;
     mobile?: string;
     captcha?: string;
-    loginName?: string;
+    account?: string;
+    account?: string;
     loginType?: string;
   };
 
