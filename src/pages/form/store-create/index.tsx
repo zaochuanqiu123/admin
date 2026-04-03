@@ -1,17 +1,48 @@
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-components';
-import { AutoComplete, Button, Card, Input, Select, Space, Switch } from 'antd';
+import { history, useAccess, useParams } from '@umijs/max';
+import {
+  AutoComplete,
+  Button,
+  Card,
+  Cascader,
+  Form,
+  Input,
+  message,
+  Radio,
+  Result,
+  Select,
+  Steps,
+  Upload,
+} from 'antd';
+import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import {
+  type AddressCityNode,
+  getAddressProvinceCityArea,
+} from '@/api/address';
+import { getCurrentStoreBusiness } from '@/api/business';
+import {
+  addStore,
+  getStoreDetail,
+  modifyStore,
+  type StoreDetailRecord,
+} from '@/api/store';
+import { type SearchUserResult, searchUserByPhone } from '@/api/user';
+import { ROUTE_TAB_REFRESH_EVENT } from '@/components/Layout/RouteTabsKeepAlive';
+import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
+import { STORE_PERMS } from '../store-perms';
 import './index.less';
-
-type BusinessType = 'direct' | 'join';
-type SupplierType = 'normal' | 'consignment';
 
 const DEFAULT_CENTER = { lat: 31.2304, lng: 121.4737 };
 const MAP_MARKER_ID = 'store-center';
+const DIRECT_STORE_CLASS = 1;
+const NORMAL_SUPPLIER_TYPE = 1;
 const TENCENT_MAP_KEY =
   typeof __TENCENT_MAP_KEY__ !== 'undefined' ? __TENCENT_MAP_KEY__ : '';
+
+type SupplierTypeValue = 1 | 2;
 
 type SuggestionItem = {
   id: string;
@@ -33,6 +64,46 @@ type GeocodeResult = {
   standardAddress: string;
 };
 
+type BusinessOption = {
+  label: string;
+  value: string;
+};
+
+type AdminMatchStatus = 'idle' | 'matched' | 'new';
+
+type RegionOption = {
+  value: string;
+  label: string;
+  isLeaf?: boolean;
+  loading?: boolean;
+  children?: RegionOption[];
+};
+
+type StoreCreateFormValues = {
+  businessCode?: string;
+  storeClass: number;
+  supplierType: SupplierTypeValue;
+  storeName?: string;
+  storePhone?: string;
+  shopImgFileList?: UploadFile[];
+  logoFileList?: UploadFile[];
+  regionCodes?: string[];
+  longitude?: string;
+  latitude?: string;
+  storeAddress?: string;
+  storeDetailAddress?: string;
+  originShopId?: string;
+  storeManagerPhone?: string;
+  storeManagerName?: string;
+  storeManagerNickName?: string;
+  storeManagerPassword?: string;
+  confirmPassword?: string;
+};
+
+type StoreRouteParams = {
+  id?: string;
+};
+
 function loadScriptOnce(
   id: string,
   src: string,
@@ -40,19 +111,16 @@ function loadScriptOnce(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     let settled = false;
-
     const safeResolve = () => {
       if (settled) return;
       settled = true;
       resolve();
     };
-
     const safeReject = (error: Error) => {
       if (settled) return;
       settled = true;
       reject(error);
     };
-
     const onLoad = () => {
       if (readyCheck()) {
         safeResolve();
@@ -66,32 +134,29 @@ function loadScriptOnce(
         safeReject(new Error(`${id} loaded but sdk not ready`));
       }, 80);
     };
-
-    const onError = () => {
-      safeReject(new Error(`${id} load failed`));
-    };
-
     if (readyCheck()) {
       safeResolve();
       return;
     }
-
     const existingScript = document.getElementById(
       id,
     ) as HTMLScriptElement | null;
     if (existingScript) {
       existingScript.addEventListener('load', onLoad, { once: true });
-      existingScript.addEventListener('error', onError, { once: true });
+      existingScript.addEventListener(
+        'error',
+        () => safeReject(new Error(`${id} load failed`)),
+        { once: true },
+      );
       window.setTimeout(onLoad, 0);
       return;
     }
-
     const script = document.createElement('script');
     script.id = id;
     script.async = true;
     script.src = src;
     script.onload = onLoad;
-    script.onerror = onError;
+    script.onerror = () => safeReject(new Error(`${id} load failed`));
     document.head.appendChild(script);
   });
 }
@@ -100,7 +165,6 @@ function loadTencentGLMapScript(key: string): Promise<void> {
   if (!key) {
     return Promise.reject(new Error('missing tencent map key'));
   }
-
   return loadScriptOnce(
     'tencent-map-gl-sdk-script',
     `https://map.qq.com/api/gljs?v=1.exp&libraries=service&key=${key}`,
@@ -134,22 +198,17 @@ function requestTencentJsonp<T>(
       cleanup();
       reject(new Error('tencent jsonp timeout'));
     }, 10000);
-
     const cleanup = () => {
       window.clearTimeout(timeoutId);
       try {
         delete (window as any)[callbackName];
       } catch {}
-      if (script.parentNode) {
-        script.parentNode.removeChild(script);
-      }
+      script.parentNode?.removeChild(script);
     };
-
     (window as any)[callbackName] = (payload: T) => {
       cleanup();
       resolve(payload);
     };
-
     script.onerror = () => {
       cleanup();
       reject(new Error('tencent jsonp load failed'));
@@ -167,13 +226,10 @@ function normalizeSuggestionItems(rawList: any[]): SuggestionItem[] {
     if (lat === null || lng === null) {
       continue;
     }
-
-    const title = String(item?.title || item?.name || '');
-    const address = String(item?.address || item?.addr || '');
     list.push({
       id: String(item?.id || `${lat}-${lng}-${index}`),
-      title,
-      address,
+      title: String(item?.title || item?.name || ''),
+      address: String(item?.address || item?.addr || ''),
       lat,
       lng,
     });
@@ -196,22 +252,18 @@ async function fetchSuggestionListByGL(
   if (!TMap?.service?.Suggestion) {
     return [];
   }
-
   try {
     const suggestion = new TMap.service.Suggestion({
       pageSize: 10,
       region: '',
       regionFix: false,
     });
-    const params = { keyword };
-
-    let result: any = null;
-    if (typeof suggestion.getSuggestions === 'function') {
-      result = await suggestion.getSuggestions(params);
-    } else if (typeof suggestion.getSuggestion === 'function') {
-      result = await suggestion.getSuggestion(params);
-    }
-
+    const result =
+      typeof suggestion.getSuggestions === 'function'
+        ? await suggestion.getSuggestions({ keyword })
+        : typeof suggestion.getSuggestion === 'function'
+          ? await suggestion.getSuggestion({ keyword })
+          : null;
     const rawList = Array.isArray(result?.data)
       ? result.data
       : Array.isArray(result?.result?.data)
@@ -227,15 +279,9 @@ async function fetchSuggestionList(
   keyword: string,
   key: string,
 ): Promise<SuggestionItem[]> {
-  if (!keyword || !key) {
-    return [];
-  }
-
+  if (!keyword || !key) return [];
   const glList = await fetchSuggestionListByGL(keyword);
-  if (glList.length > 0) {
-    return glList;
-  }
-
+  if (glList.length > 0) return glList;
   const data: any = await requestTencentJsonp(
     'https://apis.map.qq.com/ws/place/v1/suggestion',
     {
@@ -250,7 +296,6 @@ async function fetchSuggestionList(
   if (data?.status !== 0 || !Array.isArray(data?.data)) {
     return [];
   }
-
   return normalizeSuggestionItems(data.data as any[]);
 }
 
@@ -262,7 +307,6 @@ async function reverseGeocodeByGL(
   if (!TMap?.service?.Geocoder || !TMap?.LatLng) {
     throw new Error('tencent gl geocoder unavailable');
   }
-
   return new Promise((resolve, reject) => {
     let settled = false;
     const finish = (result: GeocodeResult) => {
@@ -284,7 +328,6 @@ async function reverseGeocodeByGL(
         fail();
       }
     };
-
     try {
       const geocoder = new TMap.service.Geocoder({
         complete: handlePayload,
@@ -307,10 +350,6 @@ async function reverseGeocodeByWebService(
   lng: number,
   key: string,
 ): Promise<GeocodeResult> {
-  if (!key) {
-    throw new Error('missing tencent map key');
-  }
-
   const data: any = await requestTencentJsonp(
     'https://apis.map.qq.com/ws/geocoder/v1/',
     {
@@ -321,16 +360,12 @@ async function reverseGeocodeByWebService(
   if (data?.status !== 0) {
     throw new Error('tencent geocoder response invalid');
   }
-
   const recommend = extractRecommendFromGeocode(data);
   const standardAddress = extractStandardAddressFromGeocode(data);
   if (!recommend && !standardAddress) {
     throw new Error('tencent geocoder empty');
   }
-  return {
-    recommend,
-    standardAddress,
-  };
+  return { recommend, standardAddress };
 }
 
 async function reverseGeocodeWithFallback(
@@ -341,28 +376,166 @@ async function reverseGeocodeWithFallback(
   try {
     return await reverseGeocodeByGL(lat, lng);
   } catch {}
-
   try {
     return await reverseGeocodeByWebService(lat, lng, key);
   } catch {}
-
   return null;
 }
 
-const StoreCreatePage: React.FC = () => {
-  const [businessType, setBusinessType] = useState<BusinessType>('direct');
-  const [supplierType, setSupplierType] = useState<SupplierType>('normal');
-  const [dadaEnabled, setDadaEnabled] = useState(false);
+function isValidMainlandPhone(phone: string): boolean {
+  return /^1\d{10}$/.test(phone);
+}
+
+function normalizeUploadFileList(
+  event: Parameters<NonNullable<UploadProps['onChange']>>[0] | UploadFile[],
+) {
+  if (Array.isArray(event)) {
+    return event.slice(-1);
+  }
+  return (event?.fileList || []).slice(-1);
+}
+
+function getLastUploadFile(fileList?: UploadFile[]) {
+  return Array.isArray(fileList) && fileList.length > 0
+    ? fileList[fileList.length - 1]
+    : undefined;
+}
+
+function createRemoteUploadFileList(
+  url: string | undefined,
+  name: string,
+): UploadFile[] {
+  const normalizedUrl = String(url || '').trim();
+  if (!normalizedUrl) {
+    return [];
+  }
+  return [
+    {
+      uid: `remote-${name}`,
+      name,
+      status: 'done',
+      url: normalizedUrl,
+    } as UploadFile,
+  ];
+}
+
+function readCoordinateValue(
+  ...values: Array<string | number | undefined | null>
+): string {
+  for (const value of values) {
+    if (value === undefined || value === null) {
+      continue;
+    }
+    const text = String(value).trim();
+    if (text) {
+      return text;
+    }
+  }
+  return '';
+}
+
+function findRegionOptionByText(
+  options: RegionOption[],
+  target: string | undefined,
+) {
+  const normalizedTarget = String(target || '').trim();
+  if (!normalizedTarget) {
+    return undefined;
+  }
+  return options.find((option) => {
+    const optionLabel = String(option.label || '').trim();
+    const optionValue = String(option.value || '').trim();
+    return optionLabel === normalizedTarget || optionValue === normalizedTarget;
+  });
+}
+
+function buildRegionOptions(
+  nodes: AddressCityNode[],
+  nextLevel: 1 | 2 | 3,
+): RegionOption[] {
+  return nodes.map((node) => ({
+    value: String(node?.city_code || ''),
+    label: String(node?.city_name || ''),
+    isLeaf: nextLevel >= 3,
+  }));
+}
+
+function findRegionPath(
+  options: RegionOption[],
+  values: string[],
+): RegionOption[] {
+  const path: RegionOption[] = [];
+  let currentOptions = options;
+  for (const value of values) {
+    const matched = currentOptions.find(
+      (option) => String(option.value) === String(value),
+    );
+    if (!matched) {
+      return [];
+    }
+    path.push(matched);
+    currentOptions = matched.children || [];
+  }
+  return path;
+}
+
+async function mockUploadImage(file?: UploadFile): Promise<string> {
+  const rawName = String(file?.name || '')
+    .trim()
+    .toLowerCase();
+  const extension =
+    rawName.endsWith('.jpg') || rawName.endsWith('.jpeg') ? 'jpg' : 'png';
+  return new Promise((resolve) => {
+    window.setTimeout(() => {
+      resolve(`https://dummyimage.com/600x400/1890ff/ffffff.${extension}`);
+    }, 600);
+  });
+}
+
+async function resolveUploadImageUrl(
+  fileList: UploadFile[] | undefined,
+  fallbackUrl = '',
+): Promise<string> {
+  const file = getLastUploadFile(fileList);
+  if (!file) {
+    return String(fallbackUrl || '').trim();
+  }
+  const existingUrl = String(file.url || '').trim();
+  if (/^https?:\/\//i.test(existingUrl)) {
+    return existingUrl;
+  }
+  return mockUploadImage(file);
+}
+
+export default function StoreCreatePage() {
+  const access = useAccess() as {
+    hasButtonPerm?: (value: string | string[]) => boolean;
+  };
+  const { id: routeStoreId } = useParams<StoreRouteParams>();
+  const [form] = Form.useForm<StoreCreateFormValues>();
+  const isEditMode = !!routeStoreId;
+  const isUpdateMode = isEditMode;
+  const canAccessCurrentPage = isEditMode
+    ? !!access?.hasButtonPerm?.(STORE_PERMS.edit)
+    : !!access?.hasButtonPerm?.(STORE_PERMS.add);
+  const [currentStep, setCurrentStep] = useState(0);
   const [mapReady, setMapReady] = useState(false);
-  const [mapError, setMapError] = useState<string>('');
-  const [storeAddress, setStoreAddress] = useState('');
-  const [detailAddress, setDetailAddress] = useState('');
-  const [longitude, setLongitude] = useState('');
-  const [latitude, setLatitude] = useState('');
+  const [mapError, setMapError] = useState('');
   const [suggestionOptions, setSuggestionOptions] = useState<
     SuggestionOption[]
   >([]);
   const [suggestionLoading, setSuggestionLoading] = useState(false);
+  const [businessOptions, setBusinessOptions] = useState<BusinessOption[]>([]);
+  const [businessLoading, setBusinessLoading] = useState(false);
+  const [regionOptions, setRegionOptions] = useState<RegionOption[]>([]);
+  const [regionLoading, setRegionLoading] = useState(false);
+  const [adminSearching, setAdminSearching] = useState(false);
+  const [adminMatchStatus, setAdminMatchStatus] =
+    useState<AdminMatchStatus>('idle');
+  const [matchedAdmin, setMatchedAdmin] = useState<SearchUserResult>();
+  const [detailRecord, setDetailRecord] = useState<StoreDetailRecord>();
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
   const mapMarkerRef = useRef<any>(null);
@@ -370,6 +543,26 @@ const StoreCreatePage: React.FC = () => {
   const suggestionRequestIdRef = useRef(0);
   const suggestionTimerRef = useRef<number | null>(null);
   const selectingSuggestionRef = useRef(false);
+
+  const storeAddress = Form.useWatch('storeAddress', form) || '';
+  const adminPhone = Form.useWatch('storeManagerPhone', form) || '';
+  const longitude = Form.useWatch('longitude', form) || '';
+  const latitude = Form.useWatch('latitude', form) || '';
+  const pageTitle = isEditMode
+    ? '修改门店'
+    : currentStep === 0
+      ? '基础信息'
+      : '管理员信息';
+
+  const navigateBackToStoreManage = (refresh = false) => {
+    history.push('/form/store-manage');
+    if (!refresh) {
+      return;
+    }
+    window.setTimeout(() => {
+      window.dispatchEvent(new Event(ROUTE_TAB_REFRESH_EVENT));
+    }, 120);
+  };
 
   const buildSuggestionOptions = (list: SuggestionItem[]): SuggestionOption[] =>
     list.map((item) => ({
@@ -389,22 +582,16 @@ const StoreCreatePage: React.FC = () => {
   const moveMapWithMarker = (lat: number, lng: number) => {
     const TMap = (window as any).TMap;
     if (!TMap?.LatLng) return;
-
     const position = new TMap.LatLng(lat, lng);
-    const marker = mapMarkerRef.current;
-    if (marker?.updateGeometries) {
-      marker.updateGeometries([{ id: MAP_MARKER_ID, position }]);
+    if (mapMarkerRef.current?.updateGeometries) {
+      mapMarkerRef.current.updateGeometries([{ id: MAP_MARKER_ID, position }]);
     }
-
-    const map = mapInstanceRef.current;
-    if (!map) return;
-
-    if (typeof map.panTo === 'function') {
-      map.panTo(position);
+    if (typeof mapInstanceRef.current?.panTo === 'function') {
+      mapInstanceRef.current.panTo(position);
       return;
     }
-    if (typeof map.setCenter === 'function') {
-      map.setCenter(position);
+    if (typeof mapInstanceRef.current?.setCenter === 'function') {
+      mapInstanceRef.current.setCenter(position);
     }
   };
 
@@ -412,10 +599,11 @@ const StoreCreatePage: React.FC = () => {
     selectingSuggestionRef.current = true;
     setSuggestionOptions([]);
     void (async () => {
-      setLongitude(item.lng.toFixed(6));
-      setLatitude(item.lat.toFixed(6));
+      form.setFieldsValue({
+        longitude: item.lng.toFixed(6),
+        latitude: item.lat.toFixed(6),
+      });
       moveMapWithMarker(item.lat, item.lng);
-
       const requestId = ++geocodeRequestIdRef.current;
       const geocode = await reverseGeocodeWithFallback(
         item.lat,
@@ -425,14 +613,12 @@ const StoreCreatePage: React.FC = () => {
       if (requestId !== geocodeRequestIdRef.current) {
         return;
       }
-
-      if (geocode?.recommend) {
-        setStoreAddress(geocode.recommend);
-      } else {
-        setStoreAddress(item.title || '');
-      }
+      form.setFieldValue(
+        'storeAddress',
+        geocode?.recommend || item.title || '',
+      );
       if (geocode?.standardAddress) {
-        setDetailAddress(geocode.standardAddress);
+        form.setFieldValue('storeDetailAddress', geocode.standardAddress);
       }
     })().finally(() => {
       window.setTimeout(() => {
@@ -449,7 +635,6 @@ const StoreCreatePage: React.FC = () => {
       setSuggestionOptions([]);
       return [];
     }
-
     const requestId = ++suggestionRequestIdRef.current;
     setSuggestionLoading(true);
     try {
@@ -457,7 +642,6 @@ const StoreCreatePage: React.FC = () => {
       if (requestId !== suggestionRequestIdRef.current) {
         return [];
       }
-
       setSuggestionOptions(buildSuggestionOptions(list));
       return list;
     } catch {
@@ -473,20 +657,14 @@ const StoreCreatePage: React.FC = () => {
   };
 
   const handleAddressInputSearch = (value: string) => {
-    setStoreAddress(value);
-    if (selectingSuggestionRef.current) {
-      return;
-    }
-
+    if (selectingSuggestionRef.current) return;
     if (suggestionTimerRef.current !== null) {
       window.clearTimeout(suggestionTimerRef.current);
     }
-
     if (!value.trim()) {
       setSuggestionOptions([]);
       return;
     }
-
     suggestionTimerRef.current = window.setTimeout(() => {
       void requestSuggestionOptions(value);
     }, 300);
@@ -494,12 +672,9 @@ const StoreCreatePage: React.FC = () => {
 
   const handleSuggestionSelect = (_value: string, option: any) => {
     const item = (option as SuggestionOption | undefined)?.item;
-    if (!item) return;
-    applySuggestionItem(item);
-  };
-
-  const handleAddressValueChange = (value: string) => {
-    setStoreAddress(value);
+    if (item) {
+      applySuggestionItem(item);
+    }
   };
 
   const handleAddressSearchSubmit = async () => {
@@ -508,6 +683,291 @@ const StoreCreatePage: React.FC = () => {
       applySuggestionItem(list[0]);
     }
   };
+
+  const resetAdminMatchState = () => {
+    setAdminMatchStatus('idle');
+    setMatchedAdmin(undefined);
+    form.setFieldsValue({
+      storeManagerName: undefined,
+      storeManagerNickName: undefined,
+      storeManagerPassword: undefined,
+      confirmPassword: undefined,
+    });
+  };
+
+  const handleSearchAdmin = async () => {
+    const phone = String(form.getFieldValue('storeManagerPhone') || '').trim();
+    if (!isValidMainlandPhone(phone)) {
+      message.warning('请输入11位手机号');
+      return;
+    }
+    setAdminSearching(true);
+    try {
+      const res = await searchUserByPhone(phone, { skipErrorHandler: true });
+      if (String(res?.id || '').trim()) {
+        setMatchedAdmin(res);
+        setAdminMatchStatus('matched');
+        form.setFieldsValue({
+          storeManagerName: undefined,
+          storeManagerNickName: undefined,
+          storeManagerPassword: undefined,
+          confirmPassword: undefined,
+        });
+        message.success('已匹配到现有用户');
+      } else {
+        setMatchedAdmin(undefined);
+        setAdminMatchStatus('new');
+        form.setFieldsValue({
+          storeManagerName: undefined,
+          storeManagerNickName: undefined,
+          storeManagerPassword: undefined,
+          confirmPassword: undefined,
+        });
+        message.info('未匹配到用户，请补充管理员信息');
+      }
+    } catch (error) {
+      setMatchedAdmin(undefined);
+      setAdminMatchStatus('idle');
+      message.error(getErrorMessage(error, '查询管理员失败'));
+    } finally {
+      setAdminSearching(false);
+    }
+  };
+
+  const handleCoordinateBlur = () => {
+    const lat = Number(form.getFieldValue('latitude'));
+    const lng = Number(form.getFieldValue('longitude'));
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      moveMapWithMarker(lat, lng);
+    }
+  };
+
+  const requestRegionChildren = async (selectedOptions: RegionOption[]) => {
+    const nextType = selectedOptions.length === 1 ? 1 : 2;
+    return getAddressProvinceCityArea(
+      {
+        type: nextType as 1 | 2,
+        provinceCode:
+          selectedOptions.length >= 1
+            ? String(selectedOptions[0]?.value || '')
+            : '',
+        cityCode:
+          selectedOptions.length >= 2
+            ? String(selectedOptions[1]?.value || '')
+            : '',
+      },
+      { skipErrorHandler: true },
+    );
+  };
+
+  const handleRegionLoadData = async (selectedOptions: RegionOption[]) => {
+    const targetOption = selectedOptions[selectedOptions.length - 1];
+    if (!targetOption || targetOption.isLeaf) {
+      return;
+    }
+
+    targetOption.loading = true;
+    setRegionOptions((prev) => [...prev]);
+
+    try {
+      const list = await requestRegionChildren(selectedOptions);
+
+      targetOption.children = buildRegionOptions(
+        list,
+        selectedOptions.length === 1 ? 2 : 3,
+      );
+    } catch (error) {
+      message.error(getErrorMessage(error, '获取省市区失败'));
+      targetOption.children = [];
+    } finally {
+      targetOption.loading = false;
+      setRegionOptions((prev) => [...prev]);
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadBaseOptions = async () => {
+      setBusinessLoading(true);
+      try {
+        const res = await getCurrentStoreBusiness({ skipErrorHandler: true });
+        if (cancelled) return;
+        const businessCode = String(res?.businessCode || '').trim();
+        const businessName = String(res?.businessName || '').trim();
+        const optionLabel = [businessCode, businessName]
+          .filter(Boolean)
+          .join(' ');
+        if (businessCode && optionLabel) {
+          setBusinessOptions([{ label: optionLabel, value: businessCode }]);
+          form.setFieldValue('businessCode', businessCode);
+        } else {
+          setBusinessOptions([]);
+          form.setFieldValue('businessCode', undefined);
+        }
+      } catch (error) {
+        if (cancelled) return;
+        setBusinessOptions([]);
+        form.setFieldValue('businessCode', undefined);
+        message.error(getErrorMessage(error, '获取所属业态失败'));
+      } finally {
+        if (!cancelled) setBusinessLoading(false);
+      }
+    };
+    const loadRegionTree = async () => {
+      setRegionLoading(true);
+      try {
+        const list = await getAddressProvinceCityArea(
+          {
+            type: 0,
+            provinceCode: '',
+            cityCode: '',
+          },
+          { skipErrorHandler: true },
+        );
+        if (!cancelled) {
+          setRegionOptions(buildRegionOptions(list, 1));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setRegionOptions([]);
+          message.error(getErrorMessage(error, '获取省市区失败'));
+        }
+      } finally {
+        if (!cancelled) setRegionLoading(false);
+      }
+    };
+    void Promise.all([loadBaseOptions(), loadRegionTree()]);
+    return () => {
+      cancelled = true;
+    };
+  }, [form]);
+
+  useEffect(() => {
+    if (!isUpdateMode) {
+      setDetailRecord(undefined);
+      setDetailLoading(false);
+      return;
+    }
+    if (!routeStoreId) {
+      message.error('缺少门店 ID');
+      return;
+    }
+    let cancelled = false;
+    const loadDetail = async () => {
+      setDetailLoading(true);
+      try {
+        const detail = await getStoreDetail(routeStoreId, {
+          skipErrorHandler: true,
+        });
+        if (cancelled) {
+          return;
+        }
+        setDetailRecord(detail);
+        form.setFieldsValue({
+          businessCode: String(detail?.businessCode || '').trim() || undefined,
+          storeClass: Number(detail?.storeClass || DIRECT_STORE_CLASS),
+          supplierType: Number(
+            detail?.supplierType || NORMAL_SUPPLIER_TYPE,
+          ) as SupplierTypeValue,
+          storeName: String(detail?.storeName || '').trim(),
+          storePhone: String(detail?.storePhone || '').trim(),
+          shopImgFileList: createRemoteUploadFileList(
+            detail?.shopImgId,
+            'shop-image.png',
+          ),
+          logoFileList: createRemoteUploadFileList(
+            detail?.logoId,
+            'store-logo.png',
+          ),
+          longitude: readCoordinateValue(
+            detail?.longitude,
+            detail?.lng,
+            detail?.storeLongitude,
+          ),
+          latitude: readCoordinateValue(
+            detail?.latitude,
+            detail?.lat,
+            detail?.storeLatitude,
+          ),
+          storeAddress: String(detail?.storeAddress || '').trim(),
+          storeDetailAddress: String(detail?.storeDetailAddress || '').trim(),
+          originShopId: String(detail?.originShopId || '').trim(),
+        });
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        message.error(getErrorMessage(error, '获取门店详情失败'));
+      } finally {
+        if (!cancelled) {
+          setDetailLoading(false);
+        }
+      }
+    };
+    void loadDetail();
+    return () => {
+      cancelled = true;
+    };
+  }, [form, isUpdateMode, routeStoreId]);
+
+  useEffect(() => {
+    if (!detailRecord || regionLoading || regionOptions.length === 0) {
+      return;
+    }
+    const currentCodes = form.getFieldValue('regionCodes');
+    if (Array.isArray(currentCodes) && currentCodes.length === 3) {
+      return;
+    }
+    let cancelled = false;
+    const fillRegionCodes = async () => {
+      const province = findRegionOptionByText(
+        regionOptions,
+        detailRecord.storeProvince,
+      );
+      if (!province) {
+        return;
+      }
+      if (!Array.isArray(province.children)) {
+        const cityList = await requestRegionChildren([province]);
+        if (cancelled) {
+          return;
+        }
+        province.children = buildRegionOptions(cityList, 2);
+        setRegionOptions((prev) => [...prev]);
+      }
+      const city = findRegionOptionByText(
+        province.children || [],
+        detailRecord.storeCity,
+      );
+      if (!city) {
+        return;
+      }
+      if (!Array.isArray(city.children)) {
+        const areaList = await requestRegionChildren([province, city]);
+        if (cancelled) {
+          return;
+        }
+        city.children = buildRegionOptions(areaList, 3);
+        setRegionOptions((prev) => [...prev]);
+      }
+      const area = findRegionOptionByText(
+        city.children || [],
+        detailRecord.storeArea,
+      );
+      if (!area || cancelled) {
+        return;
+      }
+      form.setFieldValue('regionCodes', [
+        String(province.value || ''),
+        String(city.value || ''),
+        String(area.value || ''),
+      ]);
+    };
+    void fillRegionCodes().catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [detailRecord, form, regionLoading, regionOptions]);
 
   useEffect(() => {
     return () => {
@@ -518,21 +978,29 @@ const StoreCreatePage: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    if (!mapReady || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return;
+    }
+    moveMapWithMarker(lat, lng);
+  }, [latitude, longitude, mapReady]);
+
+  useEffect(() => {
     let disposed = false;
     let cleanupMap: (() => void) | null = null;
-
+    if (currentStep !== 0) return () => {};
     if (!mapRef.current) return () => {};
-
     const initMap = async () => {
       if (!TENCENT_MAP_KEY) {
         throw new Error('missing tencent map key');
       }
-
       const handleMapPointSelect = async (lat: number, lng: number) => {
-        setLongitude(lng.toFixed(6));
-        setLatitude(lat.toFixed(6));
+        form.setFieldsValue({
+          longitude: lng.toFixed(6),
+          latitude: lat.toFixed(6),
+        });
         moveMapWithMarker(lat, lng);
-
         const requestId = ++geocodeRequestIdRef.current;
         const geocode = await reverseGeocodeWithFallback(
           lat,
@@ -542,50 +1010,33 @@ const StoreCreatePage: React.FC = () => {
         if (disposed || requestId !== geocodeRequestIdRef.current) {
           return;
         }
-
         if (geocode?.standardAddress) {
-          setDetailAddress(geocode.standardAddress);
+          form.setFieldValue('storeDetailAddress', geocode.standardAddress);
         }
         if (geocode?.recommend) {
-          setStoreAddress(geocode.recommend);
+          form.setFieldValue('storeAddress', geocode.recommend);
         }
       };
-
       await loadTencentGLMapScript(TENCENT_MAP_KEY);
       if (disposed || !mapRef.current) return;
-
       const TMap = (window as any).TMap;
       if (!TMap?.Map) {
         throw new Error('tencent gl sdk unavailable');
       }
-
       const center = new TMap.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng);
-      const map = new TMap.Map(mapRef.current, {
-        center,
-        zoom: 13,
-      });
+      const map = new TMap.Map(mapRef.current, { center, zoom: 13 });
       const marker = new TMap.MultiMarker({
         map,
-        geometries: [
-          {
-            id: MAP_MARKER_ID,
-            position: center,
-          },
-        ],
+        geometries: [{ id: MAP_MARKER_ID, position: center }],
       });
       mapInstanceRef.current = map;
       mapMarkerRef.current = marker;
-
       const onMapClick = (event: any) => {
         const latLng = event?.latLng;
         if (!latLng) return;
-
-        const lat = latLng.getLat();
-        const lng = latLng.getLng();
-        void handleMapPointSelect(lat, lng);
+        void handleMapPointSelect(latLng.getLat(), latLng.getLng());
       };
       map.on('click', onMapClick);
-
       cleanupMap = () => {
         map.off('click', onMapClick);
         marker.setMap(null);
@@ -596,28 +1047,191 @@ const StoreCreatePage: React.FC = () => {
         mapInstanceRef.current = null;
       };
     };
-
     initMap()
       .then(() => {
-        if (disposed) return;
-        setMapReady(true);
-        setMapError('');
+        if (!disposed) {
+          setMapReady(true);
+          setMapError('');
+        }
       })
       .catch(() => {
-        if (disposed) return;
-        setMapReady(false);
-        setMapError(
-          TENCENT_MAP_KEY
-            ? '腾讯地图加载失败，请检查 key 白名单（如 localhost）或网络'
-            : '未配置腾讯地图 Key（REACT_APP_TENCENT_MAP_KEY）',
-        );
+        if (!disposed) {
+          setMapReady(false);
+          setMapError(
+            TENCENT_MAP_KEY
+              ? '腾讯地图加载失败，请检查 key 白名单（如 localhost）或网络'
+              : '未配置腾讯地图 Key（REACT_APP_TENCENT_MAP_KEY）',
+          );
+        }
       });
-
     return () => {
       disposed = true;
       cleanupMap?.();
     };
-  }, []);
+  }, [currentStep, form]);
+
+  const handleNextStep = async () => {
+    await form.validateFields([
+      'businessCode',
+      'storeClass',
+      'supplierType',
+      'storeName',
+      'storePhone',
+      'shopImgFileList',
+      'logoFileList',
+      'regionCodes',
+      'longitude',
+      'latitude',
+      'storeAddress',
+      'storeDetailAddress',
+    ]);
+    setCurrentStep(1);
+  };
+
+  const handleSubmit = async () => {
+    const baseFieldNames = [
+      'businessCode',
+      'storeClass',
+      'supplierType',
+      'storeName',
+      'storePhone',
+      'shopImgFileList',
+      'logoFileList',
+      'regionCodes',
+      'longitude',
+      'latitude',
+      'storeAddress',
+      'storeDetailAddress',
+    ];
+    if (!isUpdateMode && adminMatchStatus === 'idle') {
+      await form.validateFields(['storeManagerPhone']);
+      message.warning('请先匹配管理员手机号');
+      return;
+    }
+    const validateFieldNames = [...baseFieldNames];
+    if (!isUpdateMode) {
+      validateFieldNames.push('storeManagerPhone');
+      if (adminMatchStatus === 'matched') {
+        validateFieldNames.push('storeManagerNickName');
+      }
+      if (adminMatchStatus === 'new') {
+        validateFieldNames.push(
+          'storeManagerName',
+          'storeManagerNickName',
+          'storeManagerPassword',
+          'confirmPassword',
+        );
+      }
+    }
+    const values = await form.validateFields(validateFieldNames);
+    const regionPath = findRegionPath(
+      regionOptions,
+      Array.isArray(values.regionCodes) ? values.regionCodes : [],
+    );
+    if (regionPath.length !== 3) {
+      message.warning('请选择完整的省市区');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const shopImgUrl = await resolveUploadImageUrl(
+        values.shopImgFileList,
+        String(detailRecord?.shopImgId || '').trim(),
+      );
+      const logoUrl = await resolveUploadImageUrl(
+        values.logoFileList,
+        String(detailRecord?.logoId || '').trim(),
+      );
+      const payload = {
+        storeName: String(values.storeName || '').trim(),
+        businessCode: String(values.businessCode || '').trim(),
+        logoId: logoUrl,
+        shopImgId: shopImgUrl,
+        storePhone: String(values.storePhone || '').trim(),
+        storeAddress: String(values.storeAddress || '').trim(),
+        storeProvince: String(regionPath[0]?.label || '').trim(),
+        storeCity: String(regionPath[1]?.label || '').trim(),
+        storeArea: String(regionPath[2]?.label || '').trim(),
+        storeDetailAddress: String(values.storeDetailAddress || '').trim(),
+        longitude: String(values.longitude || '').trim(),
+        latitude: String(values.latitude || '').trim(),
+        originShopId: String(values.originShopId || '').trim(),
+        storeClass: Number(values.storeClass || DIRECT_STORE_CLASS),
+        supplierType: Number(values.supplierType || NORMAL_SUPPLIER_TYPE),
+      };
+      if (isUpdateMode) {
+        if (!routeStoreId) {
+          message.error('缺少门店 ID');
+          return;
+        }
+        const response = await modifyStore(
+          {
+            id: routeStoreId,
+            ...payload,
+          },
+          { skipErrorHandler: true },
+        );
+        message.success(getApiMessage(response, '修改门店成功'));
+        navigateBackToStoreManage(true);
+        return;
+      }
+      const response = await addStore(
+        {
+          ...payload,
+          storeManagerPhone: String(values.storeManagerPhone || '').trim(),
+          storeManagerName:
+            adminMatchStatus === 'matched'
+              ? String(matchedAdmin?.name || '').trim()
+              : String(values.storeManagerName || '').trim(),
+          storeManagerNickName: String(
+            values.storeManagerNickName || '',
+          ).trim(),
+          storeManagerPassword:
+            adminMatchStatus === 'new'
+              ? String(values.storeManagerPassword || '').trim()
+              : '',
+        },
+        { skipErrorHandler: true },
+      );
+      message.success(getApiMessage(response, '新增门店成功'));
+      navigateBackToStoreManage(true);
+    } catch (error) {
+      message.error(
+        getErrorMessage(error, isUpdateMode ? '修改门店失败' : '新增门店失败'),
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!canAccessCurrentPage) {
+    return (
+      <PageContainer
+        className="store-create-container"
+        contentWidth="Fluid"
+        pageHeaderRender={false}
+      >
+        <div className="store-create-page">
+          <Card className="store-create-card wizard-card">
+            <Result
+              status="403"
+              title="暂无权限"
+              subTitle={
+                isEditMode
+                  ? '当前账号没有修改门店权限'
+                  : '当前账号没有新增门店权限'
+              }
+              extra={
+                <Button onClick={() => navigateBackToStoreManage(false)}>
+                  返回门店管理
+                </Button>
+              }
+            />
+          </Card>
+        </div>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer
@@ -626,190 +1240,407 @@ const StoreCreatePage: React.FC = () => {
       pageHeaderRender={false}
     >
       <div className="store-create-page">
-        <Card title="基础信息" className="store-create-card">
-          <div className="store-form-row u-flex">
-            <div className="store-form-label required">门店行业</div>
-            <div className="store-form-control">
-              <Select
-                placeholder="选择行业"
-                options={[
-                  { label: '中式正餐', value: 'cn' },
-                  { label: '快餐简餐', value: 'fast' },
-                  { label: '咖啡饮品', value: 'drink' },
-                ]}
-              />
-            </div>
-          </div>
-
-          <div className="store-form-row u-flex">
-            <div className="store-form-label required">经营类型</div>
-            <div className="store-form-control">
-              <Space size={0} className="choice-group">
-                <button
-                  type="button"
-                  className={`choice-btn ${
-                    businessType === 'direct' ? 'active' : ''
-                  }`}
-                  onClick={() => setBusinessType('direct')}
+        <Card className="store-create-card wizard-card" loading={detailLoading}>
+          {!isUpdateMode ? (
+            <Steps
+              className="store-create-steps"
+              current={currentStep}
+              items={[{ title: '基础信息' }, { title: '管理员信息' }]}
+            />
+          ) : null}
+          <div className="store-create-step-title">{pageTitle}</div>
+          <Form<StoreCreateFormValues>
+            form={form}
+            className="store-create-form"
+            layout="horizontal"
+            colon={false}
+            labelCol={{ flex: '118px' }}
+            wrapperCol={{ flex: '520px' }}
+            initialValues={{
+              storeClass: DIRECT_STORE_CLASS,
+              supplierType: NORMAL_SUPPLIER_TYPE,
+              shopImgFileList: [],
+              logoFileList: [],
+              longitude: '',
+              latitude: '',
+            }}
+          >
+            {currentStep === 0 ? (
+              <>
+                <Form.Item
+                  label="所属业态"
+                  name="businessCode"
+                  rules={[{ required: true, message: '请选择所属业态' }]}
                 >
-                  直营店
-                </button>
-                <button
-                  type="button"
-                  className={`choice-btn ${businessType === 'join' ? 'active' : ''}`}
-                  onClick={() => setBusinessType('join')}
+                  <Select
+                    placeholder="请选择所属业态"
+                    loading={businessLoading}
+                    options={businessOptions}
+                    optionFilterProp="label"
+                  />
+                </Form.Item>
+                <Form.Item
+                  label="经营类型"
+                  name="storeClass"
+                  rules={[{ required: true, message: '请选择经营类型' }]}
                 >
-                  加盟店
-                </button>
-              </Space>
-            </div>
-          </div>
-
-          <div className="store-form-row u-flex">
-            <div className="store-form-label required">供货商类型</div>
-            <div className="store-form-control">
-              <Space size={0} className="choice-group">
-                <button
-                  type="button"
-                  className={`choice-btn ${
-                    supplierType === 'normal' ? 'active' : ''
-                  }`}
-                  onClick={() => setSupplierType('normal')}
+                  <Radio.Group
+                    className="store-radio-group"
+                    optionType="button"
+                    buttonStyle="solid"
+                    options={[{ label: '直营店', value: DIRECT_STORE_CLASS }]}
+                    disabled
+                  />
+                </Form.Item>
+                <Form.Item
+                  label="供货商类型"
+                  name="supplierType"
+                  rules={[{ required: true, message: '请选择供货商类型' }]}
                 >
-                  常规供货商
-                </button>
-                <button
-                  type="button"
-                  className={`choice-btn ${
-                    supplierType === 'consignment' ? 'active' : ''
-                  }`}
-                  onClick={() => setSupplierType('consignment')}
+                  <Radio.Group
+                    className="store-radio-group"
+                    optionType="button"
+                    buttonStyle="solid"
+                    options={[
+                      { label: '常规供货商', value: 1 },
+                      { label: '寄售供货商', value: 2 },
+                    ]}
+                  />
+                </Form.Item>
+                <Form.Item
+                  label="门店名称"
+                  name="storeName"
+                  rules={[{ required: true, message: '请输入门店名称' }]}
                 >
-                  寄售供货商
-                </button>
-              </Space>
-            </div>
-          </div>
-
-          <div className="store-form-row u-flex">
-            <div className="store-form-label required">门店名称</div>
-            <div className="store-form-control">
-              <Input placeholder="请输入门店名称" />
-            </div>
-          </div>
-
-          <div className="store-form-row u-flex">
-            <div className="store-form-label required">门头照片</div>
-            <div className="store-form-control">
-              <div className="upload-box u-flex-col u-flex-center">
-                <PlusOutlined />
-                <span>上传图片</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="store-form-row u-flex">
-            <div className="store-form-label required">省市区</div>
-            <div className="store-form-control">
-              <Select
-                placeholder="请选择省市区"
-                options={[{ label: '上海市 / 闵行区', value: 'sh-mh' }]}
-              />
-            </div>
-          </div>
-
-          <div className="store-form-row u-flex">
-            <div className="store-form-label">经纬度</div>
-            <div className="store-form-control latlng-group">
-              <Input
-                placeholder="经度"
-                value={longitude}
-                onChange={(event) => setLongitude(event.target.value)}
-              />
-              <Input
-                placeholder="纬度"
-                value={latitude}
-                onChange={(event) => setLatitude(event.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="store-form-row u-flex">
-            <div className="store-form-label required">门店地址</div>
-            <div className="store-form-control address-search">
-              <AutoComplete
-                className="address-autocomplete"
-                placeholder="搜索地址"
-                value={storeAddress}
-                options={suggestionOptions}
-                filterOption={false}
-                onSearch={handleAddressInputSearch}
-                onSelect={handleSuggestionSelect}
-                onChange={handleAddressValueChange}
-                open={
-                  !!storeAddress.trim() &&
-                  (suggestionLoading || suggestionOptions.length > 0)
-                }
-              />
+                  <Input placeholder="请输入门店名称" />
+                </Form.Item>
+                <Form.Item label="门店电话" name="storePhone">
+                  <Input placeholder="请输入门店电话/手机号" />
+                </Form.Item>
+                <Form.Item
+                  label="门头照片"
+                  name="shopImgFileList"
+                  valuePropName="fileList"
+                  getValueFromEvent={normalizeUploadFileList}
+                  rules={[
+                    {
+                      validator: async (
+                        _rule,
+                        value: UploadFile[] | undefined,
+                      ) => {
+                        if (!value || value.length === 0) {
+                          throw new Error('请上传门头照片');
+                        }
+                      },
+                    },
+                  ]}
+                  extra="当前仅支持本地选择图片，提交时会暂用假 URL 占位。"
+                >
+                  <Upload
+                    accept="image/*"
+                    beforeUpload={() => false}
+                    maxCount={1}
+                    listType="picture-card"
+                    className="store-upload"
+                  >
+                    <div className="upload-box u-flex-col u-flex-center">
+                      <PlusOutlined />
+                      <span>上传图片</span>
+                    </div>
+                  </Upload>
+                </Form.Item>
+                <Form.Item
+                  label="门店 logo"
+                  name="logoFileList"
+                  valuePropName="fileList"
+                  getValueFromEvent={normalizeUploadFileList}
+                >
+                  <Upload
+                    accept="image/*"
+                    beforeUpload={() => false}
+                    maxCount={1}
+                    listType="picture-card"
+                    className="store-upload"
+                  >
+                    <div className="upload-box u-flex-col u-flex-center">
+                      <PlusOutlined />
+                      <span>上传图片</span>
+                    </div>
+                  </Upload>
+                </Form.Item>
+                <Form.Item
+                  label="省市区"
+                  name="regionCodes"
+                  rules={[
+                    {
+                      validator: async (_rule, value: string[] | undefined) => {
+                        if (!Array.isArray(value) || value.length !== 3) {
+                          throw new Error('请选择省市区');
+                        }
+                      },
+                    },
+                  ]}
+                >
+                  <Cascader
+                    placeholder={
+                      regionLoading ? '省市区加载中...' : '请选择省市区'
+                    }
+                    options={regionOptions}
+                    disabled={regionLoading}
+                    loadData={(selectedOptions) =>
+                      void handleRegionLoadData(
+                        selectedOptions as RegionOption[],
+                      )
+                    }
+                    changeOnSelect={false}
+                  />
+                </Form.Item>
+                <Form.Item label="经纬度">
+                  <div className="latlng-group">
+                    <Form.Item
+                      name="longitude"
+                      noStyle
+                      rules={[{ required: true, message: '请输入经度' }]}
+                    >
+                      <Input placeholder="经度" onBlur={handleCoordinateBlur} />
+                    </Form.Item>
+                    <Form.Item
+                      name="latitude"
+                      noStyle
+                      rules={[{ required: true, message: '请输入纬度' }]}
+                    >
+                      <Input placeholder="纬度" onBlur={handleCoordinateBlur} />
+                    </Form.Item>
+                  </div>
+                </Form.Item>
+                <Form.Item label="门店地址" required>
+                  <div className="address-search">
+                    <Form.Item
+                      name="storeAddress"
+                      className="store-inline-form-item"
+                      rules={[{ required: true, message: '请输入门店地址' }]}
+                    >
+                      <AutoComplete
+                        className="address-autocomplete"
+                        placeholder="搜索地址"
+                        options={suggestionOptions}
+                        filterOption={false}
+                        onSearch={handleAddressInputSearch}
+                        onSelect={handleSuggestionSelect}
+                        onChange={(value) => {
+                          if (selectingSuggestionRef.current) {
+                            return;
+                          }
+                          form.setFieldValue('storeAddress', value);
+                          if (!String(value || '').trim()) {
+                            setSuggestionOptions([]);
+                          }
+                        }}
+                        open={
+                          !!storeAddress.trim() &&
+                          (suggestionLoading || suggestionOptions.length > 0)
+                        }
+                      />
+                    </Form.Item>
+                    <Button
+                      type="primary"
+                      icon={<SearchOutlined />}
+                      loading={suggestionLoading}
+                      onClick={() => void handleAddressSearchSubmit()}
+                    />
+                  </div>
+                </Form.Item>
+                <Form.Item label="地图定位">
+                  <div className="map-box">
+                    <div ref={mapRef} className="map-canvas" />
+                    {!mapReady ? (
+                      <div className="map-fallback u-flex-center">
+                        {mapError || '地图加载中...'}
+                      </div>
+                    ) : null}
+                  </div>
+                </Form.Item>
+                <Form.Item
+                  label="详细地址"
+                  name="storeDetailAddress"
+                  rules={[{ required: true, message: '请输入详细地址' }]}
+                >
+                  <Input placeholder="请输入详细地址" />
+                </Form.Item>
+              </>
+            ) : null}
+            {currentStep === 1 ? (
+              <>
+                <Form.Item label="管理员手机号" required>
+                  <div className="admin-phone-search">
+                    <Form.Item
+                      name="storeManagerPhone"
+                      className="store-inline-form-item"
+                      normalize={(value) =>
+                        String(value || '')
+                          .replace(/[^\d]/g, '')
+                          .slice(0, 11)
+                      }
+                      rules={[
+                        { required: true, message: '请输入管理员手机号' },
+                        {
+                          validator: async (
+                            _rule,
+                            value: string | undefined,
+                          ) => {
+                            if (!value || isValidMainlandPhone(value)) {
+                              return;
+                            }
+                            throw new Error('请输入11位手机号');
+                          },
+                        },
+                      ]}
+                    >
+                      <Input
+                        placeholder="请输入管理员手机号"
+                        maxLength={11}
+                        onChange={resetAdminMatchState}
+                        onPressEnter={() => void handleSearchAdmin()}
+                      />
+                    </Form.Item>
+                    <Button
+                      type="primary"
+                      loading={adminSearching}
+                      onClick={() => void handleSearchAdmin()}
+                    >
+                      匹配
+                    </Button>
+                  </div>
+                </Form.Item>
+                {adminMatchStatus === 'matched' ? (
+                  <>
+                    <Form.Item label=" ">
+                      <div className="admin-result-banner matched">
+                        已匹配到现有用户，将绑定为门店管理员。
+                      </div>
+                    </Form.Item>
+                    <Form.Item label="用户姓名">
+                      <Input
+                        value={String(matchedAdmin?.name || '-')}
+                        disabled
+                      />
+                    </Form.Item>
+                    <Form.Item label="手机号">
+                      <Input
+                        value={String(matchedAdmin?.phone || adminPhone)}
+                        disabled
+                      />
+                    </Form.Item>
+                    <Form.Item
+                      label="昵称"
+                      name="storeManagerNickName"
+                      rules={[{ required: true, message: '请输入管理员昵称' }]}
+                    >
+                      <Input placeholder="请输入管理员昵称" />
+                    </Form.Item>
+                  </>
+                ) : null}
+                {adminMatchStatus === 'new' ? (
+                  <>
+                    <Form.Item label=" ">
+                      <div className="admin-result-banner warning">
+                        未匹配到现有用户，请补充管理员信息并创建新账号。
+                      </div>
+                    </Form.Item>
+                    <Form.Item label="手机号">
+                      <Input value={adminPhone} disabled />
+                    </Form.Item>
+                    <Form.Item
+                      label="姓名"
+                      name="storeManagerName"
+                      rules={[{ required: true, message: '请输入管理员姓名' }]}
+                    >
+                      <Input placeholder="请输入管理员姓名" />
+                    </Form.Item>
+                    <Form.Item
+                      label="昵称"
+                      name="storeManagerNickName"
+                      rules={[{ required: true, message: '请输入管理员昵称' }]}
+                    >
+                      <Input placeholder="请输入管理员昵称" />
+                    </Form.Item>
+                    <Form.Item
+                      label="密码"
+                      name="storeManagerPassword"
+                      rules={[{ required: true, message: '请输入登录密码' }]}
+                    >
+                      <Input.Password placeholder="请输入登录密码" />
+                    </Form.Item>
+                    <Form.Item
+                      label="确认密码"
+                      name="confirmPassword"
+                      dependencies={['storeManagerPassword']}
+                      rules={[
+                        { required: true, message: '请输入确认密码' },
+                        ({ getFieldValue }) => ({
+                          validator(_, value) {
+                            if (
+                              !value ||
+                              getFieldValue('storeManagerPassword') === value
+                            ) {
+                              return Promise.resolve();
+                            }
+                            return Promise.reject(
+                              new Error('两次输入的密码不一致'),
+                            );
+                          },
+                        }),
+                      ]}
+                    >
+                      <Input.Password placeholder="请再次输入登录密码" />
+                    </Form.Item>
+                  </>
+                ) : null}
+              </>
+            ) : null}
+          </Form>
+          <div className="store-create-actions u-flex">
+            {isEditMode ? (
+              <>
+                <Button onClick={() => navigateBackToStoreManage(false)}>
+                  取消
+                </Button>
+                <Button
+                  type="primary"
+                  shape="round"
+                  className="store-create-save-btn"
+                  loading={submitting}
+                  onClick={() => void handleSubmit()}
+                >
+                  保存
+                </Button>
+              </>
+            ) : currentStep === 0 ? (
               <Button
                 type="primary"
-                icon={<SearchOutlined />}
-                loading={suggestionLoading}
-                onClick={() => void handleAddressSearchSubmit()}
-              />
-            </div>
-          </div>
-
-          <div className="store-form-row u-flex">
-            <div className="store-form-label" />
-            <div className="store-form-control">
-              <div className="map-box">
-                <div ref={mapRef} className="map-canvas" />
-                {!mapReady ? (
-                  <div className="map-fallback u-flex-center">
-                    {mapError || '地图加载中...'}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          </div>
-
-          <div className="store-form-row u-flex">
-            <div className="store-form-label required">详细地址</div>
-            <div className="store-form-control">
-              <Input
-                placeholder="请输入详细地址"
-                value={detailAddress}
-                onChange={(event) => setDetailAddress(event.target.value)}
-              />
-            </div>
+                shape="round"
+                className="store-create-save-btn"
+                onClick={() => void handleNextStep()}
+              >
+                下一步
+              </Button>
+            ) : (
+              <>
+                <Button onClick={() => setCurrentStep(0)}>上一步</Button>
+                <Button
+                  type="primary"
+                  shape="round"
+                  className="store-create-save-btn"
+                  loading={submitting}
+                  onClick={() => void handleSubmit()}
+                >
+                  提交
+                </Button>
+              </>
+            )}
           </div>
         </Card>
-
-        <Card title="功能信息" className="store-create-card function-card">
-          <div className="function-row u-flex-between">
-            <div className="function-row-title">达达配送</div>
-            <Space size={12}>
-              <span className={`feature-status ${dadaEnabled ? 'on' : 'off'}`}>
-                {dadaEnabled ? '开启' : '关闭'}
-              </span>
-              <Switch checked={dadaEnabled} onChange={setDadaEnabled} />
-            </Space>
-          </div>
-        </Card>
-
-        <div className="store-create-actions u-flex">
-          <Button
-            type="primary"
-            shape="round"
-            className="store-create-save-btn"
-          >
-            保存
-          </Button>
-        </div>
       </div>
     </PageContainer>
   );
-};
-
-export default StoreCreatePage;
+}

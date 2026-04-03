@@ -40,6 +40,7 @@ import {
   updateQrCodeTemplate,
 } from '@/api/qrCodeTemplate';
 import {
+  ExpandableFilterCard,
   PageSectionSkeleton,
   PermissionButton,
   PermissionVisible,
@@ -51,18 +52,16 @@ import './index.less';
 const mockUploadImage = async (_base64Data: string): Promise<string> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      resolve(
-        'https://dummyimage.com/600x400/1890ff/ffffff&text=Backend+Upload+Pending',
-      );
+      resolve('https://dummyimage.com/600x400/1890ff/ffffff.png');
     }, 800);
   });
 };
 
 const { RangePicker } = DatePicker;
 const QR_TEMPLATE_PERMS = {
-  add: 'device:admin:qrcodeTemplate:add',
-  update: 'device:admin:qrcodeTemplate:update',
-  delete: 'device:admin:qrcodeTemplate:delete',
+  add: 'admin:device:qrcodeTemplate:add',
+  update: 'admin:device:qrcodeTemplate:update',
+  delete: 'admin:device:qrcodeTemplate:delete',
 } as const;
 
 type QueryFilters = {
@@ -934,83 +933,88 @@ const QrTemplateListPage: React.FC = () => {
 
   return (
     <div className="qr-template-page">
-      <div className="content-card qr-template-filter-card">
-        <div className="filter-grid">
-          <div className="field">
-            <span className="field-label">模板名称</span>
-            <Input
-              allowClear
-              placeholder="请输入模板名称"
-              value={draftFilters.name}
-              onChange={(event) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  name: event.target.value,
-                }));
-              }}
-              onPressEnter={handleSearch}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">创建时间</span>
-            <RangePicker
-              value={draftFilters.createTimeRange}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  createTimeRange: value || undefined,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">状态</span>
-            <Select
-              allowClear
-              placeholder="请选择状态"
-              value={draftFilters.state}
-              options={[
-                { label: '启用', value: '1' },
-                { label: '禁用', value: '0' },
-              ]}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  state: value,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">显示编号</span>
-            <Select
-              allowClear
-              placeholder="请选择"
-              value={draftFilters.showSn}
-              options={[
-                { label: '显示', value: '1' },
-                { label: '隐藏', value: '0' },
-              ]}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  showSn: value,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field actions">
-            <Button type="primary" onClick={handleSearch}>
-              查询
-            </Button>
-            <Button onClick={handleReset}>重置</Button>
-          </div>
-        </div>
-      </div>
+      <ExpandableFilterCard
+        className="qr-template-filter-card"
+        onSearch={handleSearch}
+        onReset={handleReset}
+        fields={[
+          {
+            key: 'name',
+            label: '模板名称',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入模板名称"
+                value={draftFilters.name}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    name: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'createTimeRange',
+            label: '创建时间',
+            content: (
+              <RangePicker
+                value={draftFilters.createTimeRange}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    createTimeRange: value || undefined,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'state',
+            label: '状态',
+            content: (
+              <Select
+                allowClear
+                placeholder="请选择状态"
+                value={draftFilters.state}
+                options={[
+                  { label: '启用', value: '1' },
+                  { label: '禁用', value: '0' },
+                ]}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    state: value,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'showSn',
+            label: '显示编号',
+            content: (
+              <Select
+                allowClear
+                placeholder="请选择"
+                value={draftFilters.showSn}
+                options={[
+                  { label: '显示', value: '1' },
+                  { label: '隐藏', value: '0' },
+                ]}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    showSn: value,
+                  }));
+                }}
+              />
+            ),
+          },
+        ]}
+      />
 
       <div className="content-card qr-template-table-card">
         <div className="qr-template-toolbar">

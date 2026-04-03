@@ -28,6 +28,7 @@ import {
 } from '@/api/qrCode';
 import { getQrCodeTemplateList } from '@/api/qrCodeTemplate';
 import {
+  ExpandableFilterCard,
   PageSectionSkeleton,
   PermissionButton,
   PermissionVisible,
@@ -42,15 +43,15 @@ import './index.less';
 
 const { RangePicker } = DatePicker;
 const QR_CODE_PERMS = {
-  bind: 'device:admin:qrcode:bind',
-  transfer: 'device:admin:qrcode:transfer',
-  batchAdd: 'device:admin:qrcode:batchAdd',
-  changeTemplate: 'device:admin:qrcode:changeTemplate',
-  updateState: 'device:admin:qrcode:updateState',
-  unbind: 'device:admin:qrcode:unbind',
-  exportData: 'device:admin:qrcode:exportData',
-  exportQrcode: 'device:admin:qrcode:exportQrcode',
-  exportCompose: 'device:admin:qrcode:exportCompose',
+  bind: 'admin:device:qrcode:bind',
+  transfer: 'admin:device:qrcode:transfer',
+  batchAdd: 'admin:device:qrcode:batchAdd',
+  changeTemplate: 'admin:device:qrcode:changeTemplate',
+  updateState: 'admin:device:qrcode:updateState',
+  unbind: 'admin:device:qrcode:unbind',
+  exportData: 'admin:device:qrcode:exportData',
+  exportQrcode: 'admin:device:qrcode:exportQrcode',
+  exportCompose: 'admin:device:qrcode:exportCompose',
 } as const;
 
 type QueryFilters = {
@@ -737,227 +738,246 @@ const StoreQrCodeListPage: React.FC = () => {
 
   return (
     <div className="qr-code-page">
-      <div className="content-card qr-code-filter-card">
-        <div className="filter-grid qr-code-filter-grid">
-          <div className="field">
-            <span className="field-label">所属品牌</span>
-            <Select
-              allowClear
-              placeholder="请选择"
-              value={draftFilters.brandName}
-              options={brandOptions}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  brandName: value,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">划拨时间</span>
-            <RangePicker
-              value={draftFilters.transferTimeRange}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  transferTimeRange: value || undefined,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">类别</span>
-            <Select
-              allowClear
-              placeholder="请选择"
-              value={draftFilters.bizType}
-              options={bizTypeOptions}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  bizType: value,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">状态</span>
-            <Select
-              allowClear
-              placeholder="请选择"
-              value={draftFilters.state}
-              options={[
-                { label: '启用', value: '1' },
-                { label: '禁用', value: '0' },
-              ]}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  state: value,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">是否划拨</span>
-            <Select
-              allowClear
-              placeholder="请选择"
-              value={draftFilters.isTransferred}
-              options={[
-                { label: '是', value: '1' },
-                { label: '否', value: '0' },
-              ]}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  isTransferred: value,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">是否绑定</span>
-            <Select
-              allowClear
-              placeholder="请选择"
-              value={draftFilters.isBound}
-              options={[
-                { label: '是', value: '1' },
-                { label: '否', value: '0' },
-              ]}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  isBound: value,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">编号</span>
-            <Input
-              allowClear
-              placeholder="请输入编号"
-              value={draftFilters.sn}
-              onChange={(event) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  sn: event.target.value,
-                }));
-              }}
-              onPressEnter={handleSearch}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">批次号</span>
-            <Input
-              allowClear
-              placeholder="请输入批次号"
-              value={draftFilters.batchSn}
-              onChange={(event) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  batchSn: event.target.value,
-                }));
-              }}
-              onPressEnter={handleSearch}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">模板</span>
-            <Select
-              allowClear
-              placeholder="请选择"
-              loading={templateLoading}
-              value={draftFilters.qrcodeTemplateId}
-              options={templateOptions}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  qrcodeTemplateId: value,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">打开方式</span>
-            <Select
-              allowClear
-              placeholder="请选择"
-              value={draftFilters.openType}
-              options={openTypeOptions}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  openType: value,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">编号区间</span>
-            <Space.Compact block>
-              <Input
-                placeholder="请输入起始编号"
-                value={draftFilters.snStart}
-                onChange={(event) => {
+      <ExpandableFilterCard
+        className="qr-code-filter-card"
+        onSearch={handleSearch}
+        onReset={handleReset}
+        fields={[
+          {
+            key: 'brandName',
+            label: '所属品牌',
+            content: (
+              <Select
+                allowClear
+                placeholder="请选择"
+                value={draftFilters.brandName}
+                options={brandOptions}
+                onChange={(value) => {
                   setDraftFilters((prev) => ({
                     ...prev,
-                    snStart: event.target.value,
+                    brandName: value,
                   }));
                 }}
               />
-              <Input
-                placeholder="请输入截止编号"
-                value={draftFilters.snEnd}
-                onChange={(event) => {
+            ),
+          },
+          {
+            key: 'transferTimeRange',
+            label: '划拨时间',
+            content: (
+              <RangePicker
+                value={draftFilters.transferTimeRange}
+                onChange={(value) => {
                   setDraftFilters((prev) => ({
                     ...prev,
-                    snEnd: event.target.value,
+                    transferTimeRange: value || undefined,
                   }));
                 }}
               />
-            </Space.Compact>
-          </div>
-
-          <div className="field">
-            <span className="field-label">关键字</span>
-            <Input
-              allowClear
-              placeholder="请输入商户/门店/机构名称"
-              value={draftFilters.keyword}
-              onChange={(event) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  keyword: event.target.value,
-                }));
-              }}
-              onPressEnter={handleSearch}
-            />
-          </div>
-
-          <div className="field actions">
-            <Space>
-              <Button type="primary" onClick={handleSearch}>
-                查询
-              </Button>
-              <Button onClick={handleReset}>重置</Button>
-            </Space>
-          </div>
-        </div>
-      </div>
+            ),
+          },
+          {
+            key: 'bizType',
+            label: '类别',
+            content: (
+              <Select
+                allowClear
+                placeholder="请选择"
+                value={draftFilters.bizType}
+                options={bizTypeOptions}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    bizType: value,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'state',
+            label: '状态',
+            content: (
+              <Select
+                allowClear
+                placeholder="请选择"
+                value={draftFilters.state}
+                options={[
+                  { label: '启用', value: '1' },
+                  { label: '禁用', value: '0' },
+                ]}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    state: value,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'isTransferred',
+            label: '是否划拨',
+            content: (
+              <Select
+                allowClear
+                placeholder="请选择"
+                value={draftFilters.isTransferred}
+                options={[
+                  { label: '是', value: '1' },
+                  { label: '否', value: '0' },
+                ]}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    isTransferred: value,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'isBound',
+            label: '是否绑定',
+            content: (
+              <Select
+                allowClear
+                placeholder="请选择"
+                value={draftFilters.isBound}
+                options={[
+                  { label: '是', value: '1' },
+                  { label: '否', value: '0' },
+                ]}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    isBound: value,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'sn',
+            label: '编号',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入编号"
+                value={draftFilters.sn}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    sn: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'batchSn',
+            label: '批次号',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入批次号"
+                value={draftFilters.batchSn}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    batchSn: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'qrcodeTemplateId',
+            label: '模板',
+            content: (
+              <Select
+                allowClear
+                placeholder="请选择"
+                loading={templateLoading}
+                value={draftFilters.qrcodeTemplateId}
+                options={templateOptions}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    qrcodeTemplateId: value,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'openType',
+            label: '打开方式',
+            content: (
+              <Select
+                allowClear
+                placeholder="请选择"
+                value={draftFilters.openType}
+                options={openTypeOptions}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    openType: value,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'snRange',
+            label: '编号区间',
+            content: (
+              <Space.Compact block>
+                <Input
+                  placeholder="请输入起始编号"
+                  value={draftFilters.snStart}
+                  onChange={(event) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      snStart: event.target.value,
+                    }));
+                  }}
+                />
+                <Input
+                  placeholder="请输入截止编号"
+                  value={draftFilters.snEnd}
+                  onChange={(event) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      snEnd: event.target.value,
+                    }));
+                  }}
+                />
+              </Space.Compact>
+            ),
+          },
+          {
+            key: 'keyword',
+            label: '关键字',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入商户/门店/机构名称"
+                value={draftFilters.keyword}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    keyword: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+        ]}
+      />
 
       <div className="content-card qr-code-table-card">
         <div className="qr-code-toolbar">

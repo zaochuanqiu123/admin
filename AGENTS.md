@@ -53,6 +53,14 @@
    - 如果操作类接口当前需要在成功后读取后端 `message`，API 层不要直接丢弃完整响应。
 8. 新页面如果出现重复的骨架、区域 loading、错误态结构，优先抽成公共组件后再继续铺页面。
 
+### 4.8 设备列表页约定
+
+1. `/device/*` 下新增管理页，优先复用现有设备页结构：`ExpandableFilterCard` + `content-card` 表格区 + `PageSectionSkeleton`。
+2. 设备列表页的业务主按钮、行内操作按钮，必须统一走 `PermissionButton` 或 `PermissionVisible`，禁止直接写裸按钮绕过按钮码。
+3. 页面内统一声明 `XXX_PERMS` 常量集中管理按钮码，命名和后端资源路径保持一致，例如打印机场景使用 `admin:device:printer:*`。
+4. 设备 iframe 映射页面新增路由时，`backendPathUrls` 必须补真实后端模块路径；打印机管理固定使用 `/device/printer`。
+5. 设备列表页视觉风格统一对齐现有 `speaker-list` / `speaker-brand`：筛选卡片、主按钮、表格圆角卡片、暗黑模式适配都优先复用同一套写法。
+
 ## 0) Stack / 技术栈
 
 - React 19 + Ant Design 5 + @ant-design/pro-components

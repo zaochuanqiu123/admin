@@ -131,7 +131,7 @@ export async function getQrCodeListQuery(
   data?: QrCodeListQueryParams,
   options?: { [key: string]: any },
 ) {
-  return apiData<QrCodeRecord[]>('/api/device/admin/qrcode/list', {
+  return apiData<QrCodeRecord[]>('/api/admin/device/v1/qrcode/list', {
     method: 'POST',
     data,
     ...(options || {}),
@@ -142,7 +142,7 @@ export async function batchAddQrCode(
   data: QrCodeBatchAddParams,
   options?: { [key: string]: any },
 ) {
-  return apiRequest<any>('/api/device/admin/qrcode/batchAdd', {
+  return apiRequest<any>('/api/admin/device/v1/qrcode/batchAdd', {
     method: 'POST',
     data,
     ...(options || {}),
@@ -153,7 +153,7 @@ export async function changeQrCodeTemplate(
   data: QrCodeChangeTemplateParams,
   options?: { [key: string]: any },
 ) {
-  return apiRequest<any>('/api/device/admin/qrcode/changeTemplate', {
+  return apiRequest<any>('/api/admin/device/v1/qrcode/changeTemplate', {
     method: 'POST',
     data,
     ...(options || {}),
@@ -164,7 +164,7 @@ export async function getQrCodePageQuery(
   data: QrCodePageQueryParams,
   options?: { [key: string]: any },
 ) {
-  return apiData<QrCodePageResult>('/api/device/admin/qrcode/page', {
+  return apiData<QrCodePageResult>('/api/admin/device/v1/qrcode/page', {
     method: 'POST',
     data,
     ...(options || {}),
@@ -175,7 +175,7 @@ export async function unbindQrCode(
   data: QrCodeUnbindParams,
   options?: { [key: string]: any },
 ) {
-  return apiRequest<any>('/api/device/admin/qrcode/unbind', {
+  return apiRequest<any>('/api/admin/device/v1/qrcode/unbind', {
     method: 'POST',
     data,
     ...(options || {}),
@@ -186,7 +186,7 @@ export async function bindQrCode(
   data: QrCodeBindParams,
   options?: { [key: string]: any },
 ) {
-  return apiRequest<any>('/api/device/admin/qrcode/bind', {
+  return apiRequest<any>('/api/admin/device/v1/qrcode/bind', {
     method: 'POST',
     data,
     ...(options || {}),
@@ -197,7 +197,7 @@ export async function transferQrCode(
   data: QrCodeTransferParams,
   options?: { [key: string]: any },
 ) {
-  return apiRequest<any>('/api/device/admin/qrcode/transfer', {
+  return apiRequest<any>('/api/admin/device/v1/qrcode/transfer', {
     method: 'POST',
     data,
     ...(options || {}),

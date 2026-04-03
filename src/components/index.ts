@@ -5,6 +5,8 @@
 /**
  * 布局组件
  */
+
+import ExpandableFilterCard from './ExpandableFilterCard';
 import Footer from './Footer';
 import MicroIframe from './MicroIframe';
 import OrganizationPickerModal from './OrganizationPickerModal';
@@ -17,6 +19,7 @@ import NoticeBell from './RightContent/NoticeBell';
 
 export {
   AvatarName,
+  ExpandableFilterCard,
   Footer,
   Question,
   SelectLang,

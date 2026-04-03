@@ -39,9 +39,12 @@ export async function getAgentOrgPageQuery(
   data: AgentOrgPageQueryParams,
   options?: { [key: string]: any },
 ) {
-  return apiData<AgentOrgPageResult>('/api/org/query/agent/orgPageList', {
-    method: 'POST',
-    data,
-    ...(options || {}),
-  });
+  return apiData<AgentOrgPageResult>(
+    '/api/admin/org/v1/org/query/agent/orgPageList',
+    {
+      method: 'POST',
+      data,
+      ...(options || {}),
+    },
+  );
 }

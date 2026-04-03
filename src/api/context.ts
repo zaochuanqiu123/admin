@@ -4,9 +4,9 @@ export async function getUserLoginContext(
   orgCode: string,
   options?: { [key: string]: any },
 ) {
-  return apiData<any>('/api/system/getUserLoginContext', {
-    method: 'GET',
-    params: { orgCode },
+  return apiData<any>('/api/admin/system/v1/system/getUserLoginContext', {
+    method: 'POST',
+    data: { orgCode },
     ...(options || {}),
   });
 }
@@ -15,9 +15,9 @@ export async function getUserLoginContextResponse(
   orgCode: string,
   options?: { [key: string]: any },
 ) {
-  return apiRequest<any>('/api/system/getUserLoginContext', {
-    method: 'GET',
-    params: { orgCode },
+  return apiRequest<any>('/api/admin/system/v1/system/getUserLoginContext', {
+    method: 'POST',
+    data: { orgCode },
     ...(options || {}),
   });
 }
@@ -26,7 +26,7 @@ export async function getPermContext(
   businessCode?: string,
   options?: { [key: string]: any },
 ) {
-  return apiData<any>('/api/system/perm/getPermContext', {
+  return apiData<any>('/api/admin/system/v1/perm/getPermContext', {
     method: 'GET',
     params: businessCode ? { businessCode } : undefined,
     ...(options || {}),
@@ -37,7 +37,7 @@ export async function getRoleVOList(
   orgCode: string,
   options?: { [key: string]: any },
 ) {
-  return apiData<any>('/api/system/role/getRoleVOList', {
+  return apiData<any>('/api/admin/system/v1/role/getRoleVOList', {
     method: 'GET',
     params: { orgCode },
     ...(options || {}),
@@ -49,7 +49,7 @@ export async function searchRole(
   roleName: string,
   options?: { [key: string]: any },
 ) {
-  return apiData<any>('/api/system/role/searchRole', {
+  return apiData<any>('/api/admin/system/v1/role/searchRole', {
     method: 'GET',
     params: {
       orgCode,
@@ -71,7 +71,7 @@ export async function getRolePageList(
   data: RolePageListParams,
   options?: { [key: string]: any },
 ) {
-  return apiData<any>('/api/system/role/page/list', {
+  return apiData<any>('/api/admin/system/v1/role/page/list', {
     method: 'POST',
     data,
     ...(options || {}),
@@ -82,7 +82,7 @@ export async function getOrgMenuTree(
   orgCode: string,
   options?: { [key: string]: any },
 ) {
-  return apiData<any>('/api/system/perm/getOrgMenuTree', {
+  return apiData<any>('/api/admin/system/v1/perm/getOrgMenuTree', {
     method: 'GET',
     params: { orgCode },
     ...(options || {}),
@@ -100,7 +100,7 @@ export async function saveRole(
   data: SaveRoleParams,
   options?: { [key: string]: any },
 ) {
-  return apiRequest<any>('/api/system/role/saveRole', {
+  return apiRequest<any>('/api/admin/system/v1/role/saveRole', {
     method: 'POST',
     data,
     ...(options || {}),
@@ -119,7 +119,7 @@ export async function editRole(
   data: EditRoleParams,
   options?: { [key: string]: any },
 ) {
-  return apiRequest<any>('/api/system/role/editRole', {
+  return apiRequest<any>('/api/admin/system/v1/role/editRole', {
     method: 'POST',
     data,
     ...(options || {}),
@@ -130,7 +130,7 @@ export async function deleteRole(
   roleId: string,
   options?: { [key: string]: any },
 ) {
-  return apiRequest<any>(`/api/system/role/del/${roleId}`, {
+  return apiRequest<any>(`/api/admin/system/v1/role/del/${roleId}`, {
     method: 'DELETE',
     params: { roleId },
     ...(options || {}),
@@ -141,7 +141,7 @@ export async function getRoleDetail(
   roleId: string,
   options?: { [key: string]: any },
 ) {
-  return apiData<any>(`/api/system/role/detailRole/${roleId}`, {
+  return apiData<any>(`/api/admin/system/v1/role/detailRole/${roleId}`, {
     method: 'GET',
     ...(options || {}),
   });
@@ -156,7 +156,7 @@ export async function updateRoleState(
   data: UpdateRoleStateParams,
   options?: { [key: string]: any },
 ) {
-  return apiRequest<any>('/api/system/role/updateState', {
+  return apiRequest<any>('/api/admin/system/v1/role/updateState', {
     method: 'POST',
     data,
     ...(options || {}),

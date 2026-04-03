@@ -49,6 +49,22 @@ type GoodsAnalysisResponse = {
   data?: GoodsAnalysisOverview;
 };
 
+export type PendingOrderTotalOverview = {
+  treat_send_order_count?: string | number;
+  treat_received_order_count?: string | number;
+  completed_order_count?: string | number;
+  goods_warning_count?: string | number;
+  goods_excess_count?: string | number;
+  goods_sell_out_count?: string | number;
+  treat_cash_out?: string | number;
+};
+
+type PendingOrderTotalResponse = {
+  status?: string | number;
+  message?: string;
+  data?: PendingOrderTotalOverview;
+};
+
 export type SuperPlugRankingItem = {
   id?: string;
   plug_name?: string;
@@ -141,24 +157,27 @@ type MallUserStatResponse = {
 export async function getIncomeCensus(params: {
   startTime: string;
   endTime: string;
+  scene?: 'merchant' | 'store';
   storeIds?: string;
 }) {
   const formData = new FormData();
   formData.append('start_time', params.startTime);
   formData.append('end_time', params.endTime);
-  if (params.storeIds) {
+  if (params.scene !== 'store' && params.storeIds) {
     formData.append('store_ids', params.storeIds);
   }
 
-  const response = await phpRequest<IncomeCensusResponse>(
-    '/Retail/Index/getIncomeCensus',
-    {
-      method: 'POST',
-      data: formData,
-      tokenHeaderName: 'Authorization',
-      tokenPrefix: 'bearer ',
-    },
-  );
+  const url =
+    params.scene === 'store'
+      ? '/Retail/Home/getIncomeCensus'
+      : '/Retail/Index/getIncomeCensus';
+
+  const response = await phpRequest<IncomeCensusResponse>(url, {
+    method: 'POST',
+    data: formData,
+    tokenHeaderName: 'Authorization',
+    tokenPrefix: 'bearer ',
+  });
 
   if (response?.status !== 1 && response?.status !== '1') {
     throw new Error(response?.message || '获取经营数据统计失败');
@@ -171,25 +190,28 @@ export async function getGoodsAnalysis(params: {
   startTime: string;
   endTime: string;
   type: '1' | '2';
+  scene?: 'merchant' | 'store';
   storeIds?: string;
 }) {
   const formData = new FormData();
   formData.append('start_time', params.startTime);
   formData.append('end_time', params.endTime);
   formData.append('type', params.type);
-  if (params.storeIds) {
+  if (params.scene !== 'store' && params.storeIds) {
     formData.append('store_ids', params.storeIds);
   }
 
-  const response = await phpRequest<GoodsAnalysisResponse>(
-    '/Retail/Index/getGoodsAnalysis',
-    {
-      method: 'POST',
-      data: formData,
-      tokenHeaderName: 'Authorization',
-      tokenPrefix: 'bearer ',
-    },
-  );
+  const url =
+    params.scene === 'store'
+      ? '/Retail/Home/getGoodsAnalysis'
+      : '/Retail/Index/getGoodsAnalysis';
+
+  const response = await phpRequest<GoodsAnalysisResponse>(url, {
+    method: 'POST',
+    data: formData,
+    tokenHeaderName: 'Authorization',
+    tokenPrefix: 'bearer ',
+  });
 
   if (response?.status !== 1 && response?.status !== '1') {
     throw new Error(response?.message || '获取商品分析数据失败');
@@ -224,6 +246,24 @@ export async function getSuperPlugRanking() {
     : [];
 }
 
+export async function getPendingOrderTotal() {
+  const response = await phpRequest<PendingOrderTotalResponse>(
+    '/Retail/Home/getPendingOrderTotal',
+    {
+      method: 'POST',
+      data: new FormData(),
+      tokenHeaderName: 'Authorization',
+      tokenPrefix: 'bearer ',
+    },
+  );
+
+  if (response?.status !== 1 && response?.status !== '1') {
+    throw new Error(response?.message || '获取待办事项失败');
+  }
+
+  return response?.data || {};
+}
+
 export async function getStoreRanking(params: {
   startTime: string;
   endTime: string;
@@ -255,25 +295,28 @@ export async function getGoodsRanking(params: {
   startTime: string;
   endTime: string;
   searchType: '1' | '2';
+  scene?: 'merchant' | 'store';
   storeIds?: string;
 }) {
   const formData = new FormData();
   formData.append('search_type', params.searchType);
   formData.append('start_time', params.startTime);
   formData.append('end_time', params.endTime);
-  if (params.storeIds) {
+  if (params.scene !== 'store' && params.storeIds) {
     formData.append('store_ids', params.storeIds);
   }
 
-  const response = await phpRequest<GoodsRankingResponse>(
-    '/Retail/Index/getGoodsRanking',
-    {
-      method: 'POST',
-      data: formData,
-      tokenHeaderName: 'Authorization',
-      tokenPrefix: 'bearer ',
-    },
-  );
+  const url =
+    params.scene === 'store'
+      ? '/Retail/Home/getGoodsRanking'
+      : '/Retail/Index/getGoodsRanking';
+
+  const response = await phpRequest<GoodsRankingResponse>(url, {
+    method: 'POST',
+    data: formData,
+    tokenHeaderName: 'Authorization',
+    tokenPrefix: 'bearer ',
+  });
 
   if (response?.status !== 1 && response?.status !== '1') {
     throw new Error(response?.message || '获取商品排行失败');

@@ -1,0 +1,71 @@
+@import (reference) '../../../styles/utilities.less';
+
+.printer-page {
+  min-height: calc(100vh - 112px);
+
+  .content-card {
+    padding: 22px 24px 18px;
+    border: 1px solid var(--ant-color-border-secondary);
+    border-radius: 14px;
+    background: var(--ant-color-bg-container);
+  }
+
+  .printer-table-card {
+    margin-top: 16px;
+  }
+
+  .printer-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 12px;
+  }
+
+  .printer-primary-action-btn.ant-btn {
+    .mixin-page-create-btn();
+  }
+
+  .printer-table-card {
+    .ant-table-thead > tr > th {
+      color: var(--ant-color-text-heading, var(--ant-color-text));
+      font-weight: 600;
+    }
+
+    .ant-table-tbody > tr > td {
+      color: var(--ant-color-text);
+      vertical-align: middle;
+    }
+  }
+
+  .printer-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    line-height: 1.6;
+  }
+
+  .printer-sub-text {
+    color: var(--ant-color-text-secondary);
+  }
+
+  .printer-action-links {
+    .mixin-flex-center();
+    gap: 10px;
+
+    a {
+      color: var(--ant-color-primary);
+      white-space: nowrap;
+    }
+  }
+}
+
+body.theme-black-mode .printer-page {
+  .content-card {
+    background: var(--pc-dark-bg-surface) !important;
+    border-color: var(--pc-dark-border);
+  }
+
+  .printer-sub-text {
+    color: var(--pc-dark-text-secondary) !important;
+  }
+}

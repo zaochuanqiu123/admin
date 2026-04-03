@@ -50,8 +50,8 @@ import {
 } from '@/utils/commonActions.storage';
 import { buildIframeRouteWithParams } from '@/utils/iframe';
 import {
-  extractPermContextNodes,
   extractButtonPermissionMap,
+  extractPermContextNodes,
   findFirstLeafMenuTarget,
   findPathByTargetId,
   getValidBusinessCode,
@@ -252,9 +252,8 @@ export async function getInitialState(): Promise<{
 
   if (devBypassAuth) {
     const currentUser = getDevUser();
-    const { permContextMenu, buttonPermissions } = await fetchPermState(
-      TEMP_BUSINESS_CODE,
-    );
+    const { permContextMenu, buttonPermissions } =
+      await fetchPermState(TEMP_BUSINESS_CODE);
     return {
       fetchUserInfo: async () => currentUser,
       currentUser,
@@ -371,9 +370,8 @@ export async function getInitialState(): Promise<{
     }
 
     // 使用 currentBusinessCode 调用 getPermContext
-    const { permContextMenu, buttonPermissions } = await fetchPermState(
-      currentBusinessCode,
-    );
+    const { permContextMenu, buttonPermissions } =
+      await fetchPermState(currentBusinessCode);
 
     return {
       fetchUserInfo,
@@ -676,32 +674,7 @@ export const layout: RunTimeLayoutConfig = ({
       );
     },
     actionsRender: () => {
-      const checked = (initialState?.settings as any)?.navTheme === 'realDark';
-
-      return [
-        <Tooltip key="theme" title={checked ? '切换亮色模式' : '切换暗黑模式'}>
-          <Button
-            type="text"
-            shape="circle"
-            className="pc-admin-header-circle-action"
-            icon={checked ? <MoonOutlined /> : <SunOutlined />}
-            aria-label={checked ? '切换亮色模式' : '切换暗黑模式'}
-            onClick={() => {
-              const nextNavTheme = checked ? 'light' : 'realDark';
-              markThemeSwitching();
-              persistNavTheme(nextNavTheme);
-              setInitialState((preInitialState) => ({
-                ...preInitialState,
-                settings: {
-                  ...(preInitialState?.settings || {}),
-                  navTheme: nextNavTheme,
-                } as Partial<LayoutSettings>,
-              }));
-            }}
-          />
-        </Tooltip>,
-        <NoticeBell key="notice" />,
-      ];
+      return [];
     },
     menuRender: (
       _menuProps: {
@@ -930,6 +903,33 @@ export const layout: RunTimeLayoutConfig = ({
       const keepAliveThemeKey = `${
         (initialState?.settings as any)?.navTheme || 'light'
       }::${(initialState?.settings as any)?.colorPrimary || ''}`;
+      const checked = (initialState?.settings as any)?.navTheme === 'realDark';
+      const routeTabsExtraOps = (
+        <>
+          <Tooltip title={checked ? '切换亮色模式' : '切换暗黑模式'}>
+            <Button
+              type="text"
+              shape="circle"
+              className="pc-admin-header-circle-action"
+              icon={checked ? <MoonOutlined /> : <SunOutlined />}
+              aria-label={checked ? '切换亮色模式' : '切换暗黑模式'}
+              onClick={() => {
+                const nextNavTheme = checked ? 'light' : 'realDark';
+                markThemeSwitching();
+                persistNavTheme(nextNavTheme);
+                setInitialState((preInitialState) => ({
+                  ...preInitialState,
+                  settings: {
+                    ...(preInitialState?.settings || {}),
+                    navTheme: nextNavTheme,
+                  } as Partial<LayoutSettings>,
+                }));
+              }}
+            />
+          </Tooltip>
+          <NoticeBell />
+        </>
+      );
 
       return (
         <>
@@ -937,6 +937,7 @@ export const layout: RunTimeLayoutConfig = ({
             key={initialState?.currentOrgCode || 'no-org'}
             themeCacheKey={keepAliveThemeKey}
             menuData={initialState?.permContextMenu}
+            extraOps={routeTabsExtraOps}
           >
             {children}
           </RouteTabsKeepAlive>

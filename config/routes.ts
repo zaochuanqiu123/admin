@@ -83,12 +83,30 @@ const routes = [
         name: '门店管理',
         path: '/form/store-manage',
         component: './form/index',
-        backendPathUrls: ['/Retail/Store/store'],
+        backendPathUrls: ['/admin/org/v1/store/page'],
+        hideInMenu: true,
       },
       {
         name: '添加门店',
         path: '/form/store-manage/create-single',
         component: './form/store-create/index',
+        backendPathUrls: ['/admin/org/v1/store/add'],
+        hideInMenu: true,
+      },
+      {
+        name: '修改门店',
+        path: '/form/store-manage/:id/edit',
+        component: './form/store-create/index',
+        backendPathUrls: [
+          '/admin/org/v1/store/modify',
+          '/admin/org/v1/store/{id}/detail',
+        ],
+        hideInMenu: true,
+      },
+      {
+        name: '门店 DIY 权限',
+        path: '/form/store-manage/:id/jurisdiction',
+        component: './form/store-jurisdiction/index',
         hideInMenu: true,
       },
       {
@@ -185,6 +203,20 @@ const routes = [
     path: '/device/speaker-brand',
     component: './device/speaker-brand/index',
     backendPathUrls: ['/device/speakerChannel'],
+    hideInMenu: true,
+  },
+  {
+    name: '打印机管理',
+    path: '/device/printer',
+    component: './device/printer/index',
+    backendPathUrls: ['/device/printer'],
+    hideInMenu: true,
+  },
+  {
+    name: '终端列表',
+    path: '/device/terminal',
+    component: './device/terminal/index',
+    backendPathUrls: ['/device/terminal'],
     hideInMenu: true,
   },
   {

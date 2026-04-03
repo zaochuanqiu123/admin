@@ -156,6 +156,13 @@ export type SpeakerBroadcastParams = {
   payAmount?: string;
 };
 
+export type SpeakerTransferParams = {
+  transferType: 'ISSUE' | 'RETURN';
+  orgId?: string;
+  snList: string[];
+  remark?: string;
+};
+
 type CommonApiResponse<T = any> = {
   code?: number | string;
   msg?: string;
@@ -169,7 +176,7 @@ export async function getSpeakerPageQuery(
   data: SpeakerPageParams,
   options?: { [key: string]: any },
 ) {
-  return apiData<SpeakerPageResult>('/api/device/admin/speaker/page', {
+  return apiData<SpeakerPageResult>('/api/admin/device/v1/speaker/page', {
     method: 'POST',
     data,
     ...(options || {}),
@@ -180,7 +187,7 @@ export async function getSpeakerListQuery(
   data?: SpeakerListQueryParams,
   options?: { [key: string]: any },
 ) {
-  return apiData<SpeakerRecord[]>('/api/device/admin/speaker/list', {
+  return apiData<SpeakerRecord[]>('/api/admin/device/v1/speaker/list', {
     method: 'POST',
     data,
     ...(options || {}),
@@ -192,7 +199,7 @@ export async function getSpeakerChannelPageQuery(
   options?: { [key: string]: any },
 ) {
   return apiData<SpeakerChannelPageResult>(
-    '/api/device/admin/speakerChannel/page',
+    '/api/admin/device/v1/speakerChannel/page',
     {
       method: 'POST',
       data,
@@ -233,7 +240,21 @@ export async function broadcastSpeaker(
   options?: { [key: string]: any },
 ) {
   return apiRequest<CommonApiResponse<boolean>>(
-    '/api/device/admin/speaker/broadcast',
+    '/api/admin/device/v1/speaker/broadcast',
+    {
+      method: 'POST',
+      data,
+      ...(options || {}),
+    },
+  );
+}
+
+export async function transferSpeaker(
+  data: SpeakerTransferParams,
+  options?: { [key: string]: any },
+) {
+  return apiRequest<CommonApiResponse<boolean>>(
+    '/api/admin/device/v1/speaker/transfer',
     {
       method: 'POST',
       data,

@@ -20,7 +20,7 @@ import {
   getDeviceTransferDetailPage,
   getDeviceTransferPage,
 } from '@/api/transfer';
-import { PageSectionSkeleton } from '@/components';
+import { ExpandableFilterCard, PageSectionSkeleton } from '@/components';
 import { getErrorMessage } from '@/utils/apiMessage';
 import './index.less';
 
@@ -380,89 +380,93 @@ const TransferRecordPage: React.FC = () => {
 
   return (
     <div className="transfer-record-page">
-      <div className="content-card transfer-record-filter-card">
-        <div className="transfer-record-filter-grid">
-          <div className="field">
-            <span className="field-label">流转单号</span>
-            <Input
-              allowClear
-              placeholder="请输入流转单号"
-              value={draftFilters.orderNo}
-              onChange={(event) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  orderNo: event.target.value,
-                }));
-              }}
-              onPressEnter={handleSearch}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">操作类型</span>
-            <Select
-              allowClear
-              placeholder="请选择"
-              value={draftFilters.transferType}
-              options={[
-                { label: '划拨', value: 'ISSUE' },
-                { label: '回调', value: 'RETURN' },
-              ]}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  transferType: value,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">设备类型</span>
-            <Select
-              allowClear
-              placeholder="请选择"
-              value={draftFilters.deviceType}
-              options={[
-                { label: '二维码', value: 'QRCODE' },
-                { label: '音箱', value: 'SPEAKER' },
-                { label: '打印机', value: 'PRINTER' },
-              ]}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  deviceType: value,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">组织ID</span>
-            <Input
-              allowClear
-              placeholder="请输入组织ID"
-              value={draftFilters.orgId}
-              onChange={(event) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  orgId: event.target.value,
-                }));
-              }}
-              onPressEnter={handleSearch}
-            />
-          </div>
-
-          <div className="field actions">
-            <Space>
-              <Button type="primary" onClick={handleSearch}>
-                搜索
-              </Button>
-              <Button onClick={handleReset}>重置</Button>
-            </Space>
-          </div>
-        </div>
-      </div>
+      <ExpandableFilterCard
+        className="transfer-record-filter-card"
+        onSearch={handleSearch}
+        onReset={handleReset}
+        searchText="搜索"
+        fields={[
+          {
+            key: 'orderNo',
+            label: '流转单号',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入流转单号"
+                value={draftFilters.orderNo}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    orderNo: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'transferType',
+            label: '操作类型',
+            content: (
+              <Select
+                allowClear
+                placeholder="请选择"
+                value={draftFilters.transferType}
+                options={[
+                  { label: '划拨', value: 'ISSUE' },
+                  { label: '回调', value: 'RETURN' },
+                ]}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    transferType: value,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'deviceType',
+            label: '设备类型',
+            content: (
+              <Select
+                allowClear
+                placeholder="请选择"
+                value={draftFilters.deviceType}
+                options={[
+                  { label: '二维码', value: 'QRCODE' },
+                  { label: '音箱', value: 'SPEAKER' },
+                  { label: '打印机', value: 'PRINTER' },
+                ]}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    deviceType: value,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'orgId',
+            label: '组织ID',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入组织ID"
+                value={draftFilters.orgId}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    orgId: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+        ]}
+      />
 
       <div className="content-card transfer-record-table-card">
         {initialListLoading ? (

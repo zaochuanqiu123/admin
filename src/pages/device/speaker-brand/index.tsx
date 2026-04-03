@@ -22,6 +22,7 @@ import {
   updateSpeakerChannel,
 } from '@/api/speaker';
 import {
+  ExpandableFilterCard,
   PageSectionSkeleton,
   PermissionButton,
   PermissionVisible,
@@ -36,10 +37,10 @@ import './index.less';
 const { RangePicker } = DatePicker;
 const DEFAULT_PAGE_SIZE = 10;
 const SPEAKER_BRAND_PERMS = {
-  add: 'device:admin:speakerChannel:add',
-  update: 'device:admin:speakerChannel:update',
-  updateState: 'device:admin:speakerChannel:updateState',
-  delete: 'device:admin:speakerChannel:delete',
+  add: 'admin:device:speakerChannel:add',
+  update: 'admin:device:speakerChannel:update',
+  updateState: 'admin:device:speakerChannel:updateState',
+  delete: 'admin:device:speakerChannel:delete',
 } as const;
 
 type QueryFilters = {
@@ -184,13 +185,6 @@ const SpeakerBrandPage: React.FC = () => {
         title: '备注',
         dataIndex: 'remark',
         width: 220,
-        render: (value) => value || '-',
-      },
-      {
-        title: '通道配置',
-        dataIndex: 'config',
-        width: 260,
-        ellipsis: true,
         render: (value) => value || '-',
       },
       {
@@ -374,82 +368,85 @@ const SpeakerBrandPage: React.FC = () => {
 
   return (
     <div className="speaker-brand-page">
-      <div className="content-card speaker-brand-filter-card">
-        <div className="speaker-brand-filter-grid">
-          <div className="field">
-            <span className="field-label">创建时间</span>
-            <RangePicker
-              value={draftFilters.createTimeRange}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  createTimeRange: value || undefined,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">状态</span>
-            <Select
-              allowClear
-              placeholder="请选择"
-              value={draftFilters.state}
-              options={[
-                { label: '启用', value: '1' },
-                { label: '禁用', value: '0' },
-              ]}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  state: value,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">通道名称</span>
-            <Input
-              allowClear
-              placeholder="请输入通道名称"
-              value={draftFilters.name}
-              onChange={(event) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  name: event.target.value,
-                }));
-              }}
-              onPressEnter={handleSearch}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">通道编码</span>
-            <Input
-              allowClear
-              placeholder="请输入通道编码"
-              value={draftFilters.code}
-              onChange={(event) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  code: event.target.value,
-                }));
-              }}
-              onPressEnter={handleSearch}
-            />
-          </div>
-
-          <div className="field actions">
-            <Space>
-              <Button type="primary" onClick={handleSearch}>
-                搜索
-              </Button>
-              <Button onClick={handleReset}>重置</Button>
-            </Space>
-          </div>
-        </div>
-      </div>
+      <ExpandableFilterCard
+        className="speaker-brand-filter-card"
+        onSearch={handleSearch}
+        onReset={handleReset}
+        fields={[
+          {
+            key: 'createTimeRange',
+            label: '创建时间',
+            content: (
+              <RangePicker
+                value={draftFilters.createTimeRange}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    createTimeRange: value || undefined,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'state',
+            label: '状态',
+            content: (
+              <Select
+                allowClear
+                placeholder="请选择"
+                value={draftFilters.state}
+                options={[
+                  { label: '启用', value: '1' },
+                  { label: '禁用', value: '0' },
+                ]}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    state: value,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'name',
+            label: '通道名称',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入通道名称"
+                value={draftFilters.name}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    name: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'code',
+            label: '通道编码',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入通道编码"
+                value={draftFilters.code}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    code: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+        ]}
+      />
 
       <div className="content-card speaker-brand-table-card">
         <div className="speaker-brand-toolbar">

@@ -1,0 +1,54 @@
+@import (reference) '../../../styles/utilities.less';
+
+.terminal-page {
+  min-height: calc(100vh - 112px);
+
+  .ant-pro-card {
+    border: 1px solid var(--ant-color-border-secondary);
+    border-radius: 14px;
+    background: var(--ant-color-bg-container);
+    box-shadow: none;
+  }
+
+  .ant-pro-card .ant-pro-card-body {
+    padding: 22px 24px 18px;
+  }
+
+  .ant-pro-table-list-toolbar {
+    padding-inline: 0;
+    padding-block: 0 12px;
+  }
+
+  .terminal-table {
+    margin-top: 16px;
+  }
+
+  .terminal-primary-action-btn.ant-btn {
+    .mixin-page-create-btn();
+  }
+
+  .ant-table-thead > tr > th {
+    color: var(--ant-color-text-heading, var(--ant-color-text));
+    font-weight: 600;
+  }
+
+  .ant-table-tbody > tr > td {
+    color: var(--ant-color-text);
+    vertical-align: middle;
+  }
+}
+
+body.theme-black-mode .terminal-page {
+  .ant-pro-card {
+    background: var(--pc-dark-bg-surface) !important;
+    border-color: var(--pc-dark-border);
+  }
+}
+
+@media (max-width: 1280px) {
+  .terminal-page {
+    .ant-pro-card .ant-pro-card-body {
+      padding: 20px 16px 16px;
+    }
+  }
+}

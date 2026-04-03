@@ -6,7 +6,7 @@ import { apiData } from './http';
  * @returns 返回 Promise，包含 token 等信息
  */
 export function login(data: API.LoginParams) {
-  return apiData<API.LoginResult>('/api/auth/login/doLogin', {
+  return apiData<API.LoginResult>('/api/admin/auth/v1/login/doLogin', {
     method: 'POST',
     data,
   });
@@ -18,7 +18,7 @@ export function login(data: API.LoginParams) {
  * 前端通过 /api 前缀走代理转发
  */
 export function logout(options?: Record<string, any>) {
-  return apiData<any>('/api/auth/login/logout', {
+  return apiData<any>('/api/admin/auth/v1/login/logout', {
     method: 'POST',
     ...(options || {}),
   });

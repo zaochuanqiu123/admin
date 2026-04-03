@@ -21,8 +21,10 @@ import {
   getSpeakerListQuery,
   getSpeakerPageQuery,
   type SpeakerRecord,
+  transferSpeaker,
 } from '@/api/speaker';
 import {
+  ExpandableFilterCard,
   PageSectionSkeleton,
   PermissionButton,
   PermissionVisible,
@@ -46,11 +48,11 @@ import './index.less';
 
 const { RangePicker } = DatePicker;
 const SPEAKER_PERMS = {
-  add: 'device:admin:speaker:add',
-  transfer: 'device:admin:speaker:transfer',
-  updateState: 'device:admin:speaker:updateState',
-  broadcast: 'device:admin:speaker:broadcast',
-  unbind: 'device:admin:speaker:unbind',
+  add: 'admin:device:speaker:add',
+  transfer: 'admin:device:speaker:transfer',
+  updateState: 'admin:device:speaker:updateState',
+  broadcast: 'admin:device:speaker:broadcast',
+  unbind: 'admin:device:speaker:unbind',
 } as const;
 
 type QueryFilters = {
@@ -528,184 +530,199 @@ const SpeakerListPage: React.FC = () => {
 
   return (
     <div className="speaker-page">
-      <div className="content-card speaker-filter-card">
-        <div className="speaker-filter-grid">
-          <div className="field">
-            <span className="field-label">所属品牌</span>
-            <Select
-              allowClear
-              placeholder="请选择"
-              value={draftFilters.belongBrand}
-              options={belongBrandOptions}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  belongBrand: value,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">划拨时间</span>
-            <RangePicker
-              value={draftFilters.transferTimeRange}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  transferTimeRange: value || undefined,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">音响品牌</span>
-            <Select
-              allowClear
-              placeholder="请选择"
-              value={draftFilters.speakerBrand}
-              options={speakerBrandOptions}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  speakerBrand: value,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">状态</span>
-            <Select
-              allowClear
-              placeholder="请选择"
-              value={draftFilters.state}
-              options={[
-                { label: '启用', value: '1' },
-                { label: '禁用', value: '0' },
-              ]}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  state: value,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">是否划拨</span>
-            <Select
-              allowClear
-              placeholder="请选择"
-              value={draftFilters.isTransferred}
-              options={[
-                { label: '是', value: '1' },
-                { label: '否', value: '0' },
-              ]}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  isTransferred: value,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">是否绑定</span>
-            <Select
-              allowClear
-              placeholder="请选择"
-              value={draftFilters.isBound}
-              options={[
-                { label: '是', value: '1' },
-                { label: '否', value: '0' },
-              ]}
-              onChange={(value) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  isBound: value,
-                }));
-              }}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">编号</span>
-            <Input
-              allowClear
-              placeholder="请输入编号"
-              value={draftFilters.sn}
-              onChange={(event) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  sn: event.target.value,
-                }));
-              }}
-              onPressEnter={handleSearch}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">批次号</span>
-            <Input
-              allowClear
-              placeholder="请输入批次号"
-              value={draftFilters.batchSn}
-              onChange={(event) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  batchSn: event.target.value,
-                }));
-              }}
-              onPressEnter={handleSearch}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">收款码</span>
-            <Input
-              allowClear
-              placeholder="请输入收款码"
-              value={draftFilters.qrcodeSn}
-              onChange={(event) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  qrcodeSn: event.target.value,
-                }));
-              }}
-              onPressEnter={handleSearch}
-            />
-          </div>
-
-          <div className="field">
-            <span className="field-label">关键字</span>
-            <Input
-              allowClear
-              placeholder="请输入商户/门店/机构名称"
-              value={draftFilters.keyword}
-              onChange={(event) => {
-                setDraftFilters((prev) => ({
-                  ...prev,
-                  keyword: event.target.value,
-                }));
-              }}
-              onPressEnter={handleSearch}
-            />
-          </div>
-
-          <div className="field actions">
-            <Space>
-              <Button type="primary" onClick={handleSearch}>
-                搜索
-              </Button>
-              <Button onClick={handleReset}>重置</Button>
-            </Space>
-          </div>
-        </div>
-      </div>
+      <ExpandableFilterCard
+        className="speaker-filter-card"
+        onSearch={handleSearch}
+        onReset={handleReset}
+        fields={[
+          {
+            key: 'belongBrand',
+            label: '所属品牌',
+            content: (
+              <Select
+                allowClear
+                placeholder="请选择"
+                value={draftFilters.belongBrand}
+                options={belongBrandOptions}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    belongBrand: value,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'transferTimeRange',
+            label: '划拨时间',
+            content: (
+              <RangePicker
+                value={draftFilters.transferTimeRange}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    transferTimeRange: value || undefined,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'speakerBrand',
+            label: '音响品牌',
+            content: (
+              <Select
+                allowClear
+                placeholder="请选择"
+                value={draftFilters.speakerBrand}
+                options={speakerBrandOptions}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    speakerBrand: value,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'state',
+            label: '状态',
+            content: (
+              <Select
+                allowClear
+                placeholder="请选择"
+                value={draftFilters.state}
+                options={[
+                  { label: '启用', value: '1' },
+                  { label: '禁用', value: '0' },
+                ]}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    state: value,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'isTransferred',
+            label: '是否划拨',
+            content: (
+              <Select
+                allowClear
+                placeholder="请选择"
+                value={draftFilters.isTransferred}
+                options={[
+                  { label: '是', value: '1' },
+                  { label: '否', value: '0' },
+                ]}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    isTransferred: value,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'isBound',
+            label: '是否绑定',
+            content: (
+              <Select
+                allowClear
+                placeholder="请选择"
+                value={draftFilters.isBound}
+                options={[
+                  { label: '是', value: '1' },
+                  { label: '否', value: '0' },
+                ]}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    isBound: value,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'sn',
+            label: '编号',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入编号"
+                value={draftFilters.sn}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    sn: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'batchSn',
+            label: '批次号',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入批次号"
+                value={draftFilters.batchSn}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    batchSn: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'qrcodeSn',
+            label: '收款码',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入收款码"
+                value={draftFilters.qrcodeSn}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    qrcodeSn: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'keyword',
+            label: '关键字',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入商户/门店/机构名称"
+                value={draftFilters.keyword}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    keyword: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+        ]}
+      />
 
       <div className="content-card speaker-table-card">
         <div className="speaker-toolbar">
@@ -774,10 +791,36 @@ const SpeakerListPage: React.FC = () => {
           selectedRowKeys.includes(item.id),
         )}
         onOk={async (values) => {
-          console.log('speaker transfer values:', values);
-          message.info('划拨/回调接口待补充，当前先保留弹窗与搜索交互。');
+          const snList = (Array.isArray(values?.items) ? values.items : [])
+            .map((item: SpeakerRecord) => String(item?.sn || '').trim())
+            .filter(Boolean);
+
+          if (!snList.length) {
+            message.warning('请选择有效的设备编号');
+            return;
+          }
+
+          const res = await transferSpeaker(
+            {
+              transferType:
+                values?.actionType === 'callback' ? 'RETURN' : 'ISSUE',
+              orgId:
+                values?.actionType === 'callback' ? undefined : values?.orgId,
+              snList,
+            },
+            {
+              skipErrorHandler: true,
+            },
+          );
+
+          message.success(getApiMessage(res, '操作成功'));
           setTransferModalOpen(false);
           setSelectedRowKeys([]);
+          if (listMode === 'list') {
+            await loadSpeakerList(filters);
+          } else {
+            await loadSpeakerPage();
+          }
         }}
       />
 

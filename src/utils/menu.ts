@@ -262,10 +262,6 @@ export function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
         } => item !== null,
       );
 
-    if (children.length > 0) {
-      children.sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
-    }
-
     return {
       name,
       path,
@@ -292,7 +288,6 @@ export function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
       } => item !== null,
     );
 
-  result.sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
   return result;
 }
 

@@ -45,6 +45,7 @@
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@fingerprintjs/fingerprintjs": "^5.1.0",
     "@umijs/plugin-qiankun": "^2.44.1",
     "antd": "^5.25.4",
     "antd-style": "^3.7.0",

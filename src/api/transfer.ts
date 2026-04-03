@@ -86,11 +86,14 @@ export async function getDeviceTransferPage(
   data: DeviceTransferPageParams,
   options?: { [key: string]: any },
 ) {
-  return apiData<DeviceTransferPageResult>('/api/device/admin/transfer/page', {
-    method: 'POST',
-    data,
-    ...(options || {}),
-  });
+  return apiData<DeviceTransferPageResult>(
+    '/api/admin/device/v1/transfer/page',
+    {
+      method: 'POST',
+      data,
+      ...(options || {}),
+    },
+  );
 }
 
 export async function getDeviceTransferDetailPage(
@@ -98,7 +101,7 @@ export async function getDeviceTransferDetailPage(
   options?: { [key: string]: any },
 ) {
   return apiData<DeviceTransferDetailPageResult>(
-    '/api/device/admin/transferDevice/page',
+    '/api/admin/device/v1/transferDevice/page',
     {
       method: 'POST',
       data,

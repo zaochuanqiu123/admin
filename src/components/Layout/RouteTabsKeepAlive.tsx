@@ -331,7 +331,8 @@ const RouteTabsKeepAlive: React.FC<{
   children: React.ReactNode;
   themeCacheKey?: string;
   menuData?: MenuDataItem[];
-}> = ({ children, themeCacheKey, menuData }) => {
+  extraOps?: React.ReactNode;
+}> = ({ children, themeCacheKey, menuData, extraOps }) => {
   const outlet = useOutlet();
   const activeNode = outlet ?? children;
   const locationContextValue = React.useContext(UNSAFE_LocationContext);
@@ -947,6 +948,7 @@ const RouteTabsKeepAlive: React.FC<{
             aria-label="综合操作"
           />
         </Dropdown>
+        {extraOps}
       </div>
     </div>
   );

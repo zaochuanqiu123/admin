@@ -1,5 +1,6 @@
 ﻿import { InfoCircleOutlined } from '@ant-design/icons';
 import { Area, Pie } from '@ant-design/plots';
+import { useModel } from '@umijs/max';
 import { DatePicker, Empty, message, Select } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
@@ -10,6 +11,7 @@ import {
   getGoodsAnalysis,
   getGoodsRanking,
   getIncomeCensus,
+  getPendingOrderTotal,
   getStoreRanking,
   getSuperPlugRanking,
   getVipConsumeRanking,
@@ -28,6 +30,10 @@ import top1 from '@/assets/top1.png';
 import top2 from '@/assets/top2.png';
 import vipPay from '@/assets/vipPay.png';
 import vipPayActive from '@/assets/vipPay1.png';
+import {
+  getCurrentIdentityItem,
+  getIdentityItemsFromStorage,
+} from '@/utils/identity';
 import './index.less';
 
 type StatItem = {
@@ -70,7 +76,7 @@ type PiePoint = {
   ratio?: string;
 };
 
-const overviewStatMeta: Omit<StatItem, 'value'>[] = [
+const merchantOverviewStatMeta: Omit<StatItem, 'value'>[] = [
   {
     key: 'turnover',
     label: '营业额(元)',
@@ -98,9 +104,15 @@ const overviewStatMeta: Omit<StatItem, 'value'>[] = [
   },
 ];
 
+const storeOverviewStatMeta: Omit<StatItem, 'value'>[] = [
+  merchantOverviewStatMeta[0],
+  merchantOverviewStatMeta[1],
+  merchantOverviewStatMeta[3],
+];
+
 const initialActiveOverviewKey =
-  overviewStatMeta.find((item) => item.active)?.key ??
-  overviewStatMeta[0]?.key ??
+  merchantOverviewStatMeta.find((item) => item.active)?.key ??
+  merchantOverviewStatMeta[0]?.key ??
   '';
 
 const emptyOverviewData = {
@@ -156,6 +168,14 @@ const emptyGoodsStats = {
 };
 
 const emptyRankingApps: RankItem[] = [];
+const emptyPendingOrderTotal = {
+  treatSendOrderCount: '0',
+  treatReceivedOrderCount: '0',
+  completedOrderCount: '0',
+  goodsWarningCount: '0',
+  goodsExcessCount: '0',
+  goodsSellOutCount: '0',
+};
 
 const emptyTopStoreRanking: Array<{
   rank: number;
@@ -428,6 +448,7 @@ const DashboardDonutChart: React.FC<DashboardDonutChartProps> = ({
 };
 
 const DashboardIndexPage: React.FC = () => {
+  const { initialState } = useModel('@@initialState');
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
     dayjs(),
     dayjs(),
@@ -463,11 +484,67 @@ const DashboardIndexPage: React.FC = () => {
   );
   const [mallUserData, setMallUserData] = useState(emptyMallUserData);
   const [rankingApps, setRankingApps] = useState<RankItem[]>(emptyRankingApps);
+  const [pendingOrderTotal, setPendingOrderTotal] = useState(
+    emptyPendingOrderTotal,
+  );
   const [memberDistKey, setMemberDistKey] = useState<
     'gender' | 'level' | 'age'
   >('gender');
   const [mallVisitKey, setMallVisitKey] = useState<'visit' | 'trade'>('visit');
 
+  const currentIdentity = useMemo(
+    () =>
+      getCurrentIdentityItem(
+        initialState?.currentOrgCode,
+        getIdentityItemsFromStorage(),
+      ),
+    [initialState?.currentOrgCode],
+  );
+  const isMerchantView = useMemo(() => {
+    const levelName = String(
+      currentIdentity?.levelName || currentIdentity?.groupLabel || '',
+    ).trim();
+    if (!levelName) return true;
+    return levelName.includes('商户') || levelName.includes('公司');
+  }, [currentIdentity?.groupLabel, currentIdentity?.levelName]);
+  const overviewStatMeta = isMerchantView
+    ? merchantOverviewStatMeta
+    : storeOverviewStatMeta;
+  const pendingItems = useMemo(
+    () => [
+      {
+        key: 'treatSendOrderCount',
+        label: '待发货',
+        value: pendingOrderTotal.treatSendOrderCount,
+      },
+      {
+        key: 'treatReceivedOrderCount',
+        label: '待收货',
+        value: pendingOrderTotal.treatReceivedOrderCount,
+      },
+      {
+        key: 'completedOrderCount',
+        label: '已完成',
+        value: pendingOrderTotal.completedOrderCount,
+      },
+      {
+        key: 'goodsWarningCount',
+        label: '商品预警',
+        value: pendingOrderTotal.goodsWarningCount,
+      },
+      {
+        key: 'goodsExcessCount',
+        label: '商品超量',
+        value: pendingOrderTotal.goodsExcessCount,
+      },
+      {
+        key: 'goodsSellOutCount',
+        label: '商品售罄',
+        value: pendingOrderTotal.goodsSellOutCount,
+      },
+    ],
+    [pendingOrderTotal],
+  );
   const memberPieData = memberPortraitData[memberDistKey];
   const mallData = mallUserData[mallVisitKey];
   const overviewSubtitle = `${dateRange[0].format('MM-DD')} ~ ${dateRange[1].format('MM-DD')}`;
@@ -477,7 +554,7 @@ const DashboardIndexPage: React.FC = () => {
         ...item,
         value: overviewValues[item.key as keyof typeof overviewValues],
       })),
-    [overviewValues],
+    [overviewStatMeta, overviewValues],
   );
   const goodsStats = useMemo(
     () =>
@@ -518,9 +595,16 @@ const DashboardIndexPage: React.FC = () => {
   const topStoreValueLabel =
     topStoreSearchType === '1' ? '交易金额' : '交易笔数';
   const goodsRankingValueLabel =
-    goodsRankingSearchType === '1' ? '成交金额' : '成交件数';
+    goodsRankingSearchType === '1' ? '金额' : '件数';
   const memberRankingValueLabel =
     memberRankingType === 'consume' ? '消费金额' : '会员数量';
+
+  useEffect(() => {
+    if (overviewStatMeta.some((item) => item.key === activeOverviewKey)) {
+      return;
+    }
+    setActiveOverviewKey(overviewStatMeta[0]?.key || '');
+  }, [activeOverviewKey, overviewStatMeta]);
 
   useEffect(() => {
     let cancelled = false;
@@ -531,6 +615,7 @@ const DashboardIndexPage: React.FC = () => {
         const data = await getIncomeCensus({
           startTime: String(dateRange[0].startOf('day').unix()),
           endTime: String(dateRange[1].endOf('day').unix()),
+          scene: isMerchantView ? 'merchant' : 'store',
         });
         if (cancelled) return;
 
@@ -563,7 +648,7 @@ const DashboardIndexPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [dateRange]);
+  }, [dateRange, isMerchantView]);
 
   useEffect(() => {
     let cancelled = false;
@@ -575,6 +660,7 @@ const DashboardIndexPage: React.FC = () => {
           startTime: String(dateRange[0].startOf('day').unix()),
           endTime: String(dateRange[1].endOf('day').unix()),
           type: goodsType,
+          scene: isMerchantView ? 'merchant' : 'store',
         });
         if (cancelled) return;
 
@@ -612,7 +698,42 @@ const DashboardIndexPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [dateRange, goodsType]);
+  }, [dateRange, goodsType, isMerchantView]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPendingOrderTotal() {
+      if (isMerchantView) {
+        setPendingOrderTotal(emptyPendingOrderTotal);
+        return;
+      }
+
+      try {
+        const data = await getPendingOrderTotal();
+        if (cancelled) return;
+
+        setPendingOrderTotal({
+          treatSendOrderCount: formatCount(data.treat_send_order_count),
+          treatReceivedOrderCount: formatCount(data.treat_received_order_count),
+          completedOrderCount: formatCount(data.completed_order_count),
+          goodsWarningCount: formatCount(data.goods_warning_count),
+          goodsExcessCount: formatCount(data.goods_excess_count),
+          goodsSellOutCount: formatCount(data.goods_sell_out_count),
+        });
+      } catch (error: any) {
+        if (cancelled) return;
+        setPendingOrderTotal(emptyPendingOrderTotal);
+        message.error(error?.message || '获取待办事项失败');
+      }
+    }
+
+    loadPendingOrderTotal();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isMerchantView]);
 
   useEffect(() => {
     if (goodsType === '2' && activeGoodsTrendKey === 'visitCount') {
@@ -624,6 +745,11 @@ const DashboardIndexPage: React.FC = () => {
     let cancelled = false;
 
     async function loadTopStoreRanking() {
+      if (!isMerchantView) {
+        setTopStoreRanking(emptyTopStoreRanking);
+        return;
+      }
+
       try {
         const data = await getStoreRanking({
           startTime: String(dateRange[0].startOf('day').unix()),
@@ -650,7 +776,7 @@ const DashboardIndexPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [dateRange, topStoreSearchType]);
+  }, [dateRange, topStoreSearchType, isMerchantView]);
 
   useEffect(() => {
     let cancelled = false;
@@ -661,6 +787,7 @@ const DashboardIndexPage: React.FC = () => {
           startTime: String(dateRange[0].startOf('day').unix()),
           endTime: String(dateRange[1].endOf('day').unix()),
           searchType: goodsRankingSearchType,
+          scene: isMerchantView ? 'merchant' : 'store',
         });
         if (cancelled) return;
         setGoodsRanking(
@@ -683,12 +810,17 @@ const DashboardIndexPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [dateRange, goodsRankingSearchType]);
+  }, [dateRange, goodsRankingSearchType, isMerchantView]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadRankingApps() {
+      if (!isMerchantView) {
+        setRankingApps(emptyRankingApps);
+        return;
+      }
+
       try {
         const data = await getSuperPlugRanking();
         if (cancelled) return;
@@ -715,12 +847,17 @@ const DashboardIndexPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isMerchantView]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadMemberRanking() {
+      if (!isMerchantView) {
+        setMemberRanking(emptyMemberRanking);
+        return;
+      }
+
       if (memberRankingType !== 'consume') {
         setMemberRanking(emptyMemberRanking);
         return;
@@ -751,12 +888,17 @@ const DashboardIndexPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [dateRange, memberRankingType]);
+  }, [dateRange, memberRankingType, isMerchantView]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadMemberPortrait() {
+      if (!isMerchantView) {
+        setMemberPortraitData(emptyMemberPortraitData);
+        return;
+      }
+
       try {
         const data = await getVipPortrait();
         if (cancelled) return;
@@ -793,12 +935,17 @@ const DashboardIndexPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isMerchantView]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadMallUserData() {
+      if (!isMerchantView) {
+        setMallUserData(emptyMallUserData);
+        return;
+      }
+
       try {
         const [visitData, tradeData] = await Promise.all([
           getAppletMallVisitUser({
@@ -836,7 +983,7 @@ const DashboardIndexPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [dateRange]);
+  }, [dateRange, isMerchantView]);
 
   return (
     <div className="dashboard-index-page">
@@ -853,12 +1000,14 @@ const DashboardIndexPage: React.FC = () => {
                 </div>
               </div>
               <div className="dashboard-card-tools">
-                <Select
-                  className="dashboard-card-tools__store-select"
-                  defaultValue="all"
-                  options={[{ value: 'all', label: '全部门店' }]}
-                  variant="borderless"
-                />
+                {isMerchantView ? (
+                  <Select
+                    className="dashboard-card-tools__store-select"
+                    defaultValue="all"
+                    options={[{ value: 'all', label: '全部门店' }]}
+                    variant="borderless"
+                  />
+                ) : null}
                 <DatePicker.RangePicker
                   className="dashboard-card-tools__date-range"
                   value={dateRange}
@@ -976,77 +1125,444 @@ const DashboardIndexPage: React.FC = () => {
             />
           </section>
 
-          <div className="dashboard-grid-row dashboard-grid-row-3">
-            <section className="dashboard-local-card dashboard-ranking-card">
-              <div className="dashboard-card-head">
-                <div>
-                  <div className="dashboard-card-title">门店营业额TOP</div>
-                  <div className="dashboard-card-subtitle">02-25 ~ 02-25</div>
-                </div>
-              </div>
-
-              <div className="dashboard-chip-row u-flex u-flex-wrap">
-                <button
-                  type="button"
-                  className={topStoreSearchType === '1' ? 'is-active' : ''}
-                  onClick={() => setTopStoreSearchType('1')}
-                >
-                  交易金额
-                </button>
-                <button
-                  type="button"
-                  className={topStoreSearchType === '2' ? 'is-active' : ''}
-                  onClick={() => setTopStoreSearchType('2')}
-                >
-                  交易笔数
-                </button>
-              </div>
-
-              <div className="dashboard-ranking-scroll">
-                <table className="dashboard-list-table">
-                  {topStoreRanking.length > 0 ? (
-                    <>
-                      <thead>
-                        <tr>
-                          <th>排名</th>
-                          <th>门店名称</th>
-                          <th>{topStoreValueLabel}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {topStoreRanking.map((item) => (
-                          <tr key={item.rank}>
-                            <td>
-                              {item.rank <= 3 ? (
-                                <img
-                                  className="dashboard-table-rank-icon"
-                                  src={topRankBadges[item.rank - 1]}
-                                  alt=""
-                                />
-                              ) : (
-                                item.rank
-                              )}
-                            </td>
-                            <td>{item.name}</td>
-                            <td>{item.value}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </>
-                  ) : null}
-                </table>
-                {topStoreRanking.length === 0 ? (
-                  <div className="dashboard-empty-block">
-                    <Empty description="暂无排行数据" />
+          {isMerchantView ? (
+            <>
+              <div className="dashboard-grid-row dashboard-grid-row-3">
+                <section className="dashboard-local-card dashboard-ranking-card">
+                  <div className="dashboard-card-head">
+                    <div>
+                      <div className="dashboard-card-title">门店营业额TOP</div>
+                      <div className="dashboard-card-subtitle">
+                        02-25 ~ 02-25
+                      </div>
+                    </div>
                   </div>
-                ) : null}
+
+                  <div className="dashboard-chip-row u-flex u-flex-wrap">
+                    <button
+                      type="button"
+                      className={topStoreSearchType === '1' ? 'is-active' : ''}
+                      onClick={() => setTopStoreSearchType('1')}
+                    >
+                      交易金额
+                    </button>
+                    <button
+                      type="button"
+                      className={topStoreSearchType === '2' ? 'is-active' : ''}
+                      onClick={() => setTopStoreSearchType('2')}
+                    >
+                      交易笔数
+                    </button>
+                  </div>
+
+                  <div className="dashboard-ranking-scroll">
+                    <table className="dashboard-list-table">
+                      {topStoreRanking.length > 0 ? (
+                        <>
+                          <thead>
+                            <tr>
+                              <th>排名</th>
+                              <th>门店名称</th>
+                              <th>{topStoreValueLabel}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {topStoreRanking.map((item) => (
+                              <tr key={item.rank}>
+                                <td>
+                                  {item.rank <= 3 ? (
+                                    <img
+                                      className="dashboard-table-rank-icon"
+                                      src={topRankBadges[item.rank - 1]}
+                                      alt=""
+                                    />
+                                  ) : (
+                                    item.rank
+                                  )}
+                                </td>
+                                <td>{item.name}</td>
+                                <td>{item.value}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </>
+                      ) : null}
+                    </table>
+                    {topStoreRanking.length === 0 ? (
+                      <div className="dashboard-empty-block">
+                        <Empty description="暂无排行数据" />
+                      </div>
+                    ) : null}
+                  </div>
+                </section>
+
+                <section className="dashboard-local-card dashboard-ranking-card">
+                  <div className="dashboard-card-head">
+                    <div>
+                      <div className="dashboard-card-title">商品成交榜TOP</div>
+                      <div className="dashboard-card-subtitle">
+                        {overviewSubtitle}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="dashboard-chip-row u-flex u-flex-wrap">
+                    <button
+                      type="button"
+                      className={
+                        goodsRankingSearchType === '1' ? 'is-active' : ''
+                      }
+                      onClick={() => setGoodsRankingSearchType('1')}
+                    >
+                      金额
+                    </button>
+                    <button
+                      type="button"
+                      className={
+                        goodsRankingSearchType === '2' ? 'is-active' : ''
+                      }
+                      onClick={() => setGoodsRankingSearchType('2')}
+                    >
+                      件数
+                    </button>
+                  </div>
+
+                  <div className="dashboard-ranking-scroll">
+                    <table className="dashboard-list-table">
+                      {goodsRanking.length > 0 ? (
+                        <>
+                          <thead>
+                            <tr>
+                              <th>排名</th>
+                              <th>商品名称</th>
+                              <th>{goodsRankingValueLabel}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {goodsRanking.map((item) => (
+                              <tr key={`${item.rank}-${item.name}`}>
+                                <td>
+                                  {item.rank <= 3 ? (
+                                    <img
+                                      className="dashboard-table-rank-icon"
+                                      src={topRankBadges[item.rank - 1]}
+                                      alt=""
+                                    />
+                                  ) : (
+                                    item.rank
+                                  )}
+                                </td>
+                                <td>
+                                  <div className="dashboard-goods-rank-cell">
+                                    {item.image ? (
+                                      <img
+                                        className="dashboard-goods-rank-image"
+                                        src={item.image}
+                                        alt={item.name}
+                                      />
+                                    ) : null}
+                                    <span className="dashboard-goods-rank-name">
+                                      {item.name}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td>{item.value}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </>
+                      ) : null}
+                    </table>
+                    {goodsRanking.length === 0 ? (
+                      <div className="dashboard-empty-block">
+                        <Empty description="暂无排行数据" />
+                      </div>
+                    ) : null}
+                  </div>
+                </section>
+
+                <section className="dashboard-local-card dashboard-ranking-card">
+                  <div className="dashboard-card-head">
+                    <div>
+                      <div className="dashboard-card-title">会员榜TOP</div>
+                      <div className="dashboard-card-subtitle">
+                        {overviewSubtitle}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="dashboard-chip-row u-flex u-flex-wrap">
+                    <button
+                      type="button"
+                      className={
+                        memberRankingType === 'register' ? 'is-active' : ''
+                      }
+                      onClick={() => setMemberRankingType('register')}
+                    >
+                      会员注册
+                    </button>
+                    <button
+                      type="button"
+                      className={
+                        memberRankingType === 'consume' ? 'is-active' : ''
+                      }
+                      onClick={() => setMemberRankingType('consume')}
+                    >
+                      会员消费
+                    </button>
+                  </div>
+
+                  <div className="dashboard-ranking-scroll">
+                    <table className="dashboard-list-table">
+                      {memberRanking.length > 0 ? (
+                        <>
+                          <thead>
+                            <tr>
+                              <th>排名</th>
+                              <th>会员名称</th>
+                              <th>{memberRankingValueLabel}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {memberRanking.map((item) => (
+                              <tr key={`${item.rank}-${item.name}`}>
+                                <td>
+                                  {item.rank <= 3 ? (
+                                    <img
+                                      className="dashboard-table-rank-icon"
+                                      src={topRankBadges[item.rank - 1]}
+                                      alt=""
+                                    />
+                                  ) : (
+                                    item.rank
+                                  )}
+                                </td>
+                                <td>
+                                  <div className="dashboard-goods-rank-cell">
+                                    <span className="dashboard-goods-rank-name">
+                                      {item.name}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td>{item.value}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </>
+                      ) : null}
+                    </table>
+                    {memberRanking.length === 0 ? (
+                      <div className="dashboard-empty-block">
+                        <Empty description="暂无排行数据" />
+                      </div>
+                    ) : null}
+                  </div>
+                </section>
+              </div>
+
+              <div className="dashboard-grid-row dashboard-grid-row-2">
+                <section className="dashboard-local-card dashboard-member-portrait-card">
+                  <div className="dashboard-card-head">
+                    <div>
+                      <div className="dashboard-card-title">会员分布</div>
+                      <div className="dashboard-card-subtitle">会员画像</div>
+                    </div>
+                  </div>
+                  <div className="dashboard-chip-row u-flex u-flex-wrap">
+                    <button
+                      type="button"
+                      className={memberDistKey === 'gender' ? 'is-active' : ''}
+                      onClick={() => setMemberDistKey('gender')}
+                    >
+                      性别分布
+                    </button>
+                    <button
+                      type="button"
+                      className={memberDistKey === 'level' ? 'is-active' : ''}
+                      onClick={() => setMemberDistKey('level')}
+                    >
+                      等级分布
+                    </button>
+                    <button
+                      type="button"
+                      className={memberDistKey === 'age' ? 'is-active' : ''}
+                      onClick={() => setMemberDistKey('age')}
+                    >
+                      年龄列表
+                    </button>
+                  </div>
+                  {memberPieData.length > 0 ? (
+                    <DashboardDonutChart
+                      data={memberPieData}
+                      colors={
+                        memberDistKey === 'gender'
+                          ? ['#5b79d1', '#84c66c', '#e8ba4a']
+                          : memberDistKey === 'level'
+                            ? [
+                                '#5b79d1',
+                                '#84c66c',
+                                '#e8ba4a',
+                                '#e56666',
+                                '#6f8ef6',
+                                '#60cfc7',
+                              ]
+                            : [
+                                '#5b79d1',
+                                '#84c66c',
+                                '#e8ba4a',
+                                '#e56666',
+                                '#6f8ef6',
+                                '#60cfc7',
+                                '#a56ef5',
+                                '#ff9f43',
+                              ]
+                      }
+                    />
+                  ) : (
+                    <div className="dashboard-empty-block">
+                      <Empty description="暂无画像数据" />
+                    </div>
+                  )}
+                </section>
+
+                <section className="dashboard-local-card">
+                  <div className="dashboard-card-head">
+                    <div>
+                      <div className="dashboard-card-title">商城访问人数</div>
+                      <div className="dashboard-card-subtitle">
+                        {overviewSubtitle}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="dashboard-chip-row u-flex u-flex-wrap">
+                    <button
+                      type="button"
+                      className={mallVisitKey === 'visit' ? 'is-active' : ''}
+                      onClick={() => setMallVisitKey('visit')}
+                    >
+                      访客人数
+                    </button>
+                    <button
+                      type="button"
+                      className={mallVisitKey === 'trade' ? 'is-active' : ''}
+                      onClick={() => setMallVisitKey('trade')}
+                    >
+                      交易人数
+                    </button>
+                  </div>
+                  {mallData.length > 0 ? (
+                    <DashboardDonutChart
+                      data={mallData}
+                      colors={['#5470c6', '#91cc75', '#f6bd16', '#5ad8a6']}
+                      innerRadius={0.5}
+                      radius={0.7}
+                    />
+                  ) : (
+                    <div className="dashboard-empty-block">
+                      <Empty description="暂无人数数据" />
+                    </div>
+                  )}
+                </section>
+              </div>
+            </>
+          ) : null}
+        </div>
+
+        <aside className="dashboard-index-side">
+          {isMerchantView ? (
+            <>
+              <section className="dashboard-local-card dashboard-org-image-card">
+                <img
+                  className="dashboard-org-image"
+                  src={suifudaCard}
+                  alt="随付达服务卡片"
+                />
+              </section>
+
+              <section className="dashboard-local-card dashboard-org-card-bottom">
+                <div className="dashboard-org-block">
+                  <div className="dashboard-org-block-head u-flex-between">
+                    <span>门店数量</span>
+                    <button type="button">管理</button>
+                  </div>
+                  <div className="dashboard-org-block-value">10 / 10</div>
+                </div>
+
+                <div className="dashboard-org-divider" />
+
+                <div className="dashboard-org-block">
+                  <div className="dashboard-org-block-head u-flex-between">
+                    <span>插件数量</span>
+                    <button type="button">详情</button>
+                  </div>
+                  <div className="dashboard-org-block-value">40 / 41</div>
+                </div>
+              </section>
+            </>
+          ) : (
+            <section className="dashboard-local-card dashboard-pending-card">
+              <div className="dashboard-card-head">
+                <div className="dashboard-card-title">待办事项</div>
+              </div>
+              <div className="dashboard-pending-grid">
+                {pendingItems.map((item) => (
+                  <div key={item.key} className="dashboard-pending-item">
+                    <div className="dashboard-pending-value">{item.value}</div>
+                    <div className="dashboard-pending-label">{item.label}</div>
+                  </div>
+                ))}
               </div>
             </section>
+          )}
 
+          {isMerchantView ? (
+            <section className="dashboard-local-card">
+              <div className="dashboard-card-head">
+                <div className="dashboard-card-title">应用排行</div>
+              </div>
+              {rankingApps.length > 0 ? (
+                <ul className="dashboard-rank-list u-flex-col">
+                  {rankingApps.map((item, index) => (
+                    <li key={item.key} className="u-flex-center">
+                      <span className="dashboard-rank-badge u-inline-flex-middle">
+                        {index < 3 ? (
+                          <img
+                            className="dashboard-rank-badge-img"
+                            src={appRankBadges[index]}
+                            alt={item.name}
+                          />
+                        ) : item.icon ? (
+                          <img
+                            className="dashboard-rank-badge-img"
+                            src={item.icon}
+                            alt={item.name}
+                          />
+                        ) : (
+                          <span className="dashboard-rank-badge-fallback">
+                            {index + 1}
+                          </span>
+                        )}
+                      </span>
+                      <span className="dashboard-rank-meta u-flex-col">
+                        <span className="dashboard-rank-name">{item.name}</span>
+                        <span className="dashboard-rank-status">
+                          {item.status}
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="dashboard-empty-block">
+                  <Empty description="暂无排行数据" />
+                </div>
+              )}
+            </section>
+          ) : (
             <section className="dashboard-local-card dashboard-ranking-card">
               <div className="dashboard-card-head">
                 <div>
-                  <div className="dashboard-card-title">商品成交榜TOP</div>
+                  <div className="dashboard-card-title">商品成交榜</div>
                   <div className="dashboard-card-subtitle">
                     {overviewSubtitle}
                   </div>
@@ -1059,14 +1575,14 @@ const DashboardIndexPage: React.FC = () => {
                   className={goodsRankingSearchType === '1' ? 'is-active' : ''}
                   onClick={() => setGoodsRankingSearchType('1')}
                 >
-                  成交金额
+                  金额
                 </button>
                 <button
                   type="button"
                   className={goodsRankingSearchType === '2' ? 'is-active' : ''}
                   onClick={() => setGoodsRankingSearchType('2')}
                 >
-                  成交件数
+                  件数
                 </button>
               </div>
 
@@ -1095,20 +1611,7 @@ const DashboardIndexPage: React.FC = () => {
                                 item.rank
                               )}
                             </td>
-                            <td>
-                              <div className="dashboard-goods-rank-cell">
-                                {item.image ? (
-                                  <img
-                                    className="dashboard-goods-rank-image"
-                                    src={item.image}
-                                    alt={item.name}
-                                  />
-                                ) : null}
-                                <span className="dashboard-goods-rank-name">
-                                  {item.name}
-                                </span>
-                              </div>
-                            </td>
+                            <td>{item.name}</td>
                             <td>{item.value}</td>
                           </tr>
                         ))}
@@ -1123,261 +1626,7 @@ const DashboardIndexPage: React.FC = () => {
                 ) : null}
               </div>
             </section>
-
-            <section className="dashboard-local-card dashboard-ranking-card">
-              <div className="dashboard-card-head">
-                <div>
-                  <div className="dashboard-card-title">会员榜TOP</div>
-                  <div className="dashboard-card-subtitle">
-                    {overviewSubtitle}
-                  </div>
-                </div>
-              </div>
-
-              <div className="dashboard-chip-row u-flex u-flex-wrap">
-                <button
-                  type="button"
-                  className={
-                    memberRankingType === 'register' ? 'is-active' : ''
-                  }
-                  onClick={() => setMemberRankingType('register')}
-                >
-                  会员注册
-                </button>
-                <button
-                  type="button"
-                  className={memberRankingType === 'consume' ? 'is-active' : ''}
-                  onClick={() => setMemberRankingType('consume')}
-                >
-                  会员消费
-                </button>
-              </div>
-
-              <div className="dashboard-ranking-scroll">
-                <table className="dashboard-list-table">
-                  {memberRanking.length > 0 ? (
-                    <>
-                      <thead>
-                        <tr>
-                          <th>排名</th>
-                          <th>会员名称</th>
-                          <th>{memberRankingValueLabel}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {memberRanking.map((item) => (
-                          <tr key={`${item.rank}-${item.name}`}>
-                            <td>
-                              {item.rank <= 3 ? (
-                                <img
-                                  className="dashboard-table-rank-icon"
-                                  src={topRankBadges[item.rank - 1]}
-                                  alt=""
-                                />
-                              ) : (
-                                item.rank
-                              )}
-                            </td>
-                            <td>
-                              <div className="dashboard-goods-rank-cell">
-                                <span className="dashboard-goods-rank-name">
-                                  {item.name}
-                                </span>
-                              </div>
-                            </td>
-                            <td>{item.value}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </>
-                  ) : null}
-                </table>
-                {memberRanking.length === 0 ? (
-                  <div className="dashboard-empty-block">
-                    <Empty description="暂无排行数据" />
-                  </div>
-                ) : null}
-              </div>
-            </section>
-          </div>
-
-          <div className="dashboard-grid-row dashboard-grid-row-2">
-            <section className="dashboard-local-card dashboard-member-portrait-card">
-              <div className="dashboard-card-head">
-                <div>
-                  <div className="dashboard-card-title">会员分布</div>
-                  <div className="dashboard-card-subtitle">会员画像</div>
-                </div>
-              </div>
-              <div className="dashboard-chip-row u-flex u-flex-wrap">
-                <button
-                  type="button"
-                  className={memberDistKey === 'gender' ? 'is-active' : ''}
-                  onClick={() => setMemberDistKey('gender')}
-                >
-                  性别分布
-                </button>
-                <button
-                  type="button"
-                  className={memberDistKey === 'level' ? 'is-active' : ''}
-                  onClick={() => setMemberDistKey('level')}
-                >
-                  等级分布
-                </button>
-                <button
-                  type="button"
-                  className={memberDistKey === 'age' ? 'is-active' : ''}
-                  onClick={() => setMemberDistKey('age')}
-                >
-                  年龄列表
-                </button>
-              </div>
-              {memberPieData.length > 0 ? (
-                <DashboardDonutChart
-                  data={memberPieData}
-                  colors={
-                    memberDistKey === 'gender'
-                      ? ['#5b79d1', '#84c66c', '#e8ba4a']
-                      : memberDistKey === 'level'
-                        ? [
-                            '#5b79d1',
-                            '#84c66c',
-                            '#e8ba4a',
-                            '#e56666',
-                            '#6f8ef6',
-                            '#60cfc7',
-                          ]
-                        : [
-                            '#5b79d1',
-                            '#84c66c',
-                            '#e8ba4a',
-                            '#e56666',
-                            '#6f8ef6',
-                            '#60cfc7',
-                            '#a56ef5',
-                            '#ff9f43',
-                          ]
-                  }
-                />
-              ) : (
-                <div className="dashboard-empty-block">
-                  <Empty description="暂无画像数据" />
-                </div>
-              )}
-            </section>
-
-            <section className="dashboard-local-card">
-              <div className="dashboard-card-head">
-                <div>
-                  <div className="dashboard-card-title">商城访问人数</div>
-                  <div className="dashboard-card-subtitle">
-                    {overviewSubtitle}
-                  </div>
-                </div>
-              </div>
-              <div className="dashboard-chip-row u-flex u-flex-wrap">
-                <button
-                  type="button"
-                  className={mallVisitKey === 'visit' ? 'is-active' : ''}
-                  onClick={() => setMallVisitKey('visit')}
-                >
-                  访客人数
-                </button>
-                <button
-                  type="button"
-                  className={mallVisitKey === 'trade' ? 'is-active' : ''}
-                  onClick={() => setMallVisitKey('trade')}
-                >
-                  交易人数
-                </button>
-              </div>
-              {mallData.length > 0 ? (
-                <DashboardDonutChart
-                  data={mallData}
-                  colors={['#5470c6', '#91cc75', '#f6bd16', '#5ad8a6']}
-                  innerRadius={0.5}
-                  radius={0.7}
-                />
-              ) : (
-                <div className="dashboard-empty-block">
-                  <Empty description="暂无人数数据" />
-                </div>
-              )}
-            </section>
-          </div>
-        </div>
-
-        <aside className="dashboard-index-side">
-          <section className="dashboard-local-card dashboard-org-image-card">
-            <img
-              className="dashboard-org-image"
-              src={suifudaCard}
-              alt="随付达服务卡片"
-            />
-          </section>
-
-          <section className="dashboard-local-card dashboard-org-card-bottom">
-            <div className="dashboard-org-block">
-              <div className="dashboard-org-block-head u-flex-between">
-                <span>门店数量</span>
-                <button type="button">管理</button>
-              </div>
-              <div className="dashboard-org-block-value">10 / 10</div>
-            </div>
-
-            <div className="dashboard-org-divider" />
-
-            <div className="dashboard-org-block">
-              <div className="dashboard-org-block-head u-flex-between">
-                <span>插件数量</span>
-                <button type="button">详情</button>
-              </div>
-              <div className="dashboard-org-block-value">40 / 41</div>
-            </div>
-          </section>
-
-          <section className="dashboard-local-card">
-            <div className="dashboard-card-head">
-              <div className="dashboard-card-title">应用排行</div>
-            </div>
-            {rankingApps.length > 0 ? (
-              <ul className="dashboard-rank-list u-flex-col">
-                {rankingApps.map((item, index) => (
-                  <li key={item.key} className="u-flex-center">
-                    <span className="dashboard-rank-badge u-inline-flex-middle">
-                      {index < 3 ? (
-                        <img
-                          className="dashboard-rank-badge-img"
-                          src={appRankBadges[index]}
-                          alt={item.name}
-                        />
-                      ) : item.icon ? (
-                        <img
-                          className="dashboard-rank-badge-img"
-                          src={item.icon}
-                          alt={item.name}
-                        />
-                      ) : (
-                        <span className="dashboard-rank-badge-fallback">
-                          {index + 1}
-                        </span>
-                      )}
-                    </span>
-                    <span className="dashboard-rank-meta u-flex-col">
-                      <span className="dashboard-rank-name">{item.name}</span>
-                      <span className="dashboard-rank-status">
-                        {item.status}
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="dashboard-empty-block">
-                <Empty description="暂无排行数据" />
-              </div>
-            )}
-          </section>
+          )}
         </aside>
       </div>
     </div>
