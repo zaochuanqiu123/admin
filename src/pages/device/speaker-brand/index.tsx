@@ -1,21 +1,18 @@
 import {
   Alert,
   Button,
-  DatePicker,
   Empty,
   Input,
   Modal,
   message,
   Select,
-  Space,
   Switch,
   Table,
 } from 'antd';
-import type { RangePickerProps } from 'antd/es/date-picker';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
-import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  addSpeakerChannel,
   getSpeakerChannelDetail,
   getSpeakerChannelPageQuery,
   type SpeakerChannelRecord,
@@ -34,7 +31,6 @@ import {
 } from './components/SpeakerBrandModal';
 import './index.less';
 
-const { RangePicker } = DatePicker;
 const DEFAULT_PAGE_SIZE = 10;
 const SPEAKER_BRAND_PERMS = {
   add: 'admin:device:speakerChannel:add',
@@ -43,31 +39,33 @@ const SPEAKER_BRAND_PERMS = {
   delete: 'admin:device:speakerChannel:delete',
 } as const;
 
+function readText(...values: unknown[]) {
+  for (const value of values) {
+    const text = String(value || '').trim();
+    if (text) {
+      return text;
+    }
+  }
+  return '';
+}
+
+function getSpeakerChannelLogoUrl(record: SpeakerChannelRecord) {
+  const logo = String(record?.logo || '').trim();
+  return readText(
+    record?.logoUrl,
+    record?.logoImageUrl,
+    record?.logoAttachmentUrl,
+    record?.logoAttachment?.url,
+    record?.attachment?.url,
+    /^https?:\/\//i.test(logo) ? logo : '',
+  );
+}
+
 type QueryFilters = {
-  createTimeRange?: RangePickerProps['value'];
   state?: string;
   name: string;
   code: string;
 };
-
-function buildLocalRecordFromForm(
-  values: SpeakerBrandFormValues,
-  currentRecord?: SpeakerChannelRecord,
-): SpeakerChannelRecord {
-  return {
-    ...(currentRecord || {}),
-    id: String(currentRecord?.id || Date.now()),
-    name: values.name.trim(),
-    code: values.code.trim(),
-    logo: String(values.logo || '').trim() || undefined,
-    remark: String(values.remark || '').trim() || undefined,
-    config: String(values.config || '').trim(),
-    state: values.state ? 1 : 0,
-    createTime:
-      currentRecord?.createTime || dayjs().format('YYYY-MM-DD HH:mm:ss'),
-    updateTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
-  };
-}
 
 const SpeakerBrandPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -79,13 +77,11 @@ const SpeakerBrandPage: React.FC = () => {
   const [editingRecord, setEditingRecord] = useState<SpeakerChannelRecord>();
   const [detailLoadingId, setDetailLoadingId] = useState<string>();
   const [draftFilters, setDraftFilters] = useState<QueryFilters>({
-    createTimeRange: undefined,
     state: undefined,
     name: '',
     code: '',
   });
   const [filters, setFilters] = useState<QueryFilters>({
-    createTimeRange: undefined,
     state: undefined,
     name: '',
     code: '',
@@ -132,26 +128,6 @@ const SpeakerBrandPage: React.FC = () => {
     void loadBrandPage();
   }, [loadBrandPage]);
 
-  const filteredRecords = useMemo(() => {
-    return records.filter((record) => {
-      if (filters.createTimeRange?.[0] && filters.createTimeRange[1]) {
-        const createTime = dayjs(record?.createTime);
-        if (!createTime.isValid()) return false;
-        const start = filters.createTimeRange[0].startOf('day');
-        const end = filters.createTimeRange[1].endOf('day');
-        if (createTime.isBefore(start) || createTime.isAfter(end)) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [filters.createTimeRange, records]);
-
-  const filteredTotal = filters.createTimeRange
-    ? filteredRecords.length
-    : serverTotal;
-
   const initialListLoading = loading && !listInitialized;
   const refreshingList = loading && listInitialized;
 
@@ -179,7 +155,18 @@ const SpeakerBrandPage: React.FC = () => {
         title: 'LOGO',
         dataIndex: 'logo',
         width: 180,
-        render: (value) => value || '-',
+        render: (_, record) => {
+          const logoUrl = getSpeakerChannelLogoUrl(record);
+          return logoUrl ? (
+            <img
+              src={logoUrl}
+              alt="通道LOGO"
+              className="speaker-brand-logo-image"
+            />
+          ) : (
+            '-'
+          );
+        },
       },
       {
         title: '备注',
@@ -276,7 +263,6 @@ const SpeakerBrandPage: React.FC = () => {
 
   const handleReset = () => {
     const nextFilters: QueryFilters = {
-      createTimeRange: undefined,
       state: undefined,
       name: '',
       code: '',
@@ -342,28 +328,35 @@ const SpeakerBrandPage: React.FC = () => {
       return;
     }
 
-    const nextRecord = buildLocalRecordFromForm(values, editingRecord);
-    setRecords((prev) => {
-      const hasEditing = prev.some(
-        (item) => String(item.id) === String(editingRecord?.id),
+    try {
+      const res = await addSpeakerChannel(
+        {
+          name: values.name.trim(),
+          code: values.code.trim(),
+          logo: String(values.logo || '').trim() || undefined,
+          remark: String(values.remark || '').trim() || undefined,
+          config: String(values.config || '').trim(),
+          state: values.state ? 1 : 0,
+        },
+        {
+          skipErrorHandler: true,
+        },
       );
-      if (hasEditing) {
-        return prev.map((item) =>
-          String(item.id) === String(editingRecord?.id) ? nextRecord : item,
-        );
+      message.success(getApiMessage(res, '添加成功'));
+      setBrandModalOpen(false);
+      setEditingRecord(undefined);
+      if (current === 1) {
+        await loadBrandPage();
+      } else {
+        setPagination((prev) => ({
+          ...prev,
+          current: 1,
+        }));
       }
-      return [nextRecord, ...prev];
-    });
-    if (!editingRecord) {
-      setServerTotal((prev) => prev + 1);
+    } catch (error) {
+      console.error('add speaker channel failed:', error);
+      message.error(getErrorMessage(error, '添加音响通道失败'));
     }
-    message.success(
-      editingRecord
-        ? '通道已更新，保存接口后续再补。'
-        : '通道已添加，保存接口后续再补。',
-    );
-    setBrandModalOpen(false);
-    setEditingRecord(undefined);
   };
 
   return (
@@ -373,21 +366,6 @@ const SpeakerBrandPage: React.FC = () => {
         onSearch={handleSearch}
         onReset={handleReset}
         fields={[
-          {
-            key: 'createTimeRange',
-            label: '创建时间',
-            content: (
-              <RangePicker
-                value={draftFilters.createTimeRange}
-                onChange={(value) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    createTimeRange: value || undefined,
-                  }));
-                }}
-              />
-            ),
-          },
           {
             key: 'state',
             label: '状态',
@@ -472,14 +450,14 @@ const SpeakerBrandPage: React.FC = () => {
             rowKey="id"
             loading={refreshingList}
             columns={columns}
-            dataSource={filteredRecords}
+            dataSource={records}
             scroll={{ x: 1280 }}
             locale={{
               emptyText: <Empty description="暂无音响通道数据" />,
             }}
             pagination={{
               ...pagination,
-              total: filteredTotal,
+              total: serverTotal,
               onChange: (nextCurrent, nextPageSize) => {
                 setPagination((prev) => ({
                   ...prev,

@@ -602,6 +602,11 @@ body .ant-layout-sider .ant-layout-sider-children>div {
   color: inherit !important;
 }
 
+.dashboard-home-split-menu-ant>.ant-menu-item-selected:hover .ant-menu-title-content,
+.dashboard-home-split-menu-ant>.ant-menu-item-selected.ant-menu-item-active .ant-menu-title-content {
+  color: var(--ant-color-primary) !important;
+}
+
 .dashboard-home-split-menu-ant .ant-menu-item::after,
 .dashboard-home-split-menu-ant .ant-menu-submenu-title::after {
   border-right: none !important;
@@ -912,6 +917,11 @@ body .ant-layout-sider .ant-layout-sider-children>div {
   color: inherit !important;
 }
 
+.other-menus-split-menu-ant>.ant-menu-item-selected:hover .ant-menu-title-content,
+.other-menus-split-menu-ant>.ant-menu-item-selected.ant-menu-item-active .ant-menu-title-content {
+  color: var(--ant-color-primary) !important;
+}
+
 .other-menus-split-menu-ant .ant-menu-item::after,
 .other-menus-split-menu-ant .ant-menu-submenu-title::after {
   border-right: none !important;
@@ -941,7 +951,7 @@ body .ant-layout-sider .ant-layout-sider-children>div {
   border-radius: 0;
 }
 
-/* 非工作台分栏：单侧边栏容器内左右布局（不是两个独立卡片） */
+/* 非系统首页分栏：单侧边栏容器内左右布局（不是两个独立卡片） */
 .plain-sider-split-content .dashboard-home-split-menu {
   gap: 0;
 }
@@ -1035,7 +1045,7 @@ body .ant-layout-sider .ant-layout-sider-children>div {
   max-width: none !important;
 }
 
-/* 非工作台：二级菜单图标与文字对齐（跟工作台侧栏体验一致） */
+/* 非系统首页：二级菜单图标与文字对齐（跟系统首页侧栏体验一致） */
 .plain-sider-menu-content .ant-menu-submenu-title {
   display: flex;
   align-items: center;
@@ -1064,20 +1074,20 @@ body .ant-layout-sider .ant-layout-sider-children>div {
   margin-right: 8px !important;
 }
 
-/* 非工作台：字体默认色与工作台一致 */
+/* 非系统首页：字体默认色与系统首页一致 */
 .plain-sider-menu-content .ant-menu-item,
 .plain-sider-menu-content .ant-menu-submenu-title {
   color: rgba(0, 0, 0, 0.88) !important;
 }
 
-/* 非工作台：选中叶子菜单文字色与工作台一致 */
+/* 非系统首页：选中叶子菜单文字色与系统首页一致 */
 .plain-sider-menu-content .ant-menu-item-selected,
 .plain-sider-menu-content .ant-menu-item-selected .ant-menu-title-content,
 .plain-sider-menu-content .ant-menu-item-selected * {
   color: var(--ant-color-primary) !important;
 }
 
-/* 非工作台：父级菜单保持常规态（不加粗、不变强调色） */
+/* 非系统首页：父级菜单保持常规态（不加粗、不变强调色） */
 .plain-sider-menu-content .ant-menu-submenu-selected>.ant-menu-submenu-title,
 .plain-sider-menu-content .ant-menu-submenu-open>.ant-menu-submenu-title,
 .plain-sider-menu-content .ant-menu-submenu-active>.ant-menu-submenu-title {
@@ -1309,7 +1319,7 @@ body.theme-black-mode .business-switch-pill {
   background: var(--ant-color-bg-container) !important;
 }
 
-/* 工作台左上 AI 卡片样式 */
+/* 系统首页左上 AI 卡片样式 */
 .workplace-user-info-card {
   display: flex;
   align-items: stretch;

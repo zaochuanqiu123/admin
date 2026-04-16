@@ -83,6 +83,13 @@ function isPathMatch(basePath: string | undefined, pathname: string): boolean {
   return current === base || current.startsWith(`${base}/`);
 }
 
+function isDashboardHomeNode(node: MenuNode): boolean {
+  const normalizedPath = normalizePath(node.path);
+  return (
+    normalizedPath === '/dashboard' || normalizedPath === '/dashboard/index'
+  );
+}
+
 function buildNodes(
   items: MenuDataItem[] | undefined,
   parentKey: string,
@@ -356,10 +363,9 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
           key: node.key,
           label: node.name,
           icon: undefined,
-          className:
-            node.name === '工作台'
-              ? 'dashboard-home-workplace-font'
-              : undefined,
+          className: isDashboardHomeNode(node)
+            ? 'dashboard-home-workplace-font'
+            : undefined,
           children,
         };
       };

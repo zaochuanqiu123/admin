@@ -1,4 +1,5 @@
 import { request } from '@umijs/max';
+import { getSelectedOrgCode, getToken } from '@/api/storage';
 import { handleAuthExpiredByCode } from '@/utils/auth-expired';
 
 type AnyRecord = Record<string, any>;
@@ -27,6 +28,113 @@ type AnyRecord = Record<string, any>;
 
 function isRecord(v: unknown): v is AnyRecord {
   return typeof v === 'object' && v !== null;
+}
+
+function isFormData(value: unknown): value is FormData {
+  return typeof FormData !== 'undefined' && value instanceof FormData;
+}
+
+function toFormData(data: unknown): FormData {
+  if (isFormData(data)) {
+    return data;
+  }
+
+  const formData = new FormData();
+  if (!isRecord(data)) {
+    return formData;
+  }
+
+  const appendValue = (key: string, value: unknown) => {
+    if (value === undefined || value === null) {
+      return;
+    }
+    if (typeof File !== 'undefined' && value instanceof File) {
+      formData.append(key, value, value.name);
+      return;
+    }
+    if (value instanceof Blob) {
+      formData.append(key, value);
+      return;
+    }
+    formData.append(key, String(value));
+  };
+
+  Object.entries(data).forEach(([key, value]) => {
+    if (value === undefined || value === null) {
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((item) => {
+        appendValue(key, item);
+      });
+      return;
+    }
+    appendValue(key, value);
+  });
+
+  return formData;
+}
+
+function parseResponseText(text: string) {
+  if (!text) {
+    return {};
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+function requestFormData<TResponse>(
+  url: string,
+  options: { [key: string]: any },
+): Promise<TResponse> {
+  const formData = toFormData(options.data);
+  const token = getToken();
+  const orgCode = getSelectedOrgCode();
+  const hasAuthorizationHeader = Boolean(options.headers?.Authorization);
+  const headers = {
+    ...(options.headers || {}),
+    ...(!hasAuthorizationHeader && token
+      ? { Authorization: `Bearer ${token}` }
+      : {}),
+    ...(orgCode ? { 'X-Org-Code': orgCode } : {}),
+  };
+  delete (headers as Record<string, any>)['Content-Type'];
+  delete (headers as Record<string, any>)['content-type'];
+
+  return new Promise<TResponse>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(String(options.method || 'GET'), url);
+    Object.entries(headers).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        xhr.setRequestHeader(key, String(value));
+      }
+    });
+    xhr.onload = () => {
+      const responseBody = parseResponseText(xhr.responseText);
+      if (xhr.status < 200 || xhr.status >= 300) {
+        const error: any = new Error(
+          String(
+            (isRecord(responseBody) &&
+              (responseBody.message || responseBody.msg)) ||
+              xhr.statusText ||
+              'Request failed',
+          ),
+        );
+        error.response = {
+          status: xhr.status,
+          data: responseBody,
+        };
+        reject(error);
+        return;
+      }
+      resolve(responseBody as TResponse);
+    };
+    xhr.onerror = () => reject(new Error('Request failed'));
+    xhr.send(formData);
+  });
 }
 
 type ApiErrorInfo = {
@@ -66,14 +174,15 @@ export async function apiRequest<TResponse = any>(
   url: string,
   options?: { [key: string]: any },
 ): Promise<TResponse> {
-  /**
-   * 说明：
-   * - 这里直接调用 Umi request（底层 axios）。
-   * - requestInterceptors / errorHandler 等全局逻辑在 src/requestErrorConfig.ts 中配置。
-   */
-  const res = await request<TResponse>(url, {
-    ...(options || {}),
-  });
+  const requestOptions = { ...(options || {}) };
+  const isFormDataRequest = requestOptions.requestType === 'form-data';
+  delete requestOptions.requestType;
+
+  const res = isFormDataRequest
+    ? await requestFormData<TResponse>(url, requestOptions)
+    : await request<TResponse>(url, {
+        ...requestOptions,
+      });
 
   if (isRecord(res)) {
     if (isCodeResponse(res)) {

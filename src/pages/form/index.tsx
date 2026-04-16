@@ -680,6 +680,9 @@ const StorePage: React.FC = () => {
               type="primary"
               shape="round"
               className="overview-primary-btn"
+              onClick={() => {
+                history.push('/permission/store-staff');
+              }}
             >
               管理店员
             </Button>

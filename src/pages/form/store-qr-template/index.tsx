@@ -3,12 +3,12 @@ import {
   PlusOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
+import { Ecc, QrCode } from '@rc-component/qrcode/es/libs/qrcodegen';
 import type { UploadProps } from 'antd';
 import {
   Alert,
   Button,
   ColorPicker,
-  DatePicker,
   Drawer,
   Empty,
   Form,
@@ -27,9 +27,7 @@ import {
   Table,
   Upload,
 } from 'antd';
-import type { RangePickerProps } from 'antd/es/date-picker';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
-import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addQrCodeTemplate,
@@ -45,19 +43,10 @@ import {
   PermissionButton,
   PermissionVisible,
 } from '@/components';
+import { uploadImageAttachment } from '@/pages/form/shared/upload';
 import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
 import './index.less';
 
-// 临时挡板：前端假装上传成功并返回一个固定图片 URL
-const mockUploadImage = async (_base64Data: string): Promise<string> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve('https://dummyimage.com/600x400/1890ff/ffffff.png');
-    }, 800);
-  });
-};
-
-const { RangePicker } = DatePicker;
 const QR_TEMPLATE_PERMS = {
   add: 'admin:device:qrcodeTemplate:add',
   update: 'admin:device:qrcodeTemplate:update',
@@ -67,8 +56,6 @@ const QR_TEMPLATE_PERMS = {
 type QueryFilters = {
   name: string;
   state?: string;
-  showSn?: string;
-  createTimeRange?: RangePickerProps['value'];
 };
 
 type EditorSelection = 'qrcode' | 'codeText' | null;
@@ -81,6 +68,7 @@ type EditorStateModel = {
     x: number;
     y: number;
     size: number;
+    color: string;
   };
   codeText: {
     offsetY: number;
@@ -111,6 +99,9 @@ type CropDraft = {
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_CANVAS_WIDTH = 500;
 const MAX_CANVAS_HEIGHT = 600;
+const QR_TEMPLATE_PREVIEW_VALUE =
+  'https://demo.suifida.local/pay/template-preview';
+const QR_TEMPLATE_PREVIEW_SN = 'NO. 20260320';
 
 const DEFAULT_EDITOR_STATE: EditorStateModel = {
   canvasWidth: 320,
@@ -120,6 +111,7 @@ const DEFAULT_EDITOR_STATE: EditorStateModel = {
     x: 88,
     y: 112,
     size: 144,
+    color: '#000000',
   },
   codeText: {
     offsetY: 14,
@@ -151,10 +143,90 @@ function clampCodeTextOffset(
 function loadImage(url: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new window.Image();
+    image.crossOrigin = 'anonymous';
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error('load image failed'));
     image.src = url;
   });
+}
+
+function canvasToFile(canvas: HTMLCanvasElement, fileName: string) {
+  return new Promise<File>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error('canvas blob unavailable'));
+        return;
+      }
+      resolve(new File([blob], fileName, { type: blob.type || 'image/png' }));
+    }, 'image/png');
+  });
+}
+
+function drawPreviewQrCode(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  color: string,
+) {
+  const qrCode = QrCode.encodeText(QR_TEMPLATE_PREVIEW_VALUE, Ecc.MEDIUM);
+  const modules = qrCode.getModules();
+  const moduleCount = qrCode.size;
+  const marginModules = 0;
+  const totalModules = moduleCount + marginModules * 2;
+  const moduleSize = size / totalModules;
+
+  context.fillStyle = color;
+  modules.forEach((row, rowIndex) => {
+    row.forEach((enabled, columnIndex) => {
+      if (!enabled) return;
+      context.fillRect(
+        x + (columnIndex + marginModules) * moduleSize,
+        y + (rowIndex + marginModules) * moduleSize,
+        Math.ceil(moduleSize),
+        Math.ceil(moduleSize),
+      );
+    });
+  });
+}
+
+async function createTemplatePreviewFile(
+  state: EditorStateModel,
+  backgroundImage: string,
+) {
+  const image = await loadImage(backgroundImage);
+  const canvas = document.createElement('canvas');
+  canvas.width = state.canvasWidth;
+  canvas.height = state.canvasHeight;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('canvas context unavailable');
+
+  context.drawImage(image, 0, 0, state.canvasWidth, state.canvasHeight);
+
+  const qrBox = state.qrcode;
+  drawPreviewQrCode(context, qrBox.x, qrBox.y, qrBox.size, qrBox.color);
+
+  if (state.showCodeText) {
+    const codeTextTop = qrBox.y + qrBox.size + state.codeText.offsetY;
+    const textHeight = Math.max(28, state.codeText.fontSize * 1.4 + 8);
+    context.save();
+    context.font = `600 ${state.codeText.fontSize}px sans-serif`;
+    context.fillStyle = state.codeText.color;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.shadowColor = 'rgba(255, 255, 255, 0.72)';
+    context.shadowBlur = 1;
+    context.shadowOffsetY = 1;
+    context.fillText(
+      QR_TEMPLATE_PREVIEW_SN,
+      qrBox.x + qrBox.size / 2,
+      codeTextTop + textHeight / 2,
+      qrBox.size,
+    );
+    context.restore();
+  }
+
+  return canvasToFile(canvas, 'qr-template-preview.png');
 }
 
 function revokeObjectUrl(url?: string | null) {
@@ -175,6 +247,50 @@ function getStateLabel(state?: number) {
 
 function buildPreviewImage(record: QrCodeTemplateRecord) {
   return String(record?.prevImageUrl || record?.prevImage || '').trim();
+}
+
+function readText(...values: unknown[]) {
+  for (const value of values) {
+    const text = String(value || '').trim();
+    if (text) return text;
+  }
+  return '';
+}
+
+function getAttachmentId(
+  attachment: Awaited<ReturnType<typeof uploadImageAttachment>>,
+) {
+  return String(attachment?.id || '').trim();
+}
+
+function getAttachmentUrl(
+  attachment: Awaited<ReturnType<typeof uploadImageAttachment>>,
+) {
+  return String(attachment?.url || '').trim();
+}
+
+function getBackgroundImageUrl(data: any) {
+  return readText(
+    data?.bgConfig?.imageUrl,
+    data?.bgConfig?.url,
+    data?.bgConfig?.imageAttachmentUrl,
+    data?.bgConfig?.imageAttachment?.url,
+    data?.bgConfig?.attachment?.url,
+    data?.backgroundImageUrl,
+    data?.bgImageUrl,
+  );
+}
+
+function getBackgroundImageAttachmentId(data: any) {
+  return readText(
+    data?.bgConfig?.imageAttachmentId,
+    data?.bgConfig?.attachmentId,
+    data?.bgConfig?.imageId,
+    data?.bgConfig?.imageAttachment?.id,
+    data?.bgConfig?.attachment?.id,
+    data?.backgroundImageAttachmentId,
+    data?.bgImageAttachmentId,
+  );
 }
 
 const QrTemplateListPage: React.FC = () => {
@@ -207,14 +323,10 @@ const QrTemplateListPage: React.FC = () => {
   const [draftFilters, setDraftFilters] = useState<QueryFilters>({
     name: '',
     state: undefined,
-    showSn: undefined,
-    createTimeRange: undefined,
   });
   const [filters, setFilters] = useState<QueryFilters>({
     name: '',
     state: undefined,
-    showSn: undefined,
-    createTimeRange: undefined,
   });
   const [pagination, setPagination] = useState<TablePaginationConfig>({
     current: 1,
@@ -224,6 +336,9 @@ const QrTemplateListPage: React.FC = () => {
   });
   const backgroundObjectUrlRef = useRef<string | null>(null);
   const backgroundSourceObjectUrlRef = useRef<string | null>(null);
+  const backgroundFileRef = useRef<File | null>(null);
+  const backgroundUploadedAttachmentIdRef = useRef<string | null>(null);
+  const backgroundUploadedUrlRef = useRef<string | null>(null);
 
   const current = pagination.current || 1;
   const pageSize = pagination.pageSize || DEFAULT_PAGE_SIZE;
@@ -233,6 +348,9 @@ const QrTemplateListPage: React.FC = () => {
     backgroundObjectUrlRef.current = null;
     revokeObjectUrl(backgroundSourceObjectUrlRef.current);
     backgroundSourceObjectUrlRef.current = null;
+    backgroundFileRef.current = null;
+    backgroundUploadedAttachmentIdRef.current = null;
+    backgroundUploadedUrlRef.current = null;
   }, []);
 
   const clearBackgroundPreview = useCallback(() => {
@@ -415,30 +533,9 @@ const QrTemplateListPage: React.FC = () => {
         }
       }
 
-      if (filters.showSn !== undefined && filters.showSn !== '') {
-        if (
-          String(Number(record?.qrcodeSnConfig?.isShow ?? 0)) !==
-          String(filters.showSn)
-        ) {
-          return false;
-        }
-      }
-
-      const range = filters.createTimeRange;
-      if (range?.[0] && range[1] && record?.createTime) {
-        const createTime = dayjs(record.createTime);
-        if (createTime.isValid()) {
-          const start = range[0].startOf('day');
-          const end = range[1].endOf('day');
-          if (createTime.isBefore(start) || createTime.isAfter(end)) {
-            return false;
-          }
-        }
-      }
-
       return true;
     });
-  }, [filters.createTimeRange, filters.showSn, filters.state, records]);
+  }, [filters.state, records]);
 
   const columns = useMemo<ColumnsType<QrCodeTemplateRecord>>(
     () => [
@@ -567,8 +664,6 @@ const QrTemplateListPage: React.FC = () => {
     const nextFilters: QueryFilters = {
       name: '',
       state: undefined,
-      showSn: undefined,
-      createTimeRange: undefined,
     };
     setDraftFilters(nextFilters);
     setFilters(nextFilters);
@@ -578,10 +673,7 @@ const QrTemplateListPage: React.FC = () => {
     }));
   };
 
-  const filteredTotal =
-    filters.state || filters.showSn || filters.createTimeRange
-      ? filteredRecords.length
-      : serverTotal;
+  const filteredTotal = filters.state ? filteredRecords.length : serverTotal;
   const initialListLoading = loading && !listInitialized;
   const refreshingList = loading && listInitialized;
 
@@ -605,6 +697,8 @@ const QrTemplateListPage: React.FC = () => {
       });
       if (!res) throw new Error('Query detail empty');
       const data = res as any;
+      const backgroundImageUrl = getBackgroundImageUrl(data);
+      const backgroundImageAttachmentId = getBackgroundImageAttachmentId(data);
 
       setEditingTemplateId(id);
 
@@ -618,11 +712,12 @@ const QrTemplateListPage: React.FC = () => {
       setEditorState({
         canvasWidth: data.bgConfig?.w || 320,
         canvasHeight: data.bgConfig?.h || 420,
-        backgroundImage: data.bgConfig?.imageUrl || null,
+        backgroundImage: backgroundImageUrl || null,
         qrcode: {
           x: data.qrcodeImageConfig?.x || 88,
           y: data.qrcodeImageConfig?.y || 112,
           size: data.qrcodeImageConfig?.w || 144,
+          color: data.qrcodeImageConfig?.color || '#000000',
         },
         codeText: {
           offsetY: data.qrcodeSnConfig?.y || 14,
@@ -631,6 +726,9 @@ const QrTemplateListPage: React.FC = () => {
         },
         showCodeText: data.qrcodeSnConfig?.isShow === 1,
       });
+      backgroundUploadedAttachmentIdRef.current =
+        backgroundImageAttachmentId || null;
+      backgroundUploadedUrlRef.current = backgroundImageUrl || null;
 
       setDrawerOpen(true);
     } catch (error) {
@@ -734,6 +832,16 @@ const QrTemplateListPage: React.FC = () => {
     }));
   };
 
+  const handleQrcodeColorChange = (color: string) => {
+    setEditorState((prev) => ({
+      ...prev,
+      qrcode: {
+        ...prev.qrcode,
+        color,
+      },
+    }));
+  };
+
   const backgroundUploadProps: UploadProps = {
     accept: 'image/*',
     showUploadList: false,
@@ -803,12 +911,30 @@ const QrTemplateListPage: React.FC = () => {
         imageDrawHeight * ratioY,
       );
 
-      const dataUrl = exportCanvas.toDataURL('image/png');
+      const backgroundFile = await canvasToFile(
+        exportCanvas,
+        'qr-template-bg.png',
+      );
+      const previewUrl = URL.createObjectURL(backgroundFile);
+      const backgroundImageAttachment = await uploadImageAttachment(
+        backgroundFile,
+        'qr-template-bg.png',
+      );
+      const backgroundImageAttachmentId = getAttachmentId(
+        backgroundImageAttachment,
+      );
+      const backgroundImageUrl = getAttachmentUrl(backgroundImageAttachment);
+      if (!backgroundImageAttachmentId) {
+        throw new Error('上传接口未返回背景图附件 ID');
+      }
       revokeObjectUrl(backgroundObjectUrlRef.current);
-      backgroundObjectUrlRef.current = dataUrl;
+      backgroundObjectUrlRef.current = previewUrl;
+      backgroundFileRef.current = backgroundFile;
+      backgroundUploadedAttachmentIdRef.current = backgroundImageAttachmentId;
+      backgroundUploadedUrlRef.current = backgroundImageUrl;
       setEditorState((prev) => ({
         ...prev,
-        backgroundImage: dataUrl,
+        backgroundImage: previewUrl,
       }));
       setCropModalOpen(false);
       setCropDragState(null);
@@ -827,7 +953,7 @@ const QrTemplateListPage: React.FC = () => {
 
       const payload = {
         name: values.name,
-        prevImageUrl: '',
+        prevImageAttachmentId: '',
         qrcodeSnConfig: {
           isShow: values.showSn ? 1 : 0,
           size: editorState.codeText.fontSize,
@@ -839,24 +965,53 @@ const QrTemplateListPage: React.FC = () => {
           h: editorState.qrcode.size,
           x: editorState.qrcode.x,
           y: editorState.qrcode.y,
+          color: editorState.qrcode.color,
         },
         bgConfig: {
           w: editorState.canvasWidth,
           h: editorState.canvasHeight,
-          imageUrl: '',
+          imageAttachmentId: '',
         },
         remark: values.remark || '',
         state: values.state,
       };
 
       if (editorState.backgroundImage) {
-        // TODO: 等后端上传接口 OK 后，在此替换真实 axios 上传
-        let uploadedUrl = editorState.backgroundImage;
-        if (uploadedUrl.startsWith('data:image')) {
-          uploadedUrl = await mockUploadImage(editorState.backgroundImage);
+        let backgroundImageAttachmentId =
+          backgroundUploadedAttachmentIdRef.current || '';
+        if (!backgroundImageAttachmentId && backgroundFileRef.current) {
+          const backgroundImageAttachment = await uploadImageAttachment(
+            backgroundFileRef.current,
+            'qr-template-bg.png',
+          );
+          backgroundImageAttachmentId = getAttachmentId(
+            backgroundImageAttachment,
+          );
+          backgroundUploadedAttachmentIdRef.current =
+            backgroundImageAttachmentId;
+          backgroundUploadedUrlRef.current = getAttachmentUrl(
+            backgroundImageAttachment,
+          );
         }
-        payload.prevImageUrl = uploadedUrl;
-        payload.bgConfig.imageUrl = uploadedUrl;
+        if (!backgroundImageAttachmentId) {
+          throw new Error('上传接口未返回背景图附件 ID');
+        }
+        const previewFile = await createTemplatePreviewFile(
+          editorState,
+          editorState.backgroundImage,
+        );
+        const previewImageAttachment = await uploadImageAttachment(
+          previewFile,
+          'qr-template-preview.png',
+        );
+        const previewImageAttachmentId = String(
+          previewImageAttachment?.id || '',
+        ).trim();
+        if (!previewImageAttachmentId) {
+          throw new Error('上传接口未返回预览图附件 ID');
+        }
+        payload.prevImageAttachmentId = previewImageAttachmentId;
+        payload.bgConfig.imageAttachmentId = backgroundImageAttachmentId;
       }
 
       if (editingTemplateId) {
@@ -957,21 +1112,6 @@ const QrTemplateListPage: React.FC = () => {
             ),
           },
           {
-            key: 'createTimeRange',
-            label: '创建时间',
-            content: (
-              <RangePicker
-                value={draftFilters.createTimeRange}
-                onChange={(value) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    createTimeRange: value || undefined,
-                  }));
-                }}
-              />
-            ),
-          },
-          {
             key: 'state',
             label: '状态',
             content: (
@@ -987,27 +1127,6 @@ const QrTemplateListPage: React.FC = () => {
                   setDraftFilters((prev) => ({
                     ...prev,
                     state: value,
-                  }));
-                }}
-              />
-            ),
-          },
-          {
-            key: 'showSn',
-            label: '显示编号',
-            content: (
-              <Select
-                allowClear
-                placeholder="请选择"
-                value={draftFilters.showSn}
-                options={[
-                  { label: '显示', value: '1' },
-                  { label: '隐藏', value: '0' },
-                ]}
-                onChange={(value) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    showSn: value,
                   }));
                 }}
               />
@@ -1109,6 +1228,17 @@ const QrTemplateListPage: React.FC = () => {
                     ]}
                   />
                 </Form.Item>
+                <Form.Item label="备注" name="remark">
+                  <Input.TextArea
+                    rows={4}
+                    placeholder="请输入备注"
+                    maxLength={200}
+                  />
+                </Form.Item>
+              </div>
+
+              <div className="qr-template-editor-card">
+                <div className="qr-template-editor-card-title">编码设置</div>
                 <Form.Item
                   label="显示编码"
                   name="showSn"
@@ -1150,60 +1280,76 @@ const QrTemplateListPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <Form.Item label="备注" name="remark">
-                  <Input.TextArea
-                    rows={4}
-                    placeholder="请输入备注"
-                    maxLength={200}
-                  />
-                </Form.Item>
+              </div>
+
+              <div className="qr-template-editor-card">
+                <div className="qr-template-editor-card-title">二维码设置</div>
+                <div className="qr-template-editor-grid">
+                  <div className="qr-template-editor-control">
+                    <span className="qr-template-editor-label">二维码颜色</span>
+                    <div className="qr-template-editor-color-control">
+                      <ColorPicker
+                        value={editorState.qrcode.color}
+                        showText
+                        onChange={(_, hex) => {
+                          handleQrcodeColorChange(hex);
+                        }}
+                      />
+                      <div
+                        className="qr-template-editor-color-preview"
+                        style={{ backgroundColor: editorState.qrcode.color }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="qr-template-editor-card">
+                <div className="qr-template-editor-card-title">画布设置</div>
+                <div className="qr-template-editor-grid">
+                  <div className="qr-template-editor-control">
+                    <span className="qr-template-editor-label">画布宽度</span>
+                    <InputNumber
+                      min={120}
+                      max={MAX_CANVAS_WIDTH}
+                      addonAfter="px"
+                      value={editorState.canvasWidth}
+                      onChange={handleCanvasWidthChange}
+                    />
+                  </div>
+                  <div className="qr-template-editor-control">
+                    <span className="qr-template-editor-label">画布高度</span>
+                    <InputNumber
+                      min={120}
+                      max={MAX_CANVAS_HEIGHT}
+                      addonAfter="px"
+                      value={editorState.canvasHeight}
+                      onChange={handleCanvasHeightChange}
+                    />
+                  </div>
+                </div>
+                <div className="qr-template-editor-limit-note">
+                  当前先限制为宽 {MAX_CANVAS_WIDTH}px、高 {MAX_CANVAS_HEIGHT}
+                  px。
+                </div>
+                <div className="qr-template-editor-actions">
+                  <Upload {...backgroundUploadProps}>
+                    <Button icon={<UploadOutlined />}>
+                      {editorState.backgroundImage
+                        ? '重新上传背景图'
+                        : '上传背景图'}
+                    </Button>
+                  </Upload>
+                  <Button
+                    icon={<DeleteOutlined />}
+                    disabled={!editorState.backgroundImage}
+                    onClick={clearBackgroundPreview}
+                  >
+                    删除背景图
+                  </Button>
+                </div>
               </div>
             </Form>
-
-            <div className="qr-template-editor-card">
-              <div className="qr-template-editor-card-title">画布设置</div>
-              <div className="qr-template-editor-grid">
-                <div className="qr-template-editor-control">
-                  <span className="qr-template-editor-label">画布宽度</span>
-                  <InputNumber
-                    min={120}
-                    max={MAX_CANVAS_WIDTH}
-                    addonAfter="px"
-                    value={editorState.canvasWidth}
-                    onChange={handleCanvasWidthChange}
-                  />
-                </div>
-                <div className="qr-template-editor-control">
-                  <span className="qr-template-editor-label">画布高度</span>
-                  <InputNumber
-                    min={120}
-                    max={MAX_CANVAS_HEIGHT}
-                    addonAfter="px"
-                    value={editorState.canvasHeight}
-                    onChange={handleCanvasHeightChange}
-                  />
-                </div>
-              </div>
-              <div className="qr-template-editor-limit-note">
-                当前先限制为宽 {MAX_CANVAS_WIDTH}px、高 {MAX_CANVAS_HEIGHT}px。
-              </div>
-              <div className="qr-template-editor-actions">
-                <Upload {...backgroundUploadProps}>
-                  <Button icon={<UploadOutlined />}>
-                    {editorState.backgroundImage
-                      ? '重新上传背景图'
-                      : '上传背景图'}
-                  </Button>
-                </Upload>
-                <Button
-                  icon={<DeleteOutlined />}
-                  disabled={!editorState.backgroundImage}
-                  onClick={clearBackgroundPreview}
-                >
-                  删除背景图
-                </Button>
-              </div>
-            </div>
           </div>
 
           <div className="qr-template-editor-preview-pane">
@@ -1266,7 +1412,10 @@ const QrTemplateListPage: React.FC = () => {
                   >
                     <QRCode
                       value="https://demo.suifida.local/pay/template-preview"
-                      size={Math.max(72, editorState.qrcode.size - 14)}
+                      size={editorState.qrcode.size}
+                      color={editorState.qrcode.color}
+                      bgColor="transparent"
+                      marginSize={0}
                       bordered={false}
                     />
                     {activeSelection === 'qrcode' ? (

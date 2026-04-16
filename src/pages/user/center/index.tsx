@@ -5,7 +5,7 @@ import {
   PlusOutlined,
 } from '@ant-design/icons';
 import { GridContent } from '@ant-design/pro-components';
-import { useModel, useRequest } from '@umijs/max';
+import { useModel } from '@umijs/max';
 import {
   Avatar,
   Card,
@@ -22,7 +22,6 @@ import Applications from './components/Applications';
 import Articles from './components/Articles';
 import Projects from './components/Projects';
 import type { CurrentUser, TagType, tabKeyType } from './data.d';
-import { queryCurrent } from './service';
 
 const operationTabList = [
   {
@@ -146,16 +145,10 @@ const Center: React.FC = () => {
   const cachedUser = initialState?.currentUser as
     | Partial<CurrentUser>
     | undefined;
-
-  //  获取用户信息
-  const { data: currentUser, loading } = useRequest(() => {
-    return queryCurrent();
-  });
-
-  const displayName = currentUser?.name || cachedUser?.name;
-  const displayAvatar = currentUser?.avatar || cachedUser?.avatar;
-  const effectiveUser =
-    (currentUser as Partial<CurrentUser> | undefined) || cachedUser;
+  const loading = false;
+  const effectiveUser = cachedUser;
+  const displayName = effectiveUser?.name;
+  const displayAvatar = effectiveUser?.avatar;
 
   //  渲染用户信息
   const renderUserInfo = ({
@@ -243,13 +236,13 @@ const Center: React.FC = () => {
                   {displayName ? (
                     <div className={styles.name}>{displayName}</div>
                   ) : null}
-                  <div>{currentUser?.signature}</div>
+                  <div>{effectiveUser?.signature}</div>
                 </div>
-                {currentUser && (
+                {effectiveUser && (
                   <>
-                    {renderUserInfo(currentUser)}
+                    {renderUserInfo(effectiveUser)}
                     <Divider dashed />
-                    <TagList tags={currentUser.tags || []} />
+                    <TagList tags={effectiveUser.tags || []} />
                     <Divider
                       style={{
                         marginTop: 16,
@@ -259,7 +252,7 @@ const Center: React.FC = () => {
                     <div className={styles.team}>
                       <div className={styles.teamTitle}>团队</div>
                       <Row gutter={36}>
-                        {currentUser.notice?.map((item) => (
+                        {effectiveUser.notice?.map((item) => (
                           <Col key={item.id} lg={24} xl={12}>
                             <a href={item.href}>
                               <Avatar size="small" src={item.logo} />

@@ -178,6 +178,17 @@ const routes = [
     backendPathUrls: ['/Admin/AdminRoles/index/Admin/AdminRoles/getRoles'],
   },
   {
+    name: '员工管理',
+    path: '/permission/store-staff',
+    component: './set/store-staff',
+  },
+  {
+    name: '新增员工账号',
+    path: '/permission/store-staff/create',
+    component: './set/store-staff',
+    hideInMenu: true,
+  },
+  {
     name: '二维码模板',
     path: '/platform/qr-template',
     component: './form/store-qr-template/index',
@@ -220,6 +231,30 @@ const routes = [
     hideInMenu: true,
   },
   {
+    name: '商户列表',
+    path: '/merchant/list',
+    component: './merchant/list/index',
+    backendPathUrls: ['/admin/org/v1/merchant/page'],
+    hideInMenu: true,
+  },
+  {
+    name: '新增商户',
+    path: '/merchant/list/create',
+    component: './merchant/create/index',
+    backendPathUrls: ['/admin/org/v1/merchant/add'],
+    hideInMenu: true,
+  },
+  {
+    name: '修改商户',
+    path: '/merchant/list/:id/edit',
+    component: './merchant/create/index',
+    backendPathUrls: [
+      '/admin/org/v1/merchant/modify',
+      '/admin/org/v1/merchant/{id}/detail',
+    ],
+    hideInMenu: true,
+  },
+  {
     name: '设备流转',
     path: '/device/transfer-record',
     component: './device/transfer-record/index',
@@ -234,6 +269,18 @@ const routes = [
     name: '设置',
     path: '/set',
     component: './set',
+  },
+  {
+    name: '存储配置',
+    path: '/set/storage-config',
+    component: './set/storage-config/index',
+    backendPathUrls: [
+      '/Retail/Storage/index',
+      '/admin/attachment/v1/storageUploadSetting/detail',
+      '/admin/attachment/v1/storageUploadSetting/save',
+      '/admin/attachment/v1/cloudStorageConfig/page',
+    ],
+    hideInMenu: true,
   },
   {
     path: '/',

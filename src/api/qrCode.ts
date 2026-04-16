@@ -3,10 +3,21 @@ import { apiData, apiRequest } from '@/api/http';
 export type QrCodePageQueryParams = {
   current: number;
   pageSize: number;
+  agentOrgId?: string;
+  groupOrgId?: string;
+  merchantOrgId?: string;
+  storeOrgId?: string;
+  storeOrgUserId?: string;
   batchSn?: string;
   sn?: string;
   model?: string;
   qrcodeTemplateId?: string;
+  openType?: string;
+  bizType?: string;
+  bindName?: string;
+  snList?: string[];
+  startSn?: string;
+  endSn?: string;
 };
 
 export type QrCodeTemplateInfo = {
@@ -85,6 +96,7 @@ export type QrCodeListQueryParams = {
   qrcodeTemplateId?: string;
   openType?: string;
   bizType?: string;
+  bindName?: string;
   snList?: string[];
   startSn?: string;
   endSn?: string;

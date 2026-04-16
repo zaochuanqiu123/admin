@@ -1,8 +1,6 @@
 import { PlusOutlined } from '@ant-design/icons';
 import {
   Alert,
-  Button,
-  DatePicker,
   Empty,
   Image,
   Input,
@@ -13,9 +11,7 @@ import {
   Switch,
   Table,
 } from 'antd';
-import type { RangePickerProps } from 'antd/es/date-picker';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
-import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   batchAddQrCode,
@@ -41,7 +37,6 @@ import type { TemplateSelectOption } from './components/TemplatePreviewSelect';
 import { TransferModal } from './components/TransferModal';
 import './index.less';
 
-const { RangePicker } = DatePicker;
 const QR_CODE_PERMS = {
   bind: 'admin:device:qrcode:bind',
   transfer: 'admin:device:qrcode:transfer',
@@ -55,23 +50,61 @@ const QR_CODE_PERMS = {
 } as const;
 
 type QueryFilters = {
-  brandName?: string;
-  transferTimeRange?: RangePickerProps['value'];
+  agentOrgId: string;
+  groupOrgId: string;
+  merchantOrgId: string;
+  storeOrgId: string;
+  storeOrgUserId: string;
   bizType?: string;
-  state?: string;
-  isTransferred?: string;
-  isBound?: string;
   sn: string;
+  snList: string;
+  startSn: string;
+  endSn: string;
   batchSn: string;
   qrcodeTemplateId?: string;
   openType?: string;
-  snStart: string;
-  snEnd: string;
-  keyword: string;
+  bindName: string;
   model: string;
 };
 
 const DEFAULT_PAGE_SIZE = 10;
+const OPEN_TYPE_OPTIONS = [
+  { label: '小程序', value: 'MINI' },
+  { label: 'H5', value: 'H5' },
+];
+const BIZ_TYPE_OPTIONS = [
+  { label: '收款码', value: 'RECEIPT_CODE' },
+  { label: '餐饮桌台', value: 'CATER_TABLE' },
+  { label: '其他业务', value: 'OTHER' },
+];
+
+function createEmptyFilters(): QueryFilters {
+  return {
+    agentOrgId: '',
+    groupOrgId: '',
+    merchantOrgId: '',
+    storeOrgId: '',
+    storeOrgUserId: '',
+    bizType: undefined,
+    sn: '',
+    snList: '',
+    startSn: '',
+    endSn: '',
+    batchSn: '',
+    qrcodeTemplateId: undefined,
+    openType: undefined,
+    bindName: '',
+    model: '',
+  };
+}
+
+function parseSnList(value: string) {
+  return value
+    .split(/[\s,，;；]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function readText(...values: unknown[]) {
   for (const value of values) {
     const text = String(value ?? '').trim();
@@ -109,15 +142,6 @@ function getPreviewImage(record: QrCodeRecord) {
   return readText(record?.qrcodeTemplate?.prevImageUrl);
 }
 
-function getBrandName(record: QrCodeRecord) {
-  const rawValue =
-    (record as any)?.brandName ||
-    (record as any)?.belongBrandName ||
-    (record as any)?.brand ||
-    (record as any)?.brandLabel;
-  return readText(rawValue);
-}
-
 function isBound(record: QrCodeRecord) {
   return Boolean(
     readText(
@@ -133,10 +157,6 @@ function isBound(record: QrCodeRecord) {
   );
 }
 
-function isTransferred(record: QrCodeRecord) {
-  return Boolean(readText(record?.transferTime));
-}
-
 function getOrgDisplay(record: QrCodeRecord) {
   return (
     [readText(record?.agentOrg?.orgName), readText(record?.groupOrg?.orgName)]
@@ -145,43 +165,6 @@ function getOrgDisplay(record: QrCodeRecord) {
     readText(record?.agentOrgId, record?.groupOrgId) ||
     '-'
   );
-}
-
-function getBindDisplay(record: QrCodeRecord) {
-  const merchantName = readText(record?.merchantOrg?.orgName);
-  const merchantId = readText(record?.merchantOrgId);
-  return [
-    merchantName || merchantId || '-',
-    merchantName && merchantId ? merchantId : '',
-  ].filter(Boolean);
-}
-
-function getStoreDisplay(record: QrCodeRecord) {
-  const storeName = readText(record?.storeOrg?.orgName);
-  const storeId = readText(record?.storeOrgId);
-  return [
-    storeName || storeId || '-',
-    storeName && storeId ? storeId : '',
-  ].filter(Boolean);
-}
-
-function getKeywordSource(record: QrCodeRecord) {
-  return [
-    readText(record?.merchantOrg?.orgName),
-    readText(record?.storeOrg?.orgName),
-    readText(record?.agentOrg?.orgName),
-    readText(record?.groupOrg?.orgName),
-    readText(record?.bindName),
-    readText(record?.merchantOrgId),
-    readText(record?.storeOrgId),
-    readText(record?.storeOrgUserId),
-    readText(record?.agentOrgId),
-    readText(record?.groupOrgId),
-    readText(record?.targetId),
-    getTemplateName(record),
-  ]
-    .filter(Boolean)
-    .join(' ');
 }
 
 function showPendingActionMessage(label: string) {
@@ -208,38 +191,9 @@ const StoreQrCodeListPage: React.FC = () => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [batchChangeTemplateOpen, setBatchChangeTemplateOpen] = useState(false);
 
-  const [draftFilters, setDraftFilters] = useState<QueryFilters>({
-    brandName: undefined,
-    transferTimeRange: undefined,
-    bizType: undefined,
-    state: undefined,
-    isTransferred: undefined,
-    isBound: undefined,
-    sn: '',
-    batchSn: '',
-    qrcodeTemplateId: undefined,
-    openType: undefined,
-    snStart: '',
-    snEnd: '',
-    keyword: '',
-    model: '',
-  });
-  const [filters, setFilters] = useState<QueryFilters>({
-    brandName: undefined,
-    transferTimeRange: undefined,
-    bizType: undefined,
-    state: undefined,
-    isTransferred: undefined,
-    isBound: undefined,
-    sn: '',
-    batchSn: '',
-    qrcodeTemplateId: undefined,
-    openType: undefined,
-    snStart: '',
-    snEnd: '',
-    keyword: '',
-    model: '',
-  });
+  const [draftFilters, setDraftFilters] =
+    useState<QueryFilters>(createEmptyFilters);
+  const [filters, setFilters] = useState<QueryFilters>(createEmptyFilters);
   const [pagination, setPagination] = useState<TablePaginationConfig>({
     current: 1,
     pageSize: DEFAULT_PAGE_SIZE,
@@ -268,41 +222,11 @@ const StoreQrCodeListPage: React.FC = () => {
         value: templateId,
         previewImageUrl:
           getPreviewImage(record) || currentOption?.previewImageUrl,
-        brandName: getBrandName(record) || currentOption?.brandName,
+        brandName: currentOption?.brandName,
       });
     });
     return Array.from(templateMap.values());
   }, [records, templateOptionsSource]);
-
-  const brandOptions = useMemo(() => {
-    const brandMap = new Map<string, { label: string; value: string }>();
-    records.forEach((record) => {
-      const brandName = getBrandName(record);
-      if (!brandName) return;
-      brandMap.set(brandName, { label: brandName, value: brandName });
-    });
-    return Array.from(brandMap.values());
-  }, [records]);
-
-  const openTypeOptions = useMemo(() => {
-    const optionMap = new Map<string, { label: string; value: string }>();
-    records.forEach((record) => {
-      const value = String(record?.openType || '').trim();
-      if (!value) return;
-      optionMap.set(value, { label: formatOpenType(value), value });
-    });
-    return Array.from(optionMap.values());
-  }, [records]);
-
-  const bizTypeOptions = useMemo(() => {
-    const optionMap = new Map<string, { label: string; value: string }>();
-    records.forEach((record) => {
-      const value = String(record?.bizType || '').trim();
-      if (!value) return;
-      optionMap.set(value, { label: formatBizType(value), value });
-    });
-    return Array.from(optionMap.values());
-  }, [records]);
 
   const loadTemplateOptions = useCallback(async () => {
     setTemplateLoading(true);
@@ -341,14 +265,26 @@ const StoreQrCodeListPage: React.FC = () => {
     setLoading(true);
     setListError(undefined);
     try {
+      const snList = parseSnList(filters.snList);
       const res = await getQrCodePageQuery(
         {
           current,
           pageSize,
+          agentOrgId: filters.agentOrgId.trim() || undefined,
+          groupOrgId: filters.groupOrgId.trim() || undefined,
+          merchantOrgId: filters.merchantOrgId.trim() || undefined,
+          storeOrgId: filters.storeOrgId.trim() || undefined,
+          storeOrgUserId: filters.storeOrgUserId.trim() || undefined,
           sn: filters.sn.trim() || undefined,
           batchSn: filters.batchSn.trim() || undefined,
           model: filters.model.trim() || undefined,
           qrcodeTemplateId: filters.qrcodeTemplateId || undefined,
+          openType: filters.openType || undefined,
+          bizType: filters.bizType || undefined,
+          bindName: filters.bindName.trim() || undefined,
+          snList: snList.length > 0 ? snList : undefined,
+          startSn: filters.startSn.trim() || undefined,
+          endSn: filters.endSn.trim() || undefined,
         },
         {
           skipErrorHandler: true,
@@ -369,11 +305,22 @@ const StoreQrCodeListPage: React.FC = () => {
       setListInitialized(true);
     }
   }, [
+    filters.agentOrgId,
     current,
     filters.batchSn,
+    filters.bindName,
+    filters.bizType,
+    filters.endSn,
+    filters.groupOrgId,
+    filters.merchantOrgId,
     filters.model,
+    filters.openType,
     filters.qrcodeTemplateId,
     filters.sn,
+    filters.snList,
+    filters.startSn,
+    filters.storeOrgId,
+    filters.storeOrgUserId,
     pageSize,
   ]);
 
@@ -426,89 +373,6 @@ const StoreQrCodeListPage: React.FC = () => {
     },
     [loadQrCodes],
   );
-
-  const filteredRecords = useMemo(() => {
-    return records.filter((record) => {
-      if (filters.brandName && getBrandName(record) !== filters.brandName) {
-        return false;
-      }
-
-      if (
-        filters.bizType &&
-        String(record?.bizType || '') !== filters.bizType
-      ) {
-        return false;
-      }
-
-      if (
-        filters.openType &&
-        String(record?.openType || '') !== filters.openType
-      ) {
-        return false;
-      }
-
-      if (filters.state !== undefined && filters.state !== '') {
-        if (String(Number(record?.state ?? 0)) !== String(filters.state)) {
-          return false;
-        }
-      }
-
-      if (filters.isTransferred !== undefined && filters.isTransferred !== '') {
-        if (
-          String(Number(isTransferred(record))) !==
-          String(filters.isTransferred)
-        ) {
-          return false;
-        }
-      }
-
-      if (filters.isBound !== undefined && filters.isBound !== '') {
-        if (String(Number(isBound(record))) !== String(filters.isBound)) {
-          return false;
-        }
-      }
-
-      if (filters.transferTimeRange?.[0] && filters.transferTimeRange[1]) {
-        const transferTime = dayjs(record?.transferTime);
-        if (!transferTime.isValid()) return false;
-        const start = filters.transferTimeRange[0].startOf('day');
-        const end = filters.transferTimeRange[1].endOf('day');
-        if (transferTime.isBefore(start) || transferTime.isAfter(end)) {
-          return false;
-        }
-      }
-
-      const snValue = String(record?.sn || '').trim();
-      if (filters.snStart && snValue && snValue < filters.snStart) {
-        return false;
-      }
-      if (filters.snEnd && snValue && snValue > filters.snEnd) {
-        return false;
-      }
-
-      const keyword = filters.keyword.trim();
-      if (keyword) {
-        const keywordSource = getKeywordSource(record);
-        if (!keywordSource.includes(keyword)) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [
-    filters.bizType,
-    filters.brandName,
-    filters.isBound,
-    filters.isTransferred,
-    filters.keyword,
-    filters.openType,
-    filters.snEnd,
-    filters.snStart,
-    filters.state,
-    filters.transferTimeRange,
-    records,
-  ]);
 
   const columns = useMemo<ColumnsType<QrCodeRecord>>(
     () => [
@@ -583,46 +447,6 @@ const StoreQrCodeListPage: React.FC = () => {
         render: (_, record) => getOrgDisplay(record),
       },
       {
-        title: '绑定商户',
-        key: 'bindInfo',
-        width: 220,
-        render: (_, record) => {
-          const bindInfo = getBindDisplay(record);
-          return (
-            <div className="qr-code-bind-lines">
-              {bindInfo.map((item, index) => (
-                <div
-                  key={`${String(record.id)}-merchant-${index}-${item}`}
-                  className={index === 0 ? '' : 'is-secondary'}
-                >
-                  {item}
-                </div>
-              ))}
-            </div>
-          );
-        },
-      },
-      {
-        title: '门店',
-        key: 'storeInfo',
-        width: 220,
-        render: (_, record) => {
-          const storeInfo = getStoreDisplay(record);
-          return (
-            <div className="qr-code-bind-lines">
-              {storeInfo.map((item, index) => (
-                <div
-                  key={`${String(record.id)}-store-${index}-${item}`}
-                  className={index === 0 ? '' : 'is-secondary'}
-                >
-                  {item}
-                </div>
-              ))}
-            </div>
-          );
-        },
-      },
-      {
         title: '创建时间',
         dataIndex: 'createTime',
         width: 180,
@@ -686,32 +510,23 @@ const StoreQrCodeListPage: React.FC = () => {
     }));
     setFilters({
       ...draftFilters,
+      agentOrgId: draftFilters.agentOrgId.trim(),
+      groupOrgId: draftFilters.groupOrgId.trim(),
+      merchantOrgId: draftFilters.merchantOrgId.trim(),
+      storeOrgId: draftFilters.storeOrgId.trim(),
+      storeOrgUserId: draftFilters.storeOrgUserId.trim(),
       sn: draftFilters.sn.trim(),
+      snList: draftFilters.snList.trim(),
+      startSn: draftFilters.startSn.trim(),
+      endSn: draftFilters.endSn.trim(),
       batchSn: draftFilters.batchSn.trim(),
+      bindName: draftFilters.bindName.trim(),
       model: draftFilters.model.trim(),
-      snStart: draftFilters.snStart.trim(),
-      snEnd: draftFilters.snEnd.trim(),
-      keyword: draftFilters.keyword.trim(),
     });
   };
 
   const handleReset = () => {
-    const nextFilters: QueryFilters = {
-      brandName: undefined,
-      transferTimeRange: undefined,
-      bizType: undefined,
-      state: undefined,
-      isTransferred: undefined,
-      isBound: undefined,
-      sn: '',
-      batchSn: '',
-      qrcodeTemplateId: undefined,
-      openType: undefined,
-      snStart: '',
-      snEnd: '',
-      keyword: '',
-      model: '',
-    };
+    const nextFilters = createEmptyFilters();
     setDraftFilters(nextFilters);
     setFilters(nextFilters);
     setPagination((prev) => ({
@@ -720,19 +535,6 @@ const StoreQrCodeListPage: React.FC = () => {
     }));
   };
 
-  const filteredTotal =
-    filters.brandName ||
-    filters.transferTimeRange ||
-    filters.bizType ||
-    filters.state ||
-    filters.isTransferred ||
-    filters.isBound ||
-    filters.openType ||
-    filters.snStart ||
-    filters.snEnd ||
-    filters.keyword
-      ? filteredRecords.length
-      : serverTotal;
   const initialListLoading = loading && !listInitialized;
   const refreshingList = loading && listInitialized;
 
@@ -744,116 +546,92 @@ const StoreQrCodeListPage: React.FC = () => {
         onReset={handleReset}
         fields={[
           {
-            key: 'brandName',
-            label: '所属品牌',
+            key: 'agentOrgId',
+            label: '代理组织ID',
             content: (
-              <Select
+              <Input
                 allowClear
-                placeholder="请选择"
-                value={draftFilters.brandName}
-                options={brandOptions}
-                onChange={(value) => {
+                placeholder="请输入代理组织ID"
+                value={draftFilters.agentOrgId}
+                onChange={(event) => {
                   setDraftFilters((prev) => ({
                     ...prev,
-                    brandName: value,
+                    agentOrgId: event.target.value,
                   }));
                 }}
+                onPressEnter={handleSearch}
               />
             ),
           },
           {
-            key: 'transferTimeRange',
-            label: '划拨时间',
+            key: 'groupOrgId',
+            label: '集团组织ID',
             content: (
-              <RangePicker
-                value={draftFilters.transferTimeRange}
-                onChange={(value) => {
+              <Input
+                allowClear
+                placeholder="请输入集团组织ID"
+                value={draftFilters.groupOrgId}
+                onChange={(event) => {
                   setDraftFilters((prev) => ({
                     ...prev,
-                    transferTimeRange: value || undefined,
+                    groupOrgId: event.target.value,
                   }));
                 }}
+                onPressEnter={handleSearch}
               />
             ),
           },
           {
-            key: 'bizType',
-            label: '类别',
+            key: 'merchantOrgId',
+            label: '商户组织ID',
             content: (
-              <Select
+              <Input
                 allowClear
-                placeholder="请选择"
-                value={draftFilters.bizType}
-                options={bizTypeOptions}
-                onChange={(value) => {
+                placeholder="请输入商户组织ID"
+                value={draftFilters.merchantOrgId}
+                onChange={(event) => {
                   setDraftFilters((prev) => ({
                     ...prev,
-                    bizType: value,
+                    merchantOrgId: event.target.value,
                   }));
                 }}
+                onPressEnter={handleSearch}
               />
             ),
           },
           {
-            key: 'state',
-            label: '状态',
+            key: 'storeOrgId',
+            label: '门店组织ID',
             content: (
-              <Select
+              <Input
                 allowClear
-                placeholder="请选择"
-                value={draftFilters.state}
-                options={[
-                  { label: '启用', value: '1' },
-                  { label: '禁用', value: '0' },
-                ]}
-                onChange={(value) => {
+                placeholder="请输入门店组织ID"
+                value={draftFilters.storeOrgId}
+                onChange={(event) => {
                   setDraftFilters((prev) => ({
                     ...prev,
-                    state: value,
+                    storeOrgId: event.target.value,
                   }));
                 }}
+                onPressEnter={handleSearch}
               />
             ),
           },
           {
-            key: 'isTransferred',
-            label: '是否划拨',
+            key: 'storeOrgUserId',
+            label: '门店员工ID',
             content: (
-              <Select
+              <Input
                 allowClear
-                placeholder="请选择"
-                value={draftFilters.isTransferred}
-                options={[
-                  { label: '是', value: '1' },
-                  { label: '否', value: '0' },
-                ]}
-                onChange={(value) => {
+                placeholder="请输入门店员工ID"
+                value={draftFilters.storeOrgUserId}
+                onChange={(event) => {
                   setDraftFilters((prev) => ({
                     ...prev,
-                    isTransferred: value,
+                    storeOrgUserId: event.target.value,
                   }));
                 }}
-              />
-            ),
-          },
-          {
-            key: 'isBound',
-            label: '是否绑定',
-            content: (
-              <Select
-                allowClear
-                placeholder="请选择"
-                value={draftFilters.isBound}
-                options={[
-                  { label: '是', value: '1' },
-                  { label: '否', value: '0' },
-                ]}
-                onChange={(value) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    isBound: value,
-                  }));
-                }}
+                onPressEnter={handleSearch}
               />
             ),
           },
@@ -894,6 +672,24 @@ const StoreQrCodeListPage: React.FC = () => {
             ),
           },
           {
+            key: 'model',
+            label: '型号',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入型号"
+                value={draftFilters.model}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    model: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
             key: 'qrcodeTemplateId',
             label: '模板',
             content: (
@@ -920,11 +716,65 @@ const StoreQrCodeListPage: React.FC = () => {
                 allowClear
                 placeholder="请选择"
                 value={draftFilters.openType}
-                options={openTypeOptions}
+                options={OPEN_TYPE_OPTIONS}
                 onChange={(value) => {
                   setDraftFilters((prev) => ({
                     ...prev,
                     openType: value,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'bizType',
+            label: '业务类型',
+            content: (
+              <Select
+                allowClear
+                placeholder="请选择"
+                value={draftFilters.bizType}
+                options={BIZ_TYPE_OPTIONS}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    bizType: value,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'bindName',
+            label: '绑定名称',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入绑定名称"
+                value={draftFilters.bindName}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    bindName: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'snList',
+            label: '编号集合',
+            content: (
+              <Input.TextArea
+                allowClear
+                autoSize={{ minRows: 1, maxRows: 3 }}
+                placeholder="多个编号用逗号、空格或换行分隔"
+                value={draftFilters.snList}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    snList: event.target.value,
                   }));
                 }}
               />
@@ -937,43 +787,25 @@ const StoreQrCodeListPage: React.FC = () => {
               <Space.Compact block>
                 <Input
                   placeholder="请输入起始编号"
-                  value={draftFilters.snStart}
+                  value={draftFilters.startSn}
                   onChange={(event) => {
                     setDraftFilters((prev) => ({
                       ...prev,
-                      snStart: event.target.value,
+                      startSn: event.target.value,
                     }));
                   }}
                 />
                 <Input
                   placeholder="请输入截止编号"
-                  value={draftFilters.snEnd}
+                  value={draftFilters.endSn}
                   onChange={(event) => {
                     setDraftFilters((prev) => ({
                       ...prev,
-                      snEnd: event.target.value,
+                      endSn: event.target.value,
                     }));
                   }}
                 />
               </Space.Compact>
-            ),
-          },
-          {
-            key: 'keyword',
-            label: '关键字',
-            content: (
-              <Input
-                allowClear
-                placeholder="请输入商户/门店/机构名称"
-                value={draftFilters.keyword}
-                onChange={(event) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    keyword: event.target.value,
-                  }));
-                }}
-                onPressEnter={handleSearch}
-              />
             ),
           },
         ]}
@@ -1059,14 +891,14 @@ const StoreQrCodeListPage: React.FC = () => {
               onChange: setSelectedRowKeys,
             }}
             columns={columns}
-            dataSource={filteredRecords}
+            dataSource={records}
             scroll={{ x: 1940 }}
             locale={{
               emptyText: <Empty description="暂无收款码数据" />,
             }}
             pagination={{
               ...pagination,
-              total: filteredTotal,
+              total: serverTotal,
               onChange: (nextCurrent, nextPageSize) => {
                 setPagination((prev) => ({
                   ...prev,

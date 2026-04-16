@@ -70,6 +70,13 @@ function isPathMatch(basePath: string | undefined, pathname: string): boolean {
   return current === base || current.startsWith(`${base}/`);
 }
 
+function isDashboardHomeNode(node: MenuNode): boolean {
+  const normalizedPath = normalizePath(node.path);
+  return (
+    normalizedPath === '/dashboard' || normalizedPath === '/dashboard/index'
+  );
+}
+
 function buildNodes(
   items: MenuDataItem[] | undefined,
   parentKey: string,
@@ -348,8 +355,9 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
         key: node.key,
         label: node.name,
         icon: undefined,
-        className:
-          node.name === '工作台' ? 'other-menus-workplace-font' : undefined,
+        className: isDashboardHomeNode(node)
+          ? 'other-menus-workplace-font'
+          : undefined,
         children,
       };
     };
@@ -718,7 +726,7 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
                 <span
                   className={
                     'other-menus-split-menu-item-label' +
-                    (node.name === '工作台'
+                    (isDashboardHomeNode(node)
                       ? ' other-menus-workplace-font-label'
                       : '')
                   }

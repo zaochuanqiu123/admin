@@ -33,17 +33,6 @@ export async function getPermContext(
   });
 }
 
-export async function getRoleVOList(
-  orgCode: string,
-  options?: { [key: string]: any },
-) {
-  return apiData<any>('/api/admin/system/v1/role/getRoleVOList', {
-    method: 'GET',
-    params: { orgCode },
-    ...(options || {}),
-  });
-}
-
 export async function searchRole(
   orgCode: string,
   roleName: string,

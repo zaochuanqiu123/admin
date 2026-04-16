@@ -1,0 +1,133 @@
+@import (reference) '../../../styles/utilities.less';
+
+.storage-config-page {
+  min-height: calc(100vh - 112px);
+
+  .content-card {
+    border: 1px solid var(--ant-color-border-secondary);
+    border-radius: 14px;
+    background: var(--ant-color-bg-container);
+  }
+
+  .storage-config-card {
+    padding: 0 20px 20px;
+  }
+
+  .ant-tabs-nav {
+    margin-bottom: 16px;
+  }
+
+  .storage-config-tip {
+    margin-bottom: 20px;
+    border-color: #c9e2ff;
+    background: #eef7ff;
+  }
+
+  .storage-config-tip .ant-alert-message {
+    color: var(--ant-color-text-heading, var(--ant-color-text));
+    font-weight: 600;
+  }
+
+  .storage-config-tip-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: var(--ant-color-text-secondary);
+    line-height: 1.7;
+  }
+
+  .storage-upload-setting-form {
+    max-width: 860px;
+  }
+
+  .storage-upload-setting-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 24px;
+  }
+
+  .storage-upload-setting-grid .ant-input-number-group-wrapper {
+    width: 100%;
+  }
+
+  .storage-config-save-row {
+    margin-top: 4px;
+    margin-bottom: 0;
+  }
+
+  .cloud-storage-filter-card {
+    margin-bottom: 16px;
+  }
+
+  .cloud-storage-table-card {
+    padding: 22px 24px 18px;
+  }
+
+  .cloud-storage-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 20px;
+  }
+
+  .cloud-storage-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 12px;
+  }
+
+  .cloud-storage-primary-action-btn.ant-btn {
+    .mixin-page-create-btn();
+  }
+
+  .cloud-storage-table-card {
+    .ant-table-thead > tr > th {
+      color: var(--ant-color-text-heading, var(--ant-color-text));
+      font-weight: 600;
+    }
+
+    .ant-table-tbody > tr > td {
+      color: var(--ant-color-text);
+      vertical-align: middle;
+    }
+  }
+
+  .cloud-storage-action-links {
+    .ant-btn {
+      padding-inline: 0;
+    }
+  }
+}
+
+body.theme-black-mode .storage-config-page {
+  .content-card {
+    background: var(--pc-dark-bg-surface) !important;
+    border-color: var(--pc-dark-border);
+  }
+
+  .storage-config-tip {
+    border-color: var(--pc-dark-border);
+    background: rgba(22, 119, 255, 0.12);
+  }
+
+  .storage-config-tip-content {
+    color: var(--pc-dark-text-secondary) !important;
+  }
+}
+
+@media (max-width: 1280px) {
+  .storage-config-page {
+    .storage-upload-setting-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .cloud-storage-table-card {
+      padding: 20px 16px 16px;
+    }
+
+    .cloud-storage-form-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+}

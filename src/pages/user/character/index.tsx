@@ -1,23 +1,9 @@
 ﻿import { history, useModel } from '@umijs/max';
-import {
-  Button,
-  Card,
-  Form,
-  Input,
-  List,
-  message,
-  Select,
-  Space,
-  Spin,
-} from 'antd';
+import { Button, Card, Form, Input, List, message, Select, Space } from 'antd';
 import type { FC } from 'react';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { logout as requestLogout } from '@/api/auth';
-import {
-  getPermContext,
-  getRoleVOList,
-  getUserLoginContextResponse,
-} from '@/api/context';
+import { getPermContext, getUserLoginContextResponse } from '@/api/context';
 import {
   clearSelectedOrgCode,
   getLoginOrgList,
@@ -58,6 +44,7 @@ type StoreItem = {
   desc?: string;
   nickName?: string;
   orgCode?: string;
+  roles?: any[];
   badge?: {
     text: string;
     tone: 'primary' | 'cyan';
@@ -157,6 +144,7 @@ function normalizeOrgToStoreItem(org: any, index: number): StoreItem {
     desc,
     nickName,
     orgCode,
+    roles: Array.isArray(org?.roles) ? org.roles : [],
     type,
     badge: {
       // 如果有 orgLevelName 直接显示（如 "直营门店"、"加盟商户"），否则兜底显示
@@ -174,8 +162,6 @@ const Character: FC = () => {
   const storeType =
     (Form.useWatch('storeType', form) as StoreType | undefined) || 'all';
   const [selectedStoreId, setSelectedStoreId] = useState<string | undefined>();
-  const [roleMap, setRoleMap] = useState<Record<string, any[]>>({});
-  const [loadingRoles, setLoadingRoles] = useState<Record<string, boolean>>({});
   const [loggingOut, setLoggingOut] = useState(false);
 
   const storeData = useMemo<StoreItem[]>(() => {
@@ -198,38 +184,6 @@ const Character: FC = () => {
     return result;
   }, []);
 
-  useEffect(() => {
-    console.log('useEffect triggered, storeData length:', storeData.length);
-    const fetchRoles = async () => {
-      for (const item of storeData) {
-        console.log('Processing item:', item.id, 'orgCode:', item.orgCode);
-        if (item.orgCode) {
-          setLoadingRoles((prev) => ({ ...prev, [item.id]: true }));
-          try {
-            const res = await getRoleVOList(item.orgCode, {
-              skipErrorHandler: true,
-            });
-            console.log('getRoleVOList response for', item.orgCode, ':', res);
-            const roles = Array.isArray(res) ? res : [];
-            setRoleMap((prev) => ({ ...prev, [item.id]: roles }));
-          } catch (error) {
-            console.error('getRoleVOList failed:', error);
-          } finally {
-            setLoadingRoles((prev) => ({ ...prev, [item.id]: false }));
-          }
-        } else {
-          console.log('Item has no orgCode:', item.id);
-        }
-      }
-    };
-    if (storeData.length > 0) {
-      console.log('Calling fetchRoles...');
-      fetchRoles();
-    } else {
-      console.log('storeData is empty, not calling fetchRoles');
-    }
-  }, [storeData]);
-
   const filteredStores = useMemo(() => {
     const kw = keyword?.trim() || '';
     return storeData.filter((it) => {
@@ -250,14 +204,14 @@ const Character: FC = () => {
       setInitialState((s: any) => resetStoreScopedInitialState(s));
       setSelectedOrgCode(orgCode);
       try {
-        // 1. 先调用 getUserLoginContext 获取登录上下文与后端提示
+        // 先调用登录上下文，再用登录上下文里的业态获取权限上下文。
         const loginContextRes = await getUserLoginContextResponse(orgCode, {
           skipErrorHandler: true,
         });
         const loginContext = unwrapApiData<any>(loginContextRes);
-
-        // 2. 从 loginContext 中提取 businessList 和默认 businessCode
-        const businessList = loginContext?.businessList || [];
+        const businessList = Array.isArray(loginContext?.businessList)
+          ? loginContext.businessList
+          : [];
         if (businessList.length === 0) {
           const backendMessage =
             loginContextRes?.msg ||
@@ -277,7 +231,7 @@ const Character: FC = () => {
         setBusinessList(businessList);
         setCurrentBusinessCode(businessCode);
 
-        // 3. 使用 businessCode 调用 getPermContext 获取权限菜单
+        // 使用 businessCode 调用 getPermContext 获取权限菜单
         const permRes = await getPermContext(businessCode, {
           skipErrorHandler: true,
         });
@@ -316,11 +270,11 @@ const Character: FC = () => {
           ) {
             nextPath = redirectPath;
           } else {
-            message.warning('原页面无权限，已跳转到工作台');
+            message.warning('原页面无权限，已跳转到系统首页');
           }
         }
 
-        // 4. 更新 initialState，包括登录上下文、业态列表、当前业态和权限菜单
+        // 更新 initialState，包括业态列表、当前业态和权限菜单
         setInitialState((s: any) => ({
           ...(s || {}),
           currentOrgCode: orgCode,
@@ -468,14 +422,12 @@ const Character: FC = () => {
 
                   return (
                     <List.Item style={{ padding: '8px 0' }}>
-                      <button
-                        type="button"
+                      <div
                         className={cls}
                         style={{
                           width: '100%',
                           border: '1px solid rgb(235 227 227)',
                           background: 'transparent',
-                          cursor: 'pointer',
                           textAlign: 'left',
                           font: 'inherit',
                           color: 'inherit',
@@ -502,13 +454,9 @@ const Character: FC = () => {
                           ) : item.nickName ? (
                             <div className="storeDesc">{item.nickName}</div>
                           ) : null}
-                          {loadingRoles[item.id] ? (
-                            <div className="storeDesc">
-                              <Spin size="small" />
-                            </div>
-                          ) : roleMap[item.id]?.length ? (
+                          {item.roles?.length ? (
                             <div className="storeDesc roleList u-flex u-flex-wrap">
-                              {roleMap[item.id].map((role, idx) => (
+                              {item.roles.map((role, idx) => (
                                 <span
                                   key={`${item.id}-${role.roleName || role.name || idx}`}
                                   className="roleTag"
@@ -532,7 +480,7 @@ const Character: FC = () => {
                             选择
                           </Button>
                         </div>
-                      </button>
+                      </div>
                     </List.Item>
                   );
                 }}

@@ -2,23 +2,19 @@ import { PlusOutlined } from '@ant-design/icons';
 import {
   Alert,
   Button,
-  DatePicker,
   Empty,
   Input,
   Modal,
   message,
-  Select,
   Space,
   Switch,
   Table,
 } from 'antd';
-import type { RangePickerProps } from 'antd/es/date-picker';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   broadcastSpeaker,
-  getSpeakerListQuery,
   getSpeakerPageQuery,
   type SpeakerRecord,
   transferSpeaker,
@@ -35,18 +31,15 @@ import { SpeakerTransferModal } from './components/SpeakerTransferModal';
 import {
   getBelongBrandName,
   getBindDisplayLines,
-  getKeywordSource,
   getOrgDisplayLines,
   getQrCodeSn,
   getSpeakerBrandName,
   getSpeakerNameLines,
   getTrafficCardLines,
   isSpeakerBound,
-  isSpeakerTransferred,
 } from './helpers';
 import './index.less';
 
-const { RangePicker } = DatePicker;
 const SPEAKER_PERMS = {
   add: 'admin:device:speaker:add',
   transfer: 'admin:device:speaker:transfer',
@@ -56,19 +49,47 @@ const SPEAKER_PERMS = {
 } as const;
 
 type QueryFilters = {
-  belongBrand?: string;
-  transferTimeRange?: RangePickerProps['value'];
-  speakerBrand?: string;
-  state?: string;
-  isTransferred?: string;
-  isBound?: string;
+  agentOrgId: string;
+  groupOrgId: string;
+  merchantOrgId: string;
+  storeOrgId: string;
   sn: string;
   batchSn: string;
-  qrcodeSn: string;
-  keyword: string;
+  speakerChannelId: string;
+  speakerChannelCode: string;
+  model: string;
+  bindName: string;
+  snList: string;
+  startSn: string;
+  endSn: string;
 };
 
 const DEFAULT_PAGE_SIZE = 10;
+
+function createEmptyFilters(): QueryFilters {
+  return {
+    agentOrgId: '',
+    groupOrgId: '',
+    merchantOrgId: '',
+    storeOrgId: '',
+    sn: '',
+    batchSn: '',
+    speakerChannelId: '',
+    speakerChannelCode: '',
+    model: '',
+    bindName: '',
+    snList: '',
+    startSn: '',
+    endSn: '',
+  };
+}
+
+function parseSnList(value: string) {
+  return value
+    .split(/[\s,，;；]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
 
 function buildRandomBroadcastContent() {
   return `播报测试-${dayjs().format('YYYYMMDDHHmmss')}-${Math.random()
@@ -108,37 +129,15 @@ const SpeakerListPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [listInitialized, setListInitialized] = useState(false);
   const [listError, setListError] = useState<string>();
-  const [listMode, setListMode] = useState<'page' | 'list'>('page');
   const [records, setRecords] = useState<SpeakerRecord[]>([]);
   const [serverTotal, setServerTotal] = useState(0);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [broadcastingId, setBroadcastingId] = useState<string>();
-  const [draftFilters, setDraftFilters] = useState<QueryFilters>({
-    belongBrand: undefined,
-    transferTimeRange: undefined,
-    speakerBrand: undefined,
-    state: undefined,
-    isTransferred: undefined,
-    isBound: undefined,
-    sn: '',
-    batchSn: '',
-    qrcodeSn: '',
-    keyword: '',
-  });
-  const [filters, setFilters] = useState<QueryFilters>({
-    belongBrand: undefined,
-    transferTimeRange: undefined,
-    speakerBrand: undefined,
-    state: undefined,
-    isTransferred: undefined,
-    isBound: undefined,
-    sn: '',
-    batchSn: '',
-    qrcodeSn: '',
-    keyword: '',
-  });
+  const [draftFilters, setDraftFilters] =
+    useState<QueryFilters>(createEmptyFilters);
+  const [filters, setFilters] = useState<QueryFilters>(createEmptyFilters);
   const [pagination, setPagination] = useState<TablePaginationConfig>({
     current: 1,
     pageSize: DEFAULT_PAGE_SIZE,
@@ -174,11 +173,23 @@ const SpeakerListPage: React.FC = () => {
     setListError(undefined);
 
     try {
+      const snList = parseSnList(filters.snList);
       const res = await getSpeakerPageQuery({
         current,
         pageSize,
+        agentOrgId: filters.agentOrgId.trim() || undefined,
+        groupOrgId: filters.groupOrgId.trim() || undefined,
+        merchantOrgId: filters.merchantOrgId.trim() || undefined,
+        storeOrgId: filters.storeOrgId.trim() || undefined,
         sn: filters.sn.trim() || undefined,
         batchSn: filters.batchSn.trim() || undefined,
+        speakerChannelId: filters.speakerChannelId.trim() || undefined,
+        speakerChannelCode: filters.speakerChannelCode.trim() || undefined,
+        model: filters.model.trim() || undefined,
+        bindName: filters.bindName.trim() || undefined,
+        snList: snList.length > 0 ? snList : undefined,
+        startSn: filters.startSn.trim() || undefined,
+        endSn: filters.endSn.trim() || undefined,
       });
       setRecords(Array.isArray(res?.records) ? res.records : []);
       setServerTotal(Number(res?.total || 0));
@@ -191,34 +202,27 @@ const SpeakerListPage: React.FC = () => {
       setLoading(false);
       setListInitialized(true);
     }
-  }, [current, filters.batchSn, filters.sn, pageSize]);
-
-  const loadSpeakerList = useCallback(async (nextFilters: QueryFilters) => {
-    setLoading(true);
-    setListError(undefined);
-
-    try {
-      const list = await getSpeakerListQuery({
-        sn: nextFilters.sn.trim() || undefined,
-        batchSn: nextFilters.batchSn.trim() || undefined,
-      });
-      setRecords(Array.isArray(list) ? list : []);
-      setServerTotal(Array.isArray(list) ? list.length : 0);
-    } catch (error) {
-      console.error('load speaker search list failed:', error);
-      const nextError = '搜索云音响失败，请稍后重试';
-      setListError(nextError);
-      message.error(nextError);
-    } finally {
-      setLoading(false);
-      setListInitialized(true);
-    }
-  }, []);
+  }, [
+    current,
+    filters.agentOrgId,
+    filters.batchSn,
+    filters.bindName,
+    filters.endSn,
+    filters.groupOrgId,
+    filters.merchantOrgId,
+    filters.model,
+    filters.sn,
+    filters.snList,
+    filters.speakerChannelCode,
+    filters.speakerChannelId,
+    filters.startSn,
+    filters.storeOrgId,
+    pageSize,
+  ]);
 
   useEffect(() => {
-    if (listMode !== 'page') return;
     void loadSpeakerPage();
-  }, [listMode, loadSpeakerPage]);
+  }, [loadSpeakerPage]);
 
   const handleBroadcast = useCallback(async (record: SpeakerRecord) => {
     const speakerSn = String(record?.sn || '').trim();
@@ -269,81 +273,6 @@ const SpeakerListPage: React.FC = () => {
       },
     });
   }, []);
-
-  const filteredRecords = useMemo(() => {
-    return records.filter((record) => {
-      if (
-        filters.belongBrand &&
-        getBelongBrandName(record) !== filters.belongBrand
-      ) {
-        return false;
-      }
-
-      if (
-        filters.speakerBrand &&
-        getSpeakerBrandName(record) !== filters.speakerBrand
-      ) {
-        return false;
-      }
-
-      if (filters.state !== undefined && filters.state !== '') {
-        if (String(Number(record?.state ?? 0)) !== String(filters.state)) {
-          return false;
-        }
-      }
-
-      if (filters.isTransferred !== undefined && filters.isTransferred !== '') {
-        if (
-          String(Number(isSpeakerTransferred(record))) !==
-          String(filters.isTransferred)
-        ) {
-          return false;
-        }
-      }
-
-      if (filters.isBound !== undefined && filters.isBound !== '') {
-        if (
-          String(Number(isSpeakerBound(record))) !== String(filters.isBound)
-        ) {
-          return false;
-        }
-      }
-
-      if (filters.transferTimeRange?.[0] && filters.transferTimeRange[1]) {
-        const transferTime = dayjs(record?.transferTime);
-        if (!transferTime.isValid()) return false;
-        const start = filters.transferTimeRange[0].startOf('day');
-        const end = filters.transferTimeRange[1].endOf('day');
-        if (transferTime.isBefore(start) || transferTime.isAfter(end)) {
-          return false;
-        }
-      }
-
-      if (
-        filters.qrcodeSn &&
-        !String(getQrCodeSn(record)).includes(filters.qrcodeSn)
-      ) {
-        return false;
-      }
-
-      const keyword = filters.keyword.trim();
-      if (keyword && !getKeywordSource(record).includes(keyword)) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [
-    filters.belongBrand,
-    filters.isBound,
-    filters.isTransferred,
-    filters.keyword,
-    filters.qrcodeSn,
-    filters.speakerBrand,
-    filters.state,
-    filters.transferTimeRange,
-    records,
-  ]);
 
   const columns = useMemo<ColumnsType<SpeakerRecord>>(
     () => [
@@ -468,63 +397,36 @@ const SpeakerListPage: React.FC = () => {
   const handleSearch = () => {
     const nextFilters = {
       ...draftFilters,
+      agentOrgId: draftFilters.agentOrgId.trim(),
+      groupOrgId: draftFilters.groupOrgId.trim(),
+      merchantOrgId: draftFilters.merchantOrgId.trim(),
+      storeOrgId: draftFilters.storeOrgId.trim(),
       sn: draftFilters.sn.trim(),
       batchSn: draftFilters.batchSn.trim(),
-      qrcodeSn: draftFilters.qrcodeSn.trim(),
-      keyword: draftFilters.keyword.trim(),
+      speakerChannelId: draftFilters.speakerChannelId.trim(),
+      speakerChannelCode: draftFilters.speakerChannelCode.trim(),
+      model: draftFilters.model.trim(),
+      bindName: draftFilters.bindName.trim(),
+      snList: draftFilters.snList.trim(),
+      startSn: draftFilters.startSn.trim(),
+      endSn: draftFilters.endSn.trim(),
     };
     setPagination((prev) => ({
       ...prev,
       current: 1,
     }));
     setFilters(nextFilters);
-    setListMode('list');
-    void loadSpeakerList(nextFilters);
   };
 
   const handleReset = () => {
-    const nextFilters: QueryFilters = {
-      belongBrand: undefined,
-      transferTimeRange: undefined,
-      speakerBrand: undefined,
-      state: undefined,
-      isTransferred: undefined,
-      isBound: undefined,
-      sn: '',
-      batchSn: '',
-      qrcodeSn: '',
-      keyword: '',
-    };
+    const nextFilters = createEmptyFilters();
     setDraftFilters(nextFilters);
     setFilters(nextFilters);
-    setListMode('page');
     setPagination((prev) => ({
       ...prev,
       current: 1,
     }));
   };
-
-  const filteredRecordsForRender =
-    listMode === 'list'
-      ? filteredRecords.slice(
-          ((pagination.current || 1) - 1) *
-            (pagination.pageSize || DEFAULT_PAGE_SIZE),
-          (pagination.current || 1) *
-            (pagination.pageSize || DEFAULT_PAGE_SIZE),
-        )
-      : filteredRecords;
-
-  const filteredTotal =
-    filters.belongBrand ||
-    filters.transferTimeRange ||
-    filters.speakerBrand ||
-    filters.state ||
-    filters.isTransferred ||
-    filters.isBound ||
-    filters.qrcodeSn ||
-    filters.keyword
-      ? filteredRecords.length
-      : serverTotal;
   const initialListLoading = loading && !listInitialized;
   const refreshingList = loading && listInitialized;
 
@@ -536,131 +438,71 @@ const SpeakerListPage: React.FC = () => {
         onReset={handleReset}
         fields={[
           {
-            key: 'belongBrand',
-            label: '所属品牌',
-            content: (
-              <Select
-                allowClear
-                placeholder="请选择"
-                value={draftFilters.belongBrand}
-                options={belongBrandOptions}
-                onChange={(value) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    belongBrand: value,
-                  }));
-                }}
-              />
-            ),
-          },
-          {
-            key: 'transferTimeRange',
-            label: '划拨时间',
-            content: (
-              <RangePicker
-                value={draftFilters.transferTimeRange}
-                onChange={(value) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    transferTimeRange: value || undefined,
-                  }));
-                }}
-              />
-            ),
-          },
-          {
-            key: 'speakerBrand',
-            label: '音响品牌',
-            content: (
-              <Select
-                allowClear
-                placeholder="请选择"
-                value={draftFilters.speakerBrand}
-                options={speakerBrandOptions}
-                onChange={(value) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    speakerBrand: value,
-                  }));
-                }}
-              />
-            ),
-          },
-          {
-            key: 'state',
-            label: '状态',
-            content: (
-              <Select
-                allowClear
-                placeholder="请选择"
-                value={draftFilters.state}
-                options={[
-                  { label: '启用', value: '1' },
-                  { label: '禁用', value: '0' },
-                ]}
-                onChange={(value) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    state: value,
-                  }));
-                }}
-              />
-            ),
-          },
-          {
-            key: 'isTransferred',
-            label: '是否划拨',
-            content: (
-              <Select
-                allowClear
-                placeholder="请选择"
-                value={draftFilters.isTransferred}
-                options={[
-                  { label: '是', value: '1' },
-                  { label: '否', value: '0' },
-                ]}
-                onChange={(value) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    isTransferred: value,
-                  }));
-                }}
-              />
-            ),
-          },
-          {
-            key: 'isBound',
-            label: '是否绑定',
-            content: (
-              <Select
-                allowClear
-                placeholder="请选择"
-                value={draftFilters.isBound}
-                options={[
-                  { label: '是', value: '1' },
-                  { label: '否', value: '0' },
-                ]}
-                onChange={(value) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    isBound: value,
-                  }));
-                }}
-              />
-            ),
-          },
-          {
-            key: 'sn',
-            label: '编号',
+            key: 'agentOrgId',
+            label: '代理组织ID',
             content: (
               <Input
                 allowClear
-                placeholder="请输入编号"
-                value={draftFilters.sn}
+                placeholder="请输入代理组织ID"
+                value={draftFilters.agentOrgId}
                 onChange={(event) => {
                   setDraftFilters((prev) => ({
                     ...prev,
-                    sn: event.target.value,
+                    agentOrgId: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'groupOrgId',
+            label: '集团组织ID',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入集团组织ID"
+                value={draftFilters.groupOrgId}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    groupOrgId: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'merchantOrgId',
+            label: '商户组织ID',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入商户组织ID"
+                value={draftFilters.merchantOrgId}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    merchantOrgId: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'storeOrgId',
+            label: '门店组织ID',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入门店组织ID"
+                value={draftFilters.storeOrgId}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    storeOrgId: event.target.value,
                   }));
                 }}
                 onPressEnter={handleSearch}
@@ -686,17 +528,17 @@ const SpeakerListPage: React.FC = () => {
             ),
           },
           {
-            key: 'qrcodeSn',
-            label: '收款码',
+            key: 'sn',
+            label: '编号',
             content: (
               <Input
                 allowClear
-                placeholder="请输入收款码"
-                value={draftFilters.qrcodeSn}
+                placeholder="请输入编号"
+                value={draftFilters.sn}
                 onChange={(event) => {
                   setDraftFilters((prev) => ({
                     ...prev,
-                    qrcodeSn: event.target.value,
+                    sn: event.target.value,
                   }));
                 }}
                 onPressEnter={handleSearch}
@@ -704,21 +546,125 @@ const SpeakerListPage: React.FC = () => {
             ),
           },
           {
-            key: 'keyword',
-            label: '关键字',
+            key: 'speakerChannelId',
+            label: '音箱通道ID',
             content: (
               <Input
                 allowClear
-                placeholder="请输入商户/门店/机构名称"
-                value={draftFilters.keyword}
+                placeholder="请输入音箱通道ID"
+                value={draftFilters.speakerChannelId}
                 onChange={(event) => {
                   setDraftFilters((prev) => ({
                     ...prev,
-                    keyword: event.target.value,
+                    speakerChannelId: event.target.value,
                   }));
                 }}
                 onPressEnter={handleSearch}
               />
+            ),
+          },
+          {
+            key: 'speakerChannelCode',
+            label: '音箱通道编码',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入音箱通道编码"
+                value={draftFilters.speakerChannelCode}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    speakerChannelCode: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'model',
+            label: '型号',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入型号"
+                value={draftFilters.model}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    model: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'bindName',
+            label: '绑定名称',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入设备绑定时名称"
+                value={draftFilters.bindName}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    bindName: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'snList',
+            label: '编号集合',
+            content: (
+              <Input.TextArea
+                allowClear
+                autoSize={{ minRows: 1, maxRows: 3 }}
+                placeholder="多个编号用逗号、空格或换行分隔"
+                value={draftFilters.snList}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    snList: event.target.value,
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'snRange',
+            label: '编号区间',
+            content: (
+              <Space.Compact block>
+                <Input
+                  allowClear
+                  placeholder="起始设备编号"
+                  value={draftFilters.startSn}
+                  onChange={(event) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      startSn: event.target.value,
+                    }));
+                  }}
+                  onPressEnter={handleSearch}
+                />
+                <Input
+                  allowClear
+                  placeholder="结束设备编号"
+                  value={draftFilters.endSn}
+                  onChange={(event) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      endSn: event.target.value,
+                    }));
+                  }}
+                  onPressEnter={handleSearch}
+                />
+              </Space.Compact>
             ),
           },
         ]}
@@ -764,14 +710,14 @@ const SpeakerListPage: React.FC = () => {
               onChange: setSelectedRowKeys,
             }}
             columns={columns}
-            dataSource={filteredRecordsForRender}
+            dataSource={records}
             scroll={{ x: 1960 }}
             locale={{
               emptyText: <Empty description="暂无云音响数据" />,
             }}
             pagination={{
               ...pagination,
-              total: filteredTotal,
+              total: serverTotal,
               onChange: (nextCurrent, nextPageSize) => {
                 setPagination((prev) => ({
                   ...prev,
@@ -816,11 +762,7 @@ const SpeakerListPage: React.FC = () => {
           message.success(getApiMessage(res, '操作成功'));
           setTransferModalOpen(false);
           setSelectedRowKeys([]);
-          if (listMode === 'list') {
-            await loadSpeakerList(filters);
-          } else {
-            await loadSpeakerPage();
-          }
+          await loadSpeakerPage();
         }}
       />
 

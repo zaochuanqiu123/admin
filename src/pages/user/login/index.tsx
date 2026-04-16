@@ -199,22 +199,26 @@ const Login: React.FC = () => {
         str((res as any)?.headImg);
 
       setLoginUserInfo({
+        ...(userInfo || {}),
         name,
         nickName,
         account,
         loginName: account,
         avatar,
+        phone: str(userInfo?.phone) || str((res as any)?.phone),
       });
 
       setInitialState((s: any) => ({
         ...(s || {}),
         currentUser: {
           ...((s as any)?.currentUser || {}),
+          ...(userInfo || {}),
           name,
           nickName,
           account,
           loginName: account,
           avatar,
+          phone: str(userInfo?.phone) || str((res as any)?.phone),
         },
       }));
 

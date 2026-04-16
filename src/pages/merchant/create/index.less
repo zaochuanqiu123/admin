@@ -1,0 +1,198 @@
+@import (reference) '../../../styles/utilities.less';
+
+.merchant-create-container .ant-pro-page-container-warp {
+  padding-inline: 0 !important;
+}
+
+.merchant-create-container .ant-pro-grid-content {
+  width: 100% !important;
+  max-width: none !important;
+  margin-inline: 0 !important;
+}
+
+.merchant-create-container .ant-page-header {
+  padding-inline: 0 !important;
+}
+
+.merchant-create-container .ant-page-header-content {
+  margin-top: 0 !important;
+}
+
+.merchant-create-container .ant-pro-page-container-warp-page-header {
+  padding-top: 0 !important;
+}
+
+.merchant-create-container .ant-page-header-heading {
+  min-height: 0 !important;
+}
+
+.merchant-create-container .ant-pro-page-container-children-container {
+  padding-inline: 0 !important;
+  padding-block: 0 !important;
+}
+
+.merchant-create-page {
+  width: 100%;
+  min-height: calc(100vh - 112px);
+}
+
+.merchant-create-card {
+  width: 100%;
+  margin-bottom: 16px;
+  border-radius: 14px;
+}
+
+.merchant-wizard-card .ant-card-body {
+  padding: 22px 24px 18px;
+}
+
+.merchant-create-steps {
+  margin-bottom: 20px;
+  padding: 4px 8px 18px;
+  border-bottom: 1px solid #eef1f6;
+}
+
+.merchant-create-step-title {
+  margin: 0 0 20px;
+  font-size: 18px;
+  font-weight: 500;
+  color: #1f2837;
+}
+
+.merchant-create-form {
+  max-width: 760px;
+}
+
+.merchant-create-form .ant-form-item {
+  margin-bottom: 16px;
+}
+
+.merchant-create-form .ant-form-item-label > label {
+  color: #1f2837;
+}
+
+.merchant-create-form .ant-form-item-control-input-content {
+  max-width: 520px;
+}
+
+.merchant-inline-form-item {
+  margin-bottom: 0 !important;
+}
+
+.merchant-radio-group .ant-radio-button-wrapper {
+  min-width: 110px;
+  text-align: center;
+}
+
+.merchant-upload-box {
+  width: 96px;
+  height: 96px;
+  gap: 6px;
+  justify-content: center;
+  border: 1px dashed #bfc9d9;
+  border-radius: 8px;
+  color: #6f7d97;
+}
+
+.merchant-upload-box .anticon {
+  font-size: 26px;
+}
+
+.merchant-upload .ant-upload.ant-upload-select,
+.merchant-upload .ant-upload-list-item-container {
+  width: 96px !important;
+  height: 96px !important;
+}
+
+.merchant-upload .ant-upload-list-item {
+  padding: 0;
+  border-radius: 8px;
+}
+
+.admin-phone-search {
+  display: grid;
+  grid-template-columns: 1fr 88px;
+  gap: 8px;
+}
+
+.admin-result-banner {
+  width: 520px;
+  min-height: 40px;
+  padding: 10px 14px;
+  border: 1px solid #dce3ef;
+  border-radius: 8px;
+  background: #f7f9fc;
+  color: #5d6b82;
+  line-height: 1.5;
+}
+
+.admin-result-banner.matched {
+  border-color: #b7eb8f;
+  background: #f6ffed;
+  color: #2f7a1f;
+}
+
+.admin-result-banner.warning {
+  border-color: #ffe58f;
+  background: #fffbe6;
+  color: #ad6800;
+}
+
+.merchant-create-actions {
+  justify-content: flex-start;
+  gap: 12px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.merchant-create-save-btn.ant-btn {
+  min-width: 63px;
+  height: 32px;
+  padding: 0 24px;
+  border-radius: 999px;
+  border-color: #005bf8 !important;
+  background: #005bf8 !important;
+  color: #fff !important;
+  font-size: 14px;
+  box-shadow: none;
+}
+
+.merchant-create-save-btn.ant-btn:hover,
+.merchant-create-save-btn.ant-btn:focus {
+  border-color: #1f73ff !important;
+  background: #1f73ff !important;
+  color: #fff !important;
+}
+
+body.theme-black-mode .merchant-create-card {
+  background: var(--pc-dark-bg-surface);
+  border-color: var(--pc-dark-border);
+}
+
+body.theme-black-mode .merchant-create-step-title,
+body.theme-black-mode .merchant-create-form .ant-form-item-label > label {
+  color: var(--pc-dark-text);
+}
+
+body.theme-black-mode .merchant-create-steps,
+body.theme-black-mode .merchant-upload-box {
+  border-color: var(--pc-dark-border);
+}
+
+body.theme-black-mode .admin-result-banner {
+  border-color: rgba(148, 163, 184, 0.32);
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--pc-dark-text-secondary);
+}
+
+body.theme-black-mode .admin-result-banner.matched {
+  border-color: rgba(82, 196, 26, 0.35);
+  background: rgba(82, 196, 26, 0.12);
+  color: #8dde68;
+}
+
+body.theme-black-mode .admin-result-banner.warning {
+  border-color: rgba(250, 173, 20, 0.38);
+  background: rgba(250, 173, 20, 0.14);
+  color: #ffd666;
+}

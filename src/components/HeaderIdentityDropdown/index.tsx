@@ -129,7 +129,7 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
       trigger={['click']}
       placement="bottomRight"
       overlayClassName="header-identity-dropdown__overlay"
-      dropdownRender={() => (
+      popupRender={() => (
         <div
           className="header-identity-dropdown__panel"
           onClick={(event) => event.stopPropagation()}

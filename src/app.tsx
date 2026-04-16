@@ -8,7 +8,7 @@ import { SettingDrawer } from '@ant-design/pro-components';
 
 import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
 import { history } from '@umijs/max';
-import { Avatar, Button, Dropdown, Modal, message, Tooltip } from 'antd';
+import { Button, Dropdown, Modal, message, Tooltip } from 'antd';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { NoticeBell } from '@/components';
 import HeaderIdentityDropdown from '@/components/HeaderIdentityDropdown';
@@ -65,6 +65,7 @@ import {
 
 const isDev = process.env.NODE_ENV === 'development' || process.env.CI;
 const loginPath = '/user/login';
+const DASHBOARD_HOME_TITLE = '系统首页';
 const devBypassAuth =
   typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
 const HEADER_USER_AVATAR_SRC =
@@ -178,14 +179,15 @@ function isDashboardRoute(pathname: string): boolean {
   return normalized === '/dashboard' || normalized.startsWith('/dashboard/');
 }
 
-function isWorkplaceMenuItem(item: MenuDataItem | undefined): boolean {
+function isDashboardHomeMenuItem(item: MenuDataItem | undefined): boolean {
   const normalizedPath = normalizePathname(
     item?.path ? String(item.path) : undefined,
   );
-  if (normalizedPath === '/dashboard') return true;
+  if (normalizedPath === '/dashboard' || normalizedPath === '/dashboard/index')
+    return true;
 
   const menuName = typeof item?.name === 'string' ? item.name.trim() : '';
-  return menuName === '工作台';
+  return menuName === DASHBOARD_HOME_TITLE;
 }
 
 class DashboardHomeMenuBoundary extends Component<
@@ -322,8 +324,8 @@ export async function getInitialState(): Promise<{
         settings: resolvedSettings,
       };
     }
-    const selectedOrgCode = getSelectedOrgCode() || undefined;
-    if (hasToken && !selectedOrgCode) {
+    const selectedOrgCode = getSelectedOrgCode();
+    if (!selectedOrgCode) {
       // 如果有 token 但没有选择身份，无论是否在 character 页面都提前返回
       // 不调用 getPermContext，等用户选择身份后再调用
       if (location.pathname !== '/user/character') {
@@ -344,7 +346,7 @@ export async function getInitialState(): Promise<{
 
     let loginContext: any;
     try {
-      loginContext = await getUserLoginContext(selectedOrgCode!);
+      loginContext = await getUserLoginContext(selectedOrgCode);
     } catch (error) {
       console.error('getUserLoginContext failed:', error);
     }
@@ -364,7 +366,6 @@ export async function getInitialState(): Promise<{
       businessList,
     );
 
-    // 如果业态代码发生变化，更新到 localStorage
     if (currentBusinessCode !== getCurrentBusinessCode()) {
       setCurrentBusinessCode(currentBusinessCode);
     }
@@ -421,16 +422,8 @@ export const layout: RunTimeLayoutConfig = ({
       commonActions: actions,
     }));
   };
-
-  // 初始化常用数据
-  if (!initialState?.commonActions) {
-    const actions = loadCommonActions();
-    setInitialState((s: any) => ({
-      ...s,
-      commonActions: actions,
-      setCommonActions: saveCommonActions,
-    }));
-  }
+  const resolvedCommonActions =
+    initialState?.commonActions || loadCommonActions();
 
   const buildTopMenus = (
     menuData: MenuDataItem[] | undefined,
@@ -440,7 +433,7 @@ export const layout: RunTimeLayoutConfig = ({
     );
 
     const dashboardMenu: MenuDataItem = {
-      name: '工作台',
+      name: DASHBOARD_HOME_TITLE,
       path: '/dashboard',
       children: dashboardFromRoutes?.children,
     } as any;
@@ -513,7 +506,7 @@ export const layout: RunTimeLayoutConfig = ({
                 ? fallbackSourceSystem
                 : undefined,
             );
-            const nextTarget = isWorkplaceMenuItem(clickedItem)
+            const nextTarget = isDashboardHomeMenuItem(clickedItem)
               ? {
                   path: fallbackPath,
                   targetId: fallbackTargetId,
@@ -606,9 +599,9 @@ export const layout: RunTimeLayoutConfig = ({
               history.location.search,
             )
           ) {
-            // 如果当前页面在新业态下没有权限，跳转到工作台
+            // 如果当前页面在新业态下没有权限，跳转到系统首页
             history.replace(buildIframeRouteWithParams('/dashboard/index'));
-            message.success('切换业态成功，已跳转到工作台');
+            message.success('切换业态成功，已跳转到系统首页');
           } else {
             message.success('切换业态成功');
           }
@@ -732,8 +725,8 @@ export const layout: RunTimeLayoutConfig = ({
         initialState?.currentUser?.name ?? 'guest'
       }`;
 
-      const commonActions = initialState?.commonActions || [];
-      const setCommonActions = initialState?.setCommonActions || (() => {});
+      const commonActions = resolvedCommonActions;
+      const setCommonActions = saveCommonActions;
 
       return (
         <div className="dashboard-sider">

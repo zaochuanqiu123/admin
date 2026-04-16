@@ -15,7 +15,7 @@ import {
   Steps,
   Upload,
 } from 'antd';
-import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
+import type { UploadFile } from 'antd/es/upload/interface';
 import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -31,6 +31,12 @@ import {
 } from '@/api/store';
 import { type SearchUserResult, searchUserByPhone } from '@/api/user';
 import { ROUTE_TAB_REFRESH_EVENT } from '@/components/Layout/RouteTabsKeepAlive';
+import {
+  createRemoteUploadFileList,
+  imageUploadRequest,
+  normalizeUploadFileList,
+  resolveUploadAttachmentId,
+} from '@/pages/form/shared/upload';
 import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
 import { STORE_PERMS } from '../store-perms';
 import './index.less';
@@ -386,39 +392,6 @@ function isValidMainlandPhone(phone: string): boolean {
   return /^1\d{10}$/.test(phone);
 }
 
-function normalizeUploadFileList(
-  event: Parameters<NonNullable<UploadProps['onChange']>>[0] | UploadFile[],
-) {
-  if (Array.isArray(event)) {
-    return event.slice(-1);
-  }
-  return (event?.fileList || []).slice(-1);
-}
-
-function getLastUploadFile(fileList?: UploadFile[]) {
-  return Array.isArray(fileList) && fileList.length > 0
-    ? fileList[fileList.length - 1]
-    : undefined;
-}
-
-function createRemoteUploadFileList(
-  url: string | undefined,
-  name: string,
-): UploadFile[] {
-  const normalizedUrl = String(url || '').trim();
-  if (!normalizedUrl) {
-    return [];
-  }
-  return [
-    {
-      uid: `remote-${name}`,
-      name,
-      status: 'done',
-      url: normalizedUrl,
-    } as UploadFile,
-  ];
-}
-
 function readCoordinateValue(
   ...values: Array<string | number | undefined | null>
 ): string {
@@ -477,34 +450,6 @@ function findRegionPath(
     currentOptions = matched.children || [];
   }
   return path;
-}
-
-async function mockUploadImage(file?: UploadFile): Promise<string> {
-  const rawName = String(file?.name || '')
-    .trim()
-    .toLowerCase();
-  const extension =
-    rawName.endsWith('.jpg') || rawName.endsWith('.jpeg') ? 'jpg' : 'png';
-  return new Promise((resolve) => {
-    window.setTimeout(() => {
-      resolve(`https://dummyimage.com/600x400/1890ff/ffffff.${extension}`);
-    }, 600);
-  });
-}
-
-async function resolveUploadImageUrl(
-  fileList: UploadFile[] | undefined,
-  fallbackUrl = '',
-): Promise<string> {
-  const file = getLastUploadFile(fileList);
-  if (!file) {
-    return String(fallbackUrl || '').trim();
-  }
-  const existingUrl = String(file.url || '').trim();
-  if (/^https?:\/\//i.test(existingUrl)) {
-    return existingUrl;
-  }
-  return mockUploadImage(file);
 }
 
 export default function StoreCreatePage() {
@@ -1134,19 +1079,19 @@ export default function StoreCreatePage() {
     }
     setSubmitting(true);
     try {
-      const shopImgUrl = await resolveUploadImageUrl(
+      const shopImgId = await resolveUploadAttachmentId(
         values.shopImgFileList,
         String(detailRecord?.shopImgId || '').trim(),
       );
-      const logoUrl = await resolveUploadImageUrl(
+      const logoId = await resolveUploadAttachmentId(
         values.logoFileList,
         String(detailRecord?.logoId || '').trim(),
       );
       const payload = {
         storeName: String(values.storeName || '').trim(),
         businessCode: String(values.businessCode || '').trim(),
-        logoId: logoUrl,
-        shopImgId: shopImgUrl,
+        logoId,
+        shopImgId,
         storePhone: String(values.storePhone || '').trim(),
         storeAddress: String(values.storeAddress || '').trim(),
         storeProvince: String(regionPath[0]?.label || '').trim(),
@@ -1334,11 +1279,11 @@ export default function StoreCreatePage() {
                       },
                     },
                   ]}
-                  extra="当前仅支持本地选择图片，提交时会暂用假 URL 占位。"
+                  extra="选择图片后会自动上传。"
                 >
                   <Upload
                     accept="image/*"
-                    beforeUpload={() => false}
+                    customRequest={imageUploadRequest}
                     maxCount={1}
                     listType="picture-card"
                     className="store-upload"
@@ -1357,7 +1302,7 @@ export default function StoreCreatePage() {
                 >
                   <Upload
                     accept="image/*"
-                    beforeUpload={() => false}
+                    customRequest={imageUploadRequest}
                     maxCount={1}
                     listType="picture-card"
                     className="store-upload"

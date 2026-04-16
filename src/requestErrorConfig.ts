@@ -113,6 +113,8 @@ export const errorConfig: RequestConfig = {
       // 拦截请求配置，进行个性化处理。
       const token = getToken();
       const orgCode = getSelectedOrgCode();
+      const isFormData =
+        typeof FormData !== 'undefined' && config.data instanceof FormData;
       const hasAuthorizationHeader = Boolean(
         (config.headers as Record<string, any> | undefined)?.Authorization,
       );
@@ -123,6 +125,10 @@ export const errorConfig: RequestConfig = {
           : {}),
         ...(orgCode ? { 'X-Org-Code': orgCode } : {}),
       };
+      if (isFormData) {
+        delete (headers as Record<string, any>)['Content-Type'];
+        delete (headers as Record<string, any>)['content-type'];
+      }
 
       return { ...config, headers };
     },

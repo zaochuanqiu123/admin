@@ -15,6 +15,7 @@ export type QrCodeTemplateRecord = {
   defaultFlag?: number;
   prevImage?: string;
   prevImageUrl?: string;
+  prevImageAttachmentId?: string;
   qrcodeSnConfig?: {
     isShow?: number;
     size?: number;
@@ -79,7 +80,7 @@ export async function getQrCodeTemplateList(
 
 export type QrCodeTemplateAddParams = {
   name: string;
-  prevImageUrl: string;
+  prevImageAttachmentId: string;
   qrcodeSnConfig: {
     isShow: number;
     size: number;
@@ -91,11 +92,12 @@ export type QrCodeTemplateAddParams = {
     h: number;
     x: number;
     y: number;
+    color: string;
   };
   bgConfig: {
     w: number;
     h: number;
-    imageUrl: string;
+    imageAttachmentId: string;
   };
   remark?: string;
   state: number;

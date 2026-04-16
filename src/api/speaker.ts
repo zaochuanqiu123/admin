@@ -65,6 +65,10 @@ export type SpeakerPageQueryParams = {
   storeOrgId?: string;
   batchSn?: string;
   sn?: string;
+  speakerChannelId?: string;
+  speakerChannelCode?: string;
+  model?: string;
+  bindName?: string;
   snList?: string[];
   startSn?: string;
   endSn?: string;
@@ -216,6 +220,20 @@ export async function getSpeakerChannelDetail(
     `/api/device/admin/speakerChannel/${id}`,
     {
       method: 'GET',
+      ...(options || {}),
+    },
+  );
+}
+
+export async function addSpeakerChannel(
+  data: SpeakerChannelSaveParams,
+  options?: { [key: string]: any },
+) {
+  return apiRequest<CommonApiResponse<boolean>>(
+    '/admin/device/v1/speakerChannel/add',
+    {
+      method: 'POST',
+      data,
       ...(options || {}),
     },
   );

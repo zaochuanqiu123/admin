@@ -7,10 +7,11 @@ import {
   ProFormText,
   ProFormTextArea,
 } from '@ant-design/pro-components';
-import { useRequest } from '@umijs/max';
+import { useModel } from '@umijs/max';
 import { Button, Input, message, Upload } from 'antd';
 import React from 'react';
-import { queryCity, queryCurrent, queryProvince } from '../service';
+import type { CurrentUser } from '../data';
+import { queryCity, queryProvince } from '../service';
 import useStyles from './index.style';
 
 const validatorPhone = (
@@ -29,6 +30,11 @@ const validatorPhone = (
 
 const BaseView: React.FC = () => {
   const { styles } = useStyles();
+  const { initialState } = useModel('@@initialState');
+  const currentUser = initialState?.currentUser as
+    | Partial<CurrentUser>
+    | undefined;
+  const loading = false;
   // 头像组件 方便以后独立，增加裁剪之类的功能
   const AvatarView = ({ avatar }: { avatar: string }) => (
     <>
@@ -46,9 +52,6 @@ const BaseView: React.FC = () => {
       </Upload>
     </>
   );
-  const { data: currentUser, loading } = useRequest(() => {
-    return queryCurrent();
-  });
   const getAvatarURL = () => {
     if (currentUser) {
       if (currentUser.avatar) {
@@ -79,7 +82,7 @@ const BaseView: React.FC = () => {
               }}
               initialValues={{
                 ...currentUser,
-                phone: currentUser?.phone.split('-'),
+                phone: currentUser?.phone?.split('-'),
               }}
               hideRequiredMark
             >
