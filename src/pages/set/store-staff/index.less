@@ -199,6 +199,20 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
   align-self: flex-start;
 }
 
+.staff-avatar.ant-avatar {
+  flex-shrink: 0;
+  border: 1px solid var(--ant-color-border-secondary);
+  background: var(--ant-color-fill-quaternary);
+}
+
+.staff-avatar-default.ant-avatar {
+  color: var(--ant-color-text-secondary);
+
+  .anticon {
+    font-size: 52%;
+  }
+}
+
 .staff-disabled-badge {
   position: absolute;
   right: -8px;
@@ -257,6 +271,14 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
   padding: 28px 0;
 }
 
+.staff-list-pagination {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--staff-border);
+}
+
 .staff-detail-card {
   align-self: start;
   height: auto;
@@ -289,17 +311,33 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
   margin-left: auto;
 
   .ant-btn {
-    width: 34px;
-    height: 34px;
-    padding: 0;
+    height: 32px;
+    padding: 0 14px;
     border-radius: 4px;
-    color: var(--ant-color-text-secondary);
+    background: transparent;
+    box-shadow: none;
   }
 
-  .ant-btn:hover,
-  .ant-btn:focus {
+  .staff-action-btn.is-edit {
     border-color: var(--staff-accent);
     color: var(--staff-accent);
+  }
+
+  .staff-action-btn.is-delete {
+    border-color: var(--ant-color-error);
+    color: var(--ant-color-error);
+  }
+
+  .staff-action-btn.is-edit:hover,
+  .staff-action-btn.is-edit:focus {
+    border-color: var(--staff-accent-hover);
+    color: var(--staff-accent-hover);
+  }
+
+  .staff-action-btn.is-delete:hover,
+  .staff-action-btn.is-delete:focus {
+    border-color: var(--ant-color-error-hover);
+    color: var(--ant-color-error-hover);
   }
 }
 
@@ -362,7 +400,7 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
 
 .staff-info-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  grid-template-columns: 1fr;
   gap: 14px 48px;
   max-width: 760px;
 
@@ -402,6 +440,13 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
   }
 }
 
+.staff-role-tags {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .staff-permission-toggle,
 .staff-inline-link,
 .staff-more-toggle {
@@ -438,6 +483,18 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
   gap: 8px;
   margin-top: 18px;
   margin-left: 70px;
+}
+
+.staff-permission-empty,
+.staff-permission-loading {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  border: 1px solid var(--staff-border);
+  border-radius: 6px;
+  background: var(--ant-color-bg-container);
 }
 
 .staff-permission-roles {
@@ -725,6 +782,89 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
   color: var(--staff-accent);
   line-height: 24px;
   box-shadow: none;
+}
+
+.staff-select-pill.ant-tag {
+  margin: 0;
+
+  .ant-tag-close-icon {
+    margin-left: 6px;
+    color: var(--staff-accent);
+  }
+}
+
+.staff-selected-role-list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.staff-avatar-upload {
+  .ant-upload-list-picture-card .ant-upload-list-item,
+  .ant-upload.ant-upload-select {
+    width: 84px;
+    height: 84px;
+    border-radius: 6px;
+  }
+}
+
+.staff-avatar-upload-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--ant-color-text-secondary);
+  font-size: 12px;
+}
+
+.staff-role-empty-text {
+  color: var(--ant-color-text-tertiary);
+}
+
+.staff-page-loading {
+  margin: auto;
+}
+
+.staff-role-picker-modal {
+  .ant-modal-body {
+    padding-top: 8px;
+  }
+
+  .ant-table-row {
+    cursor: pointer;
+  }
+}
+
+.staff-role-picker-search {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+
+  .ant-input-search {
+    width: 280px;
+  }
+}
+
+.staff-role-picker-result-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0 10px;
+  color: var(--ant-color-text-secondary);
+
+  span:first-child {
+    color: var(--ant-color-text);
+  }
+
+  button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--staff-accent);
+    cursor: pointer;
+  }
 }
 
 

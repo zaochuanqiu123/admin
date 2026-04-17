@@ -363,9 +363,7 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
           key: node.key,
           label: node.name,
           icon: undefined,
-          className: isDashboardHomeNode(node)
-            ? 'dashboard-home-workplace-font'
-            : undefined,
+          className: undefined,
           children,
         };
       };

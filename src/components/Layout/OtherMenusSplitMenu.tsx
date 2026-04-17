@@ -355,9 +355,7 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
         key: node.key,
         label: node.name,
         icon: undefined,
-        className: isDashboardHomeNode(node)
-          ? 'other-menus-workplace-font'
-          : undefined,
+        className: undefined,
         children,
       };
     };
@@ -723,14 +721,7 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
                 }}
               >
                 <span className="other-menus-split-menu-item-icon">{icon}</span>
-                <span
-                  className={
-                    'other-menus-split-menu-item-label' +
-                    (isDashboardHomeNode(node)
-                      ? ' other-menus-workplace-font-label'
-                      : '')
-                  }
-                >
+                <span className="other-menus-split-menu-item-label">
                   {node.name}
                 </span>
               </button>

@@ -1,7 +1,8 @@
 import { UploadOutlined } from '@ant-design/icons';
-import { Button, Form, Modal, Select, Space, Upload, message } from 'antd';
+import { Button, Form, Modal, message, Select, Space, Upload } from 'antd';
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 import React from 'react';
+import { resolveUploadAttachmentId } from '@/pages/form/shared/upload';
 import { getErrorMessage } from '@/utils/apiMessage';
 import './SpeakerImportModal.less';
 
@@ -11,7 +12,7 @@ type SpeakerImportModalProps = {
   onOk: (values: {
     belongBrand?: string;
     speakerBrand?: string;
-    fileList: UploadFile[];
+    fileId: string;
   }) => Promise<void> | void;
   onDownloadTemplate: () => void;
   belongBrandOptions: { label: string; value: string }[];
@@ -58,7 +59,7 @@ export const SpeakerImportModal: React.FC<SpeakerImportModalProps> = ({
       await onOk({
         belongBrand: values.belongBrand,
         speakerBrand: values.speakerBrand,
-        fileList: values.fileList || [],
+        fileId: await resolveUploadAttachmentId(values.fileList),
       });
     } catch (error) {
       if ((error as any)?.errorFields) {
@@ -130,11 +131,7 @@ export const SpeakerImportModal: React.FC<SpeakerImportModalProps> = ({
           extra="只支持上传 xls/xlsx"
         >
           <Space size={12} wrap>
-            <Upload
-              accept=".xls,.xlsx"
-              beforeUpload={() => false}
-              maxCount={1}
-            >
+            <Upload accept=".xls,.xlsx" beforeUpload={() => false} maxCount={1}>
               <Button type="primary" icon={<UploadOutlined />}>
                 选取文件
               </Button>

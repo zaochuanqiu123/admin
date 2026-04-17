@@ -230,7 +230,7 @@ export async function addSpeakerChannel(
   options?: { [key: string]: any },
 ) {
   return apiRequest<CommonApiResponse<boolean>>(
-    '/admin/device/v1/speakerChannel/add',
+    '/api/admin/device/v1/speakerChannel/add',
     {
       method: 'POST',
       data,

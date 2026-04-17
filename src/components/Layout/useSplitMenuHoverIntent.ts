@@ -13,7 +13,7 @@ type UseSplitMenuHoverIntentOptions = {
 };
 
 const INITIAL_OPEN_DELAY = 90;
-const SWITCH_OPEN_DELAY = 120;
+const SWITCH_OPEN_DELAY = 70;
 
 export function useSplitMenuHoverIntent({
   hoverOpen,

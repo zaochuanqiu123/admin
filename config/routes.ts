@@ -189,6 +189,12 @@ const routes = [
     hideInMenu: true,
   },
   {
+    name: '修改员工账号',
+    path: '/permission/store-staff/edit/:id',
+    component: './set/store-staff',
+    hideInMenu: true,
+  },
+  {
     name: '二维码模板',
     path: '/platform/qr-template',
     component: './form/store-qr-template/index',

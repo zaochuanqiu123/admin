@@ -33,6 +33,7 @@ import {
   getToken,
   setCurrentBusinessCode,
 } from '@/api/storage';
+import { getUserInfo as fetchUserInfoFromApi } from '@/api/user';
 import logoDark from '@/assets/logo-dark.png';
 import DashboardHomeSplitMenu from '@/components/Layout/DashboardHomeSplitMenu';
 import OtherMenusSplitMenu from '@/components/Layout/OtherMenusSplitMenu';
@@ -65,7 +66,7 @@ import {
 
 const isDev = process.env.NODE_ENV === 'development' || process.env.CI;
 const loginPath = '/user/login';
-const DASHBOARD_HOME_TITLE = '系统首页';
+const DASHBOARD_HOME_TITLE = '首页';
 const devBypassAuth =
   typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
 const HEADER_USER_AVATAR_SRC =
@@ -266,6 +267,25 @@ export async function getInitialState(): Promise<{
   }
 
   const fetchUserInfo = async () => {
+    // 优先走接口获取最新用户信息
+    try {
+      const apiUser = await fetchUserInfoFromApi({ skipErrorHandler: true });
+      if (apiUser && (apiUser.nickName || apiUser.name || apiUser.account)) {
+        return {
+          userid: apiUser.account,
+          // 展示名字优先使用 nickName（昵称），兜底 name
+          name: apiUser.nickName || apiUser.name,
+          nickName: apiUser.nickName || apiUser.name,
+          account: apiUser.account,
+          avatar: apiUser.avatarUrl || apiUser.avatar,
+          phone: apiUser.phone,
+        } as API.CurrentUser;
+      }
+    } catch (_e) {
+      // 接口失败，回退到本地缓存
+    }
+
+    // 回退：从本地缓存读取
     const cachedUser = getLoginUserInfo<
       API.CurrentUser & Record<string, any>
     >();
@@ -301,7 +321,7 @@ export async function getInitialState(): Promise<{
             authUser?.avatarUrl,
         };
       }
-    } catch {
+    } catch (_e) {
       // ignore cache parse errors
     }
 
@@ -342,8 +362,7 @@ export async function getInitialState(): Promise<{
       };
     }
 
-    const currentUser = await fetchUserInfo();
-
+    // 1. 登录上下文
     let loginContext: any;
     try {
       loginContext = await getUserLoginContext(selectedOrgCode);
@@ -370,9 +389,12 @@ export async function getInitialState(): Promise<{
       setCurrentBusinessCode(currentBusinessCode);
     }
 
-    // 使用 currentBusinessCode 调用 getPermContext
+    // 2. 权限上下文
     const { permContextMenu, buttonPermissions } =
       await fetchPermState(currentBusinessCode);
+
+    // 3. 最后获取用户基本信息
+    const currentUser = await fetchUserInfo();
 
     return {
       fetchUserInfo,
@@ -617,6 +639,14 @@ export const layout: RunTimeLayoutConfig = ({
         label: business.businessName,
       }));
 
+      // 判断是否显示业态选择（loginContext 或当前选中的 business 项中 isshow / isShow 为 false 时不显示）
+      const loginContext = initialState?.loginContext;
+      const showBusinessPill =
+        loginContext?.isshow !== false &&
+        loginContext?.isShow !== false &&
+        currentBusiness?.isshow !== false &&
+        currentBusiness?.isShow !== false;
+
       return (
         <div
           style={{
@@ -633,7 +663,7 @@ export const layout: RunTimeLayoutConfig = ({
             alt="logo"
             style={{ height: 48, display: 'block' }}
           />
-          {businessList.length > 0 && (
+          {businessList.length > 0 && showBusinessPill && (
             <Dropdown
               menu={{
                 items: menuItems,

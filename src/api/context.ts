@@ -78,11 +78,33 @@ export async function getOrgMenuTree(
   });
 }
 
+export async function getRolePermTree(
+  data: { roleIds: string[] },
+  options?: { [key: string]: any },
+) {
+  return apiData<any>('/api/admin/system/v1/role/getRolePermTree', {
+    method: 'POST',
+    data,
+    ...(options || {}),
+  });
+}
+
 export type SaveRoleParams = {
   roleName: string;
   roleType: number;
   state: number;
-  permIds?: string[];
+  roleTerminalList?: RoleTerminalParams[];
+};
+
+export type RoleTerminalParams = {
+  terminalName?: string;
+  terminalCode?: string;
+  terminalBusinessList?: Array<{
+    businessCode?: string;
+    businessName?: string;
+    businessVersionId?: string;
+    perms?: string[];
+  }>;
 };
 
 export async function saveRole(
@@ -101,7 +123,7 @@ export type EditRoleParams = {
   roleName: string;
   roleType: number;
   state: number;
-  permIds?: string[];
+  roleTerminalList?: RoleTerminalParams[];
 };
 
 export async function editRole(

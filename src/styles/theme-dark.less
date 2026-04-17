@@ -242,6 +242,30 @@ body.theme-black-mode .workplace-ai-card__textarea.ant-input::placeholder {
   color: rgba(255, 255, 255, 0.26) !important;
 }
 
+/* 代办事项（等同于工作台其他卡片暗黑态） */
+body.theme-black-mode .dashboard-pending-card {
+  background: var(--pc-dark-bg-surface) !important;
+  border-color: var(--pc-dark-border) !important;
+}
+
+body.theme-black-mode .dashboard-pending-card::before {
+  display: none !important;
+  background-image: none !important;
+}
+
+body.theme-black-mode .dashboard-pending-item {
+  background: rgba(20, 26, 38, 0.94) !important;
+  border: 1px solid var(--pc-dark-border) !important;
+}
+
+body.theme-black-mode .dashboard-pending-value {
+  color: var(--pc-dark-text) !important;
+}
+
+body.theme-black-mode .dashboard-pending-label {
+  color: var(--pc-dark-text-secondary) !important;
+}
+
 body.theme-black-mode .dashboard-common-actions-drawer-trigger {
   color: #89b4ff !important;
   border-color: rgba(126, 173, 255, 0.4) !important;

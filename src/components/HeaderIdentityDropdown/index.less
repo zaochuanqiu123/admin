@@ -56,6 +56,31 @@
   box-sizing: border-box;
 }
 
+/* 头像悬浮上传区域 */
+.header-identity-dropdown__avatar-wrap {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.header-identity-dropdown__avatar-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.48);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 14px;
+  pointer-events: none;
+}
+
+
 .header-identity-dropdown__account {
   min-width: 0;
   flex: 1;

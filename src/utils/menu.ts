@@ -288,44 +288,6 @@ export function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
       } => item !== null,
     );
 
-  const permissionMenu = result.find((item) => {
-    const name = String(item?.name || '').trim();
-    const path = normalizeLookupPath(String(item?.path || ''));
-    const children = Array.isArray(item?.children) ? item.children : [];
-    return (
-      name === '权限管理' ||
-      path === '/permission' ||
-      children.some(
-        (child) =>
-          normalizeLookupPath(String(child?.path || '')) ===
-          '/permission/role-list',
-      )
-    );
-  });
-
-  if (permissionMenu) {
-    const children = Array.isArray(permissionMenu.children)
-      ? permissionMenu.children
-      : [];
-    const hasStoreStaff = children.some(
-      (item) =>
-        String(item?.name || '').trim() === '员工管理' ||
-        normalizeLookupPath(String(item?.path || '')) ===
-          '/permission/store-staff',
-    );
-
-    if (!hasStoreStaff) {
-      permissionMenu.children = [
-        ...children,
-        {
-          name: '员工管理',
-          path: '/permission/store-staff',
-          sort: 0,
-        } as MenuDataItem,
-      ];
-    }
-  }
-
   return result;
 }
 

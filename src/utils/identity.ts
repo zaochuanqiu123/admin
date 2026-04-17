@@ -11,6 +11,7 @@ import {
   setCurrentBusinessCode,
   setSelectedOrgCode,
 } from '@/api/storage';
+import { getUserInfo as fetchUserInfoFromApi } from '@/api/user';
 import { clearPostLoginRedirect } from '@/utils/auth-expired';
 import { buildIframeRouteWithParams } from '@/utils/iframe';
 import {
@@ -262,11 +263,35 @@ export async function switchIdentityContext(
       businessList,
       currentBusinessCode: businessCode,
       permContextMenu: permContextMenu.length > 0 ? permContextMenu : undefined,
-      buttonPermissions: buttonPermissions.length > 0 ? buttonPermissions : undefined,
+      buttonPermissions:
+        buttonPermissions.length > 0 ? buttonPermissions : undefined,
     }));
 
     clearPostLoginRedirect();
     history.replace(buildIframeRouteWithParams('/dashboard/index'));
+
+    // 切换身份后重新获取用户信息（不影响切换结果）
+    try {
+      const apiUser = await fetchUserInfoFromApi({ skipErrorHandler: true });
+      if (apiUser && (apiUser.nickName || apiUser.name || apiUser.account)) {
+        const freshUser = {
+          userid: apiUser.account,
+          // 展示名字优先使用 nickName（昵称），兜底 name
+          name: apiUser.nickName || apiUser.name,
+          nickName: apiUser.nickName || apiUser.name,
+          account: apiUser.account,
+          avatar: apiUser.avatarUrl || apiUser.avatar,
+          phone: apiUser.phone,
+        };
+        setInitialState((state) => ({
+          ...(state || {}),
+          currentUser: freshUser,
+        }));
+      }
+    } catch (_e) {
+      // 获取用户信息失败不影响切换
+    }
+
     return true;
   } catch (error: any) {
     if (error?.info?.authHandled) {

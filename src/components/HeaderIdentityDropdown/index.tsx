@@ -1,12 +1,15 @@
 import {
+  CameraOutlined,
   DownOutlined,
   LogoutOutlined,
   SearchOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { history } from '@umijs/max';
-import { Avatar, Input, message } from 'antd';
+import { Avatar, Input, Modal, message, Upload } from 'antd';
 import React, { useMemo, useState } from 'react';
+import { uploadAttachment } from '@/api/cloudStorage';
+import { saveUserAvatar } from '@/api/user';
 import HeaderDropdown from '@/components/HeaderDropdown';
 import {
   getCurrentIdentityItem,
@@ -40,6 +43,8 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
   const [open, setOpen] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [switchingOrgCode, setSwitchingOrgCode] = useState<string>();
+  const [avatarHovered, setAvatarHovered] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   const identityItems = useMemo(
     () => getIdentityItemsFromStorage(),
@@ -68,22 +73,68 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
     (currentUser as any)?.userName ||
     (currentUser as any)?.nickName ||
     '用户';
+
+  // 名字下方展示账号（account），不展示手机号
+  const accountNo = (currentUser as any)?.account || currentUser?.userid || '-';
+
   const currentOrgName =
     currentIdentity?.name ||
     loginContext?.userOrgName ||
     loginContext?.orgName ||
     loginContext?.userOrgNickName ||
     '未选择机构';
-  const accountNo =
-    (currentUser as any)?.account ||
-    (currentUser as any)?.account ||
-    currentUser?.userid ||
-    currentUser?.phone ||
-    '-';
   const accountRole =
     currentIdentity?.groupLabel || currentIdentity?.levelName || '未选择身份';
-  const avatarSrc = currentUser?.avatar || HEADER_USER_AVATAR_SRC;
+  const avatarSrc =
+    (currentUser as any)?.avatar ||
+    currentUser?.avatar ||
+    HEADER_USER_AVATAR_SRC;
   const triggerLabel = currentOrgName;
+
+  /** 处理头像文件上传 */
+  const handleAvatarUpload = async (file: File) => {
+    const isImage = file.type.startsWith('image/');
+    if (!isImage) {
+      message.error('只能上传图片文件！');
+      return false;
+    }
+    const maxMB = 5;
+    if (file.size / 1024 / 1024 > maxMB) {
+      message.error(`图片大小不能超过 ${maxMB}MB！`);
+      return false;
+    }
+
+    setAvatarUploading(true);
+    try {
+      // 上传附件，获取 attachmentId
+      const attachment = await uploadAttachment({ file, categoryId: 1 });
+      const attachmentId = attachment?.id;
+      if (!attachmentId) {
+        message.error('上传失败，请重试');
+        return false;
+      }
+
+      // 保存头像（传 attachmentId）
+      await saveUserAvatar(String(attachmentId));
+
+      // 更新本地 initialState 中的头像（优先使用 avatarUrl，可能是 CDN 访问地址）
+      const newAvatarUrl = attachment?.url || attachment?.objectKey || '';
+      setInitialState((s: any) => ({
+        ...s,
+        currentUser: {
+          ...(s?.currentUser || {}),
+          avatar: newAvatarUrl || s?.currentUser?.avatar,
+        },
+      }));
+      message.success('头像已更新');
+    } catch (error: any) {
+      console.error('avatar upload failed:', error);
+      message.error(error?.message || '头像上传失败，请重试');
+    } finally {
+      setAvatarUploading(false);
+    }
+    return false; // 阻止 Upload 默认行为
+  };
 
   const handleOpenProfileCenter = () => {
     setOpen(false);
@@ -135,20 +186,39 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
           onClick={(event) => event.stopPropagation()}
         >
           <div className="header-identity-dropdown__header">
-            <Avatar
-              size={40}
-              src={avatarSrc}
-              icon={<UserOutlined />}
-              className="header-identity-dropdown__avatar"
-            />
+            {/* 头像区域 —— 悬停时显示上传相机图标 */}
+            <Upload
+              accept="image/*"
+              showUploadList={false}
+              beforeUpload={handleAvatarUpload}
+              disabled={avatarUploading}
+            >
+              <div
+                className="header-identity-dropdown__avatar-wrap"
+                onMouseEnter={() => setAvatarHovered(true)}
+                onMouseLeave={() => setAvatarHovered(false)}
+              >
+                <Avatar
+                  size={40}
+                  src={avatarSrc}
+                  icon={<UserOutlined />}
+                  className="header-identity-dropdown__avatar"
+                />
+                {(avatarHovered || avatarUploading) && (
+                  <div className="header-identity-dropdown__avatar-overlay">
+                    <CameraOutlined />
+                  </div>
+                )}
+              </div>
+            </Upload>
+
             <div className="header-identity-dropdown__account">
               <div className="header-identity-dropdown__name">
                 {loginUserName}
               </div>
               <div className="header-identity-dropdown__meta">
+                {/* 展示账号，不展示手机号 */}
                 <span>{accountNo}</span>
-                {/* <span>|</span>
-                <span>{accountRole}</span> */}
               </div>
             </div>
             <div className="header-identity-dropdown__actions">
