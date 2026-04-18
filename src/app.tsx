@@ -26,7 +26,6 @@ import {
   clearSelectedOrgCode,
   clearToken,
   emitRouteTabsResetEvent,
-  getBusinessList,
   getCurrentBusinessCode,
   getLoginUserInfo,
   getSelectedOrgCode,
@@ -60,6 +59,7 @@ import {
   TEMP_BUSINESS_CODE,
 } from '@/utils/menu';
 import {
+  clearStoreScopedStorage,
   clearWorkplaceCommonActionsCache,
   resetStoreScopedInitialState,
 } from '@/utils/store-switch';
@@ -368,15 +368,50 @@ export async function getInitialState(): Promise<{
       loginContext = await getUserLoginContext(selectedOrgCode);
     } catch (error) {
       console.error('getUserLoginContext failed:', error);
+      if ((error as any)?.info?.authHandled) {
+        return {
+          fetchUserInfo,
+          settings: resolvedSettings,
+        };
+      }
+
+      clearStoreScopedStorage();
+      const redirect = `${location.pathname}${location.search || ''}`;
+      if (location.pathname !== '/user/character') {
+        setPostLoginRedirect(redirect);
+        history.replace({
+          pathname: '/user/character',
+          search: new URLSearchParams({ redirect }).toString(),
+        });
+      }
+      message.error('登录上下文获取失败，请重新选择身份或稍后重试');
+      return {
+        fetchUserInfo,
+        settings: resolvedSettings,
+      };
     }
 
-    // 优先使用登录上下文里的业态数据，避免切换门店后头部昵称不同步
-    const businessList =
-      (Array.isArray(loginContext?.businessList)
-        ? loginContext.businessList
-        : undefined) ||
-      getBusinessList<any[]>() ||
-      [];
+    // 登录上下文是权限/业态的来源，不能用旧本地缓存兜底。
+    const businessList = Array.isArray(loginContext?.businessList)
+      ? loginContext.businessList
+      : [];
+    if (businessList.length === 0) {
+      clearStoreScopedStorage();
+      const redirect = `${location.pathname}${location.search || ''}`;
+      if (location.pathname !== '/user/character') {
+        setPostLoginRedirect(redirect);
+        history.replace({
+          pathname: '/user/character',
+          search: new URLSearchParams({ redirect }).toString(),
+        });
+      }
+      message.warning('当前身份暂无可用业态，请重新选择身份');
+      return {
+        fetchUserInfo,
+        settings: resolvedSettings,
+      };
+    }
+
     let currentBusinessCode = getCurrentBusinessCode() || undefined;
 
     // 验证并获取有效的业态代码

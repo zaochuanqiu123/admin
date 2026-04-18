@@ -1,5 +1,3 @@
-import { getToken } from '@/api/storage';
-
 function splitPath(inputPath: string): {
   pathname: string;
   searchParams: URLSearchParams;
@@ -27,12 +25,6 @@ export function buildIframeRouteWithParams(
 
   if (resolvedTargetId) {
     searchParams.set('targetId', resolvedTargetId);
-
-    const tokenInQuery = searchParams.get('token');
-    const token = tokenInQuery || getToken();
-    if (token) {
-      searchParams.set('token', token);
-    }
   }
 
   const nextSearch = searchParams.toString();

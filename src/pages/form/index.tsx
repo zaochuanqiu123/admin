@@ -31,6 +31,7 @@ import {
 } from '@/api/store';
 import { PermissionButton, PermissionVisible } from '@/components';
 import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
+import StoreAppModal from './components/StoreAppModal';
 import StoreQrCodeModal, {
   type StoreQrCodeModalPayload,
 } from './components/StoreQrCodeModal';
@@ -111,7 +112,7 @@ function mapStoreRecord(record: StorePageRecord): StoreItem {
     key: storeId,
     storeId,
     orgId: readText(record.orgId) || readText(record.id),
-    storeThumb: readText(record.logoId) || readText(record.shopImgId),
+    storeThumb: readText(record.logoUrl) || readText(record.shopImgUrl),
     storeName: readText(record.storeName) || '-',
     storeClassText: mapStoreClassToText(record.storeClass),
     isDirectStore: Number(record.storeClass) !== 2,
@@ -137,6 +138,7 @@ const StorePage: React.FC = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [qrModalPayload, setQrModalPayload] =
     useState<StoreQrCodeModalPayload | null>(null);
+  const [appModalRecord, setAppModalRecord] = useState<StoreItem>();
   const [isScrollAtRightEnd, setIsScrollAtRightEnd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [stores, setStores] = useState<StoreItem[]>([]);
@@ -172,6 +174,15 @@ const StorePage: React.FC = () => {
     },
     [],
   );
+
+  const handleOpenAppModal = useCallback((record: StoreItem) => {
+    const orgId = String(record.orgId || '').trim();
+    if (!orgId) {
+      message.warning('缺少门店组织 ID，无法操作应用');
+      return;
+    }
+    setAppModalRecord(record);
+  }, []);
 
   const handleStoreStateChange = useCallback(
     async (checked: boolean, record: StoreItem) => {
@@ -443,6 +454,10 @@ const StorePage: React.FC = () => {
               key: 'jurisdiction',
               label: 'DIY权限',
             },
+            {
+              key: 'app',
+              label: '应用开通',
+            },
           ];
 
           return (
@@ -476,6 +491,10 @@ const StorePage: React.FC = () => {
                       history.push(
                         `/form/store-manage/${record.storeId}/jurisdiction?storeName=${encodeURIComponent(record.storeName)}`,
                       );
+                      return;
+                    }
+                    if (key === 'app') {
+                      handleOpenAppModal(record);
                     }
                   },
                 }}
@@ -494,6 +513,7 @@ const StorePage: React.FC = () => {
       },
     ],
     [
+      handleOpenAppModal,
       handleOpenQrModal,
       handleMiniAppChange,
       handleMainStoreChange,
@@ -879,6 +899,14 @@ const StorePage: React.FC = () => {
         open={!!qrModalPayload}
         payload={qrModalPayload}
         onCancel={() => setQrModalPayload(null)}
+      />
+      <StoreAppModal
+        open={!!appModalRecord}
+        storeOrgId={appModalRecord?.orgId}
+        storeName={appModalRecord?.storeName}
+        onCancel={() => {
+          setAppModalRecord(undefined);
+        }}
       />
     </div>
   );

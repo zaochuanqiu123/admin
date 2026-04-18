@@ -18,30 +18,19 @@ export type MicroIframeMessage = {
 export type MicroIframeProps = {
   baseUrl: string;
   idParamKey?: string;
-  heightMessageType?: string;
   navigateMessageType?: string;
-  requestHeightType?: string;
+  readyMessageType?: string;
   initType?: string;
-  heightPayloadKey?: string;
-  minHeight?: number;
-  heightOffset?: number;
   withCard?: boolean;
   loadingText?: string;
-  buildInitPayload?: (ctx: {
-    id: string | null;
-    pathname: string;
-    search: string;
-  }) => Record<string, any>;
 };
 
 const MicroIframe: React.FC<MicroIframeProps> = ({
   baseUrl,
   idParamKey = 'targetId',
-  heightMessageType = 'IFRAME_HEIGHT',
   navigateMessageType = 'FROM_CHILD_APP',
-  heightPayloadKey = 'scrollHeight',
-  minHeight = 300,
-  heightOffset = 20,
+  readyMessageType = 'LEGACY_READY',
+  initType = 'LEGACY_BOOTSTRAP',
   withCard = false,
   loadingText = '系统加载中...',
 }) => {
@@ -51,9 +40,6 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
   const loadingMaskBg = token.colorBgLayout;
   const loadingTextColor = token.colorTextSecondary;
   const [loading, setLoading] = useState(true);
-  const [_iframeHeight, setIframeHeight] = useState<number>(
-    Math.max(window.innerHeight, minHeight),
-  );
 
   const locationRef = useRef(location);
   locationRef.current = location;
@@ -67,11 +53,18 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
     return undefined;
   }, [idParamKey, location.search]);
 
+  const iframeOrigin = useMemo(() => {
+    try {
+      return new URL(baseUrl, window.location.href).origin;
+    } catch {
+      return '';
+    }
+  }, [baseUrl]);
+
   useEffect(() => {
     const query = new URLSearchParams(location.search);
     const targetIdFromQuery = query.get(idParamKey);
     const tokenFromQuery = query.get('token');
-    const token = tokenFromQuery || getToken();
     let changed = false;
 
     if (!targetIdFromQuery && resolvedTargetId) {
@@ -79,8 +72,8 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
       changed = true;
     }
 
-    if (!tokenFromQuery && token) {
-      query.set('token', token);
+    if (tokenFromQuery) {
+      query.delete('token');
       changed = true;
     }
 
@@ -96,15 +89,9 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
     const query = new URLSearchParams(location.search);
     const targetId = query.get(idParamKey) || resolvedTargetId;
 
-    const tokenFromQuery = query.get('token');
-    const token = tokenFromQuery || getToken();
-
     const params = new URLSearchParams();
     if (targetId) {
       params.set('targetId', targetId);
-    }
-    if (token) {
-      params.set('token', token);
     }
 
     const queryString = params.toString();
@@ -119,8 +106,33 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
     const handleMessage = (event: MessageEvent) => {
       const iframeWindow = iframeRef.current?.contentWindow;
       if (!iframeWindow || event.source !== iframeWindow) return;
+      if (!iframeOrigin || event.origin !== iframeOrigin) return;
 
       const { type, payload } = (event.data || {}) as MicroIframeMessage;
+      console.log('[MicroIframe] received message:', {
+        origin: event.origin,
+        type,
+        payload,
+      });
+
+      if (type === readyMessageType) {
+        const token = getToken();
+        const bootstrapMessage = {
+          type: initType,
+          payload: {
+            token,
+          },
+        };
+
+        console.log('[MicroIframe] send bootstrap:', {
+          origin: iframeOrigin,
+          type: bootstrapMessage.type,
+          payload: bootstrapMessage.payload,
+        });
+
+        iframeWindow.postMessage(bootstrapMessage, iframeOrigin);
+        return;
+      }
 
       if (type === navigateMessageType) {
         const targetId = payload?.targetId ?? payload?.id;
@@ -139,12 +151,6 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
         const nextQuery = new URLSearchParams();
         nextQuery.set(idParamKey, String(targetId));
 
-        const tokenInUrl = new URLSearchParams(current.search).get('token');
-        const token = tokenInUrl || getToken();
-        if (token) {
-          nextQuery.set('token', token);
-        }
-
         const nextUrl = `${targetPath}?${nextQuery.toString()}`;
         if (
           current.pathname !== targetPath ||
@@ -154,28 +160,17 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
         }
         return;
       }
-
-      if (type === heightMessageType) {
-        const raw =
-          payload?.[heightPayloadKey] ??
-          payload?.height ??
-          payload?.scrollHeight;
-        const height = Number(raw);
-        if (!Number.isFinite(height) || height <= 0) return;
-        setIframeHeight(Math.max(height + heightOffset, minHeight));
-      }
     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [
-    heightMessageType,
-    heightOffset,
-    heightPayloadKey,
     idParamKey,
+    iframeOrigin,
     initialState?.permContextMenu,
-    minHeight,
+    initType,
     navigateMessageType,
+    readyMessageType,
   ]);
 
   const handleIframeLoad = useCallback(() => {

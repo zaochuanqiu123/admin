@@ -25,6 +25,7 @@ import {
 import { getQrCodeTemplateList } from '@/api/qrCodeTemplate';
 import {
   ExpandableFilterCard,
+  OrganizationPickerInput,
   PageSectionSkeleton,
   PermissionButton,
   PermissionVisible,
@@ -549,17 +550,15 @@ const StoreQrCodeListPage: React.FC = () => {
             key: 'agentOrgId',
             label: '代理组织ID',
             content: (
-              <Input
-                allowClear
-                placeholder="请输入代理组织ID"
+              <OrganizationPickerInput
+                placeholder="请选择代理组织"
                 value={draftFilters.agentOrgId}
-                onChange={(event) => {
+                onChange={(value) => {
                   setDraftFilters((prev) => ({
                     ...prev,
-                    agentOrgId: event.target.value,
+                    agentOrgId: value,
                   }));
                 }}
-                onPressEnter={handleSearch}
               />
             ),
           },

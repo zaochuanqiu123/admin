@@ -156,7 +156,7 @@ function normalizeOrgToStoreItem(org: any, index: number): StoreItem {
 
 const Character: FC = () => {
   console.log('=== Character component rendering ===');
-  const { setInitialState } = useModel('@@initialState');
+  const { initialState, setInitialState } = useModel('@@initialState');
   const [form] = Form.useForm();
   const keyword = Form.useWatch('keyword', form) as string | undefined;
   const storeType =
@@ -274,9 +274,13 @@ const Character: FC = () => {
           }
         }
 
-        // 更新 initialState，包括业态列表、当前业态和权限菜单
+        // 登录后首次选择身份也需要刷新用户信息，不能只等页面刷新后再补。
+        const currentUser = await initialState?.fetchUserInfo?.();
+
+        // 更新 initialState，包括用户信息、业态列表、当前业态和权限菜单
         setInitialState((s: any) => ({
           ...(s || {}),
+          currentUser: currentUser || (s as any)?.currentUser,
           currentOrgCode: orgCode,
           loginContext,
           businessList, // 保存业态列表
@@ -375,11 +379,11 @@ const Character: FC = () => {
                 <Form.Item name="keyword" style={{ flex: 1 }}>
                   <Input
                     className="searchInput"
-                    placeholder="请输入门店名称"
+                    placeholder="请输入身份名称"
                     allowClear
                   />
                 </Form.Item>
-                <Form.Item label="门店信息" name="storeType">
+                <Form.Item label="身份信息" name="storeType">
                   <Select
                     className="selectInput"
                     options={[
@@ -403,7 +407,7 @@ const Character: FC = () => {
             </Form>
 
             <div className="listHint">
-              请选择要登录的门店（共 {filteredStores.length} 个）：
+              请选择要登录的身份（共 {filteredStores.length} 个）：
             </div>
 
             <div className="storeListContainer">

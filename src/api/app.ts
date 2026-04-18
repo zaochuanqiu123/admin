@@ -61,6 +61,16 @@ export type UpgradeOrgAppParams = {
   appVersionId: string;
 };
 
+export type StoreApplicationStatusQueryParams = {
+  storeOrgId: string;
+};
+
+export type StoreEnableDisableAppParams = {
+  storeOrgId: string;
+  appId: string;
+  enable: boolean;
+};
+
 export async function getOrgAppList(
   orgId: string,
   options?: { [key: string]: any },
@@ -69,6 +79,20 @@ export async function getOrgAppList(
     `/api/admin/system/v1/app/getAppList/${orgId}`,
     {
       method: 'GET',
+      ...(options || {}),
+    },
+  );
+}
+
+export async function getStoreApplicationStatusList(
+  params: StoreApplicationStatusQueryParams,
+  options?: { [key: string]: any },
+) {
+  return apiData<OrgAppGroupRecord[]>(
+    '/api/admin/system/v1/app/storeApplicationStatusQuery',
+    {
+      method: 'GET',
+      params,
       ...(options || {}),
     },
   );
@@ -114,6 +138,17 @@ export async function getCurrentOrgAppDetail(
       ...(options || {}),
     },
   );
+}
+
+export async function storeEnableDisableApp(
+  data: StoreEnableDisableAppParams,
+  options?: { [key: string]: any },
+) {
+  return apiRequest<any>('/api/admin/system/v1/orgApp/storeEnableDisableApp', {
+    method: 'POST',
+    data,
+    ...(options || {}),
+  });
 }
 
 export async function enableOrgApp(

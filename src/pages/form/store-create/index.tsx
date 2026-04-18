@@ -407,6 +407,11 @@ function readCoordinateValue(
   return '';
 }
 
+function getDetailAttachmentId(value: string | undefined) {
+  const text = String(value || '').trim();
+  return text && !/^https?:\/\//i.test(text) ? text : '';
+}
+
 function findRegionOptionByText(
   options: RegionOption[],
   target: string | undefined,
@@ -817,11 +822,11 @@ export default function StoreCreatePage() {
           storeName: String(detail?.storeName || '').trim(),
           storePhone: String(detail?.storePhone || '').trim(),
           shopImgFileList: createRemoteUploadFileList(
-            detail?.shopImgId,
+            detail?.shopImgUrl,
             'shop-image.png',
           ),
           logoFileList: createRemoteUploadFileList(
-            detail?.logoId,
+            detail?.logoUrl,
             'store-logo.png',
           ),
           longitude: readCoordinateValue(
@@ -1081,11 +1086,11 @@ export default function StoreCreatePage() {
     try {
       const shopImgId = await resolveUploadAttachmentId(
         values.shopImgFileList,
-        String(detailRecord?.shopImgId || '').trim(),
+        getDetailAttachmentId(detailRecord?.shopImgId),
       );
       const logoId = await resolveUploadAttachmentId(
         values.logoFileList,
-        String(detailRecord?.logoId || '').trim(),
+        getDetailAttachmentId(detailRecord?.logoId),
       );
       const payload = {
         storeName: String(values.storeName || '').trim(),

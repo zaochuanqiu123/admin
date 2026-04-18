@@ -14,15 +14,19 @@
   }
 
   .organization-picker-filter-item-keyword {
-    flex: 1;
-    min-width: 320px;
+    flex: 0 1 auto;
+    min-width: 0;
 
     .ant-input {
-      min-width: 280px;
+      width: 420px;
+      max-width: calc(100vw - 220px);
+      min-width: 240px;
     }
   }
 
   .filter-item-label {
+    flex: 0 0 auto;
+    white-space: nowrap;
     color: rgba(0, 0, 0, 0.88);
     font-weight: 500;
   }

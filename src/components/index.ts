@@ -10,6 +10,7 @@ import ExpandableFilterCard from './ExpandableFilterCard';
 import Footer from './Footer';
 import MicroIframe from './MicroIframe';
 import OrganizationPickerModal from './OrganizationPickerModal';
+import OrganizationPickerInput from './OrganizationPickerModal/OrganizationPickerInput';
 import PageSectionSkeleton from './Page/PageSectionSkeleton';
 import PermissionButton from './Permission/PermissionButton';
 import PermissionVisible from './Permission/PermissionVisible';
@@ -25,6 +26,7 @@ export {
   SelectLang,
   NoticeBell,
   MicroIframe,
+  OrganizationPickerInput,
   OrganizationPickerModal,
   PageSectionSkeleton,
   PermissionButton,

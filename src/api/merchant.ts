@@ -17,6 +17,7 @@ export type MerchantPageRecord = {
   contactsName?: string;
   contactsPhone?: string;
   logoId?: string;
+  logoUrl?: string;
   merchantProvince?: string;
   merchantCity?: string;
   merchantArea?: string;
@@ -68,6 +69,7 @@ export type MerchantDetailRecord = {
   contactsName?: string;
   contactsPhone?: string;
   logoId?: string;
+  logoUrl?: string;
   merchantProvince?: string;
   merchantCity?: string;
   merchantArea?: string;

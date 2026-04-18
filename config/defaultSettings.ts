@@ -12,7 +12,7 @@ const Settings: ProLayoutProps & {
   contentWidth: 'Fluid',
   fixedHeader: false,
   fixSiderbar: true,
-  pwa: true,
+  pwa: false,
   siderWidth: 239,
   token: {
     sider: {

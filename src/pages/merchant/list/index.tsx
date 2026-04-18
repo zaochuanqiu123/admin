@@ -111,7 +111,7 @@ function renderMerchantNameCell(record: MerchantPageRecord) {
       <Avatar
         size={44}
         shape="square"
-        src={normalizeText(record.logoId) || undefined}
+        src={normalizeText(record.logoUrl) || undefined}
         icon={<UserOutlined />}
         className="merchant-list-avatar"
       />

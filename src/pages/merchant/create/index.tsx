@@ -34,7 +34,7 @@ import {
   createRemoteUploadFileList,
   imageUploadRequest,
   normalizeUploadFileList,
-  resolveUploadImageUrl,
+  resolveUploadAttachmentId,
 } from '@/pages/form/shared/upload';
 import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
 import { MERCHANT_PERMS } from '../merchant-perms';
@@ -70,6 +70,15 @@ function isValidMainlandPhone(phone: string): boolean {
 function normalizeText(value?: string) {
   const nextValue = String(value || '').trim();
   return nextValue || undefined;
+}
+
+function getMerchantLogoPreviewUrl(detail?: MerchantDetailRecord) {
+  return normalizeText(detail?.logoUrl);
+}
+
+function getMerchantLogoId(detail?: MerchantDetailRecord) {
+  const logoId = normalizeText(detail?.logoId);
+  return logoId && !/^https?:\/\//i.test(logoId) ? logoId : '';
 }
 
 function findOptionByLabel(options: RegionOption[], label?: string) {
@@ -223,7 +232,10 @@ export default function MerchantCreatePage() {
           merchantName: normalizeText(detail?.merchantName),
           contactsName: normalizeText(detail?.contactsName),
           contactsPhone: normalizeText(detail?.contactsPhone),
-          logoFileList: createRemoteUploadFileList(detail?.logoId, 'merchant'),
+          logoFileList: createRemoteUploadFileList(
+            getMerchantLogoPreviewUrl(detail),
+            'merchant',
+          ),
           merchantDetailAddress: normalizeText(detail?.merchantDetailAddress),
           sourceType:
             typeof detail?.sourceType === 'number' ? detail.sourceType : 1,
@@ -463,9 +475,9 @@ export default function MerchantCreatePage() {
       return;
     }
 
-    const logoUrl = await resolveUploadImageUrl(
+    const logoId = await resolveUploadAttachmentId(
       values.logoFileList,
-      normalizeText(detailRecord?.logoId) || '',
+      getMerchantLogoId(detailRecord),
     );
     const merchantName = String(values.merchantName ?? '').trim();
     const contactsName = String(values.contactsName ?? '').trim();
@@ -479,7 +491,7 @@ export default function MerchantCreatePage() {
       merchantName,
       contactsName,
       contactsPhone,
-      logoId: String(logoUrl || '').trim(),
+      logoId: String(logoId || '').trim(),
       merchantProvince: regionLabels.merchantProvince,
       merchantCity: regionLabels.merchantCity,
       merchantArea: regionLabels.merchantArea,

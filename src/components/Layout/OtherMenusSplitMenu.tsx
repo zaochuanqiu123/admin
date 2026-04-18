@@ -51,6 +51,11 @@ const FIRST_LEVEL_ICONS: React.ReactNode[] = [
   <SettingOutlined key="setting" />,
 ];
 const OTHER_SPLIT_MENU_FADE_DURATION = 180;
+const DISABLED_INLINE_MENU_MOTION: MenuProps['motion'] = {
+  motionAppear: false,
+  motionEnter: false,
+  motionLeave: false,
+};
 
 function normalizePath(path: string | undefined): string {
   const noQuery =
@@ -73,7 +78,9 @@ function isPathMatch(basePath: string | undefined, pathname: string): boolean {
 function isDashboardHomeNode(node: MenuNode): boolean {
   const normalizedPath = normalizePath(node.path);
   return (
-    normalizedPath === '/dashboard' || normalizedPath === '/dashboard/index'
+    node.name.trim() === '首页' ||
+    normalizedPath === '/dashboard' ||
+    normalizedPath === '/dashboard/index'
   );
 }
 
@@ -355,7 +362,9 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
         key: node.key,
         label: node.name,
         icon: undefined,
-        className: undefined,
+        className: isDashboardHomeNode(node)
+          ? 'other-menus-workplace-font'
+          : undefined,
         children,
       };
     };
@@ -721,7 +730,14 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
                 }}
               >
                 <span className="other-menus-split-menu-item-icon">{icon}</span>
-                <span className="other-menus-split-menu-item-label">
+                <span
+                  className={
+                    'other-menus-split-menu-item-label' +
+                    (isDashboardHomeNode(node)
+                      ? ' other-menus-workplace-font-label'
+                      : '')
+                  }
+                >
                   {node.name}
                 </span>
               </button>
@@ -747,6 +763,7 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
             items={hoverMenuMeta.items}
             selectedKeys={hoverSelectedKeys}
             openKeys={hoverOpenKeys}
+            motion={DISABLED_INLINE_MENU_MOTION}
             onOpenChange={(keys) =>
               setHoverOpenKeys((keys as React.Key[]).map((key) => String(key)))
             }
@@ -762,6 +779,7 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
           items={menuMeta.items}
           selectedKeys={selectedKeys}
           openKeys={openKeys}
+          motion={DISABLED_INLINE_MENU_MOTION}
           onOpenChange={(keys) =>
             setOpenKeys((keys as React.Key[]).map((key) => String(key)))
           }

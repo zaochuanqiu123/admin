@@ -65,6 +65,12 @@ const FIRST_LEVEL_ICONS: React.ReactNode[] = [
   <SettingOutlined key="setting" />,
 ];
 
+const DISABLED_INLINE_MENU_MOTION: MenuProps['motion'] = {
+  motionAppear: false,
+  motionEnter: false,
+  motionLeave: false,
+};
+
 function normalizePath(path: string | undefined): string {
   const noQuery =
     String(path || '')
@@ -86,7 +92,9 @@ function isPathMatch(basePath: string | undefined, pathname: string): boolean {
 function isDashboardHomeNode(node: MenuNode): boolean {
   const normalizedPath = normalizePath(node.path);
   return (
-    normalizedPath === '/dashboard' || normalizedPath === '/dashboard/index'
+    node.name.trim() === '首页' ||
+    normalizedPath === '/dashboard' ||
+    normalizedPath === '/dashboard/index'
   );
 }
 
@@ -363,7 +371,9 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
           key: node.key,
           label: node.name,
           icon: undefined,
-          className: undefined,
+          className: isDashboardHomeNode(node)
+            ? 'dashboard-home-workplace-font'
+            : undefined,
           children,
         };
       };
@@ -604,7 +614,14 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
                 }}
               >
                 <span className="dashboard-home-split-menu-icon">{icon}</span>
-                <span className="dashboard-home-split-menu-icon-label">
+                <span
+                  className={
+                    'dashboard-home-split-menu-icon-label' +
+                    (isDashboardHomeNode(node)
+                      ? ' dashboard-home-workplace-font-label'
+                      : '')
+                  }
+                >
                   {node.name}
                 </span>
               </button>
@@ -630,6 +647,7 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
             items={hoverMenuMeta.items}
             selectedKeys={hoverSelectedKeys}
             openKeys={hoverOpenKeys}
+            motion={DISABLED_INLINE_MENU_MOTION}
             onOpenChange={(keys) =>
               setHoverOpenKeys((keys as React.Key[]).map((key) => String(key)))
             }
@@ -645,6 +663,7 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
           items={menuMeta.items}
           selectedKeys={selectedKeys}
           openKeys={openKeys}
+          motion={DISABLED_INLINE_MENU_MOTION}
           onOpenChange={(keys) =>
             setOpenKeys((keys as React.Key[]).map((key) => String(key)))
           }

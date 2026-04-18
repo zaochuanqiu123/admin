@@ -17,7 +17,9 @@ export type StorePageRecord = {
   oldOrgId?: string;
   storeName?: string;
   logoId?: string;
+  logoUrl?: string;
   shopImgId?: string;
+  shopImgUrl?: string;
   storeProvince?: string;
   storeCity?: string;
   storeArea?: string;
@@ -97,7 +99,9 @@ export type StoreDetailRecord = {
   storeName?: string;
   businessCode?: string;
   logoId?: string;
+  logoUrl?: string;
   shopImgId?: string;
+  shopImgUrl?: string;
   storePhone?: string;
   storeAddress?: string;
   storeProvince?: string;
