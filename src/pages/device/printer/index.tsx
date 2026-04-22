@@ -1,4 +1,5 @@
 import { PlusOutlined } from '@ant-design/icons';
+import { useModel } from '@umijs/max';
 import {
   Alert,
   Button,
@@ -28,6 +29,10 @@ import {
   PermissionVisible,
 } from '@/components';
 import { getErrorMessage } from '@/utils/apiMessage';
+import {
+  getCurrentIdentityItem,
+  getIdentityItemsFromStorage,
+} from '@/utils/identity';
 import './index.less';
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -108,13 +113,10 @@ function getConnectTypeText(value?: PrinterConnectType) {
   return normalizeText(value) || '-';
 }
 
-function getOrgLines(org?: PrinterOrgInfo, fallbackId?: string) {
+function getOrgLines(org?: PrinterOrgInfo, _fallbackOrgId?: string) {
   const lines = [
     normalizeText(org?.orgName),
     normalizeText(org?.orgCode) && `编码：${normalizeText(org?.orgCode)}`,
-    normalizeText(org?.orgLevelCode) &&
-      `级别：${normalizeText(org?.orgLevelCode)}`,
-    normalizeText(fallbackId) && `ID：${normalizeText(fallbackId)}`,
   ].filter(Boolean) as string[];
 
   return lines.length > 0 ? lines : ['-'];
@@ -155,6 +157,18 @@ function renderMultiLines(lines: string[]) {
 }
 
 const PrinterPage: React.FC = () => {
+  const { initialState } = useModel('@@initialState');
+  const identityItems = useMemo(() => getIdentityItemsFromStorage(), []);
+  const currentIdentity = useMemo(
+    () => getCurrentIdentityItem(initialState?.currentOrgCode, identityItems),
+    [initialState?.currentOrgCode, identityItems],
+  );
+  const accountRole = currentIdentity?.levelName || '';
+  const isStore = accountRole.includes('门店');
+  const isMerchant = accountRole.includes('商户');
+  const isAgent = accountRole.includes('代理');
+  const isPlatform = !isMerchant && !isStore && !isAgent;
+
   const [loading, setLoading] = useState(false);
   const [listInitialized, setListInitialized] = useState(false);
   const [listError, setListError] = useState<string>();
@@ -270,130 +284,124 @@ const PrinterPage: React.FC = () => {
   }, [loadPrinterPage]);
 
   const columns = useMemo<ColumnsType<PrinterRecord>>(
-    () => [
-      {
-        title: 'ID',
-        dataIndex: 'id',
-        width: 90,
-        render: (value) => value || '-',
-      },
-      {
-        title: '代理组织',
-        key: 'agentOrg',
-        width: 180,
-        render: (_, record) =>
-          renderMultiLines(getOrgLines(record.agentOrg, record.agentOrgId)),
-      },
-      {
-        title: '集团组织',
-        key: 'groupOrg',
-        width: 180,
-        render: (_, record) =>
-          renderMultiLines(getOrgLines(record.groupOrg, record.groupOrgId)),
-      },
-      {
-        title: '商户组织',
-        key: 'merchantOrg',
-        width: 180,
-        render: (_, record) =>
-          renderMultiLines(
-            getOrgLines(record.merchantOrg, record.merchantOrgId),
+    () =>
+      [
+        {
+          title: '编号',
+          dataIndex: 'sn',
+          width: 180,
+          ellipsis: true,
+          render: (value: any) => value || '-',
+        },
+        isPlatform && {
+          title: '代理组织',
+          key: 'agentOrg',
+          width: 180,
+          render: (_: any, record: PrinterRecord) =>
+            renderMultiLines(getOrgLines(record.agentOrg)),
+        },
+        (isPlatform || isAgent) && {
+          title: '集团组织',
+          key: 'groupOrg',
+          width: 180,
+          render: (_: any, record: PrinterRecord) =>
+            renderMultiLines(getOrgLines(record.groupOrg)),
+        },
+        (isPlatform || isAgent) && {
+          title: '商户组织',
+          key: 'merchantOrg',
+          width: 180,
+          render: (_: any, record: PrinterRecord) =>
+            renderMultiLines(getOrgLines(record.merchantOrg)),
+        },
+        (isPlatform || isAgent || isMerchant) && {
+          title: '门店组织',
+          key: 'storeOrg',
+          width: 180,
+          render: (_: any, record: PrinterRecord) =>
+            renderMultiLines(getOrgLines(record.storeOrg)),
+        },
+        {
+          title: '打印通道',
+          key: 'printerChannel',
+          width: 180,
+          render: (_: unknown, record: PrinterRecord) =>
+            renderMultiLines(getPrinterChannelLines(record)),
+        },
+        {
+          title: '型号',
+          dataIndex: 'model',
+          width: 160,
+          ellipsis: true,
+          render: (value: string) => value || '-',
+        },
+        {
+          title: '打印类型',
+          dataIndex: 'printType',
+          width: 130,
+          render: (value: PrinterPrintType) => getPrintTypeText(value),
+        },
+        {
+          title: '连接类型',
+          dataIndex: 'connectType',
+          width: 130,
+          render: (value: PrinterConnectType) => getConnectTypeText(value),
+        },
+        {
+          title: '绑定名称',
+          dataIndex: 'bindName',
+          width: 180,
+          ellipsis: true,
+          render: (value: string) => value || '-',
+        },
+        {
+          title: '状态',
+          dataIndex: 'state',
+          width: 120,
+          render: (value: string | number) => (
+            <Switch
+              checked={Number(value) === 1}
+              checkedChildren="启用"
+              unCheckedChildren="禁用"
+              disabled
+            />
           ),
-      },
-      {
-        title: '门店组织',
-        key: 'storeOrg',
-        width: 180,
-        render: (_, record) =>
-          renderMultiLines(getOrgLines(record.storeOrg, record.storeOrgId)),
-      },
-      {
-        title: '编号',
-        dataIndex: 'sn',
-        width: 180,
-        ellipsis: true,
-        render: (value) => value || '-',
-      },
-      {
-        title: '打印通道',
-        key: 'printerChannel',
-        width: 180,
-        render: (_, record) => renderMultiLines(getPrinterChannelLines(record)),
-      },
-      {
-        title: '型号',
-        dataIndex: 'model',
-        width: 160,
-        ellipsis: true,
-        render: (value) => value || '-',
-      },
-      {
-        title: '打印类型',
-        dataIndex: 'printType',
-        width: 130,
-        render: (value: PrinterPrintType) => getPrintTypeText(value),
-      },
-      {
-        title: '连接类型',
-        dataIndex: 'connectType',
-        width: 130,
-        render: (value: PrinterConnectType) => getConnectTypeText(value),
-      },
-      {
-        title: '绑定名称',
-        dataIndex: 'bindName',
-        width: 180,
-        ellipsis: true,
-        render: (value) => value || '-',
-      },
-      {
-        title: '状态',
-        dataIndex: 'state',
-        width: 120,
-        render: (value) => (
-          <Switch
-            checked={Number(value) === 1}
-            checkedChildren="启用"
-            unCheckedChildren="禁用"
-            disabled
-          />
-        ),
-      },
-      {
-        title: '创建时间',
-        dataIndex: 'createTime',
-        width: 180,
-        render: (value) => value || '-',
-      },
-      {
-        title: '修改时间',
-        dataIndex: 'updateTime',
-        width: 180,
-        render: (value) => value || '-',
-      },
-      {
-        title: '操作',
-        key: 'action',
-        width: 120,
-        fixed: 'right',
-        render: (_, record) => (
-          <div className="printer-action-links">
-            <PermissionVisible perm={PRINTER_PERMS.detail}>
-              <Button
-                type="link"
-                size="small"
-                onClick={() => {
-                  setDetailRecord(record);
-                }}
-              >
-                查看详情
-              </Button>
-            </PermissionVisible>
-          </div>
-        ),
-      },
-    ],
-    [],
+        },
+        {
+          title: '创建时间',
+          dataIndex: 'createTime',
+          width: 180,
+          render: (value: string) => value || '-',
+        },
+        {
+          title: '修改时间',
+          dataIndex: 'updateTime',
+          width: 180,
+          render: (value: string) => value || '-',
+        },
+        {
+          title: '操作',
+          key: 'action',
+          width: 120,
+          fixed: 'right',
+          render: (_: unknown, record: PrinterRecord) => (
+            <div className="printer-action-links">
+              <PermissionVisible perm={PRINTER_PERMS.detail}>
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => {
+                    setDetailRecord(record);
+                  }}
+                >
+                  查看详情
+                </Button>
+              </PermissionVisible>
+            </div>
+          ),
+        },
+      ].filter(Boolean) as ColumnsType<PrinterRecord>,
+    [isPlatform, isAgent, isMerchant],
   );
 
   const handleSearch = () => {
@@ -458,279 +466,281 @@ const PrinterPage: React.FC = () => {
         className="printer-filter-card"
         onSearch={handleSearch}
         onReset={handleReset}
-        fields={[
-          {
-            key: 'agentOrgId',
-            label: '代理组织ID',
-            content: (
-              <OrganizationPickerInput
-                placeholder="请选择代理组织"
-                value={draftFilters.agentOrgId}
-                onChange={(value) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    agentOrgId: value,
-                  }));
-                }}
-              />
-            ),
-          },
-          {
-            key: 'groupOrgId',
-            label: '集团组织ID',
-            content: (
-              <Input
-                allowClear
-                placeholder="请输入集团组织ID"
-                value={draftFilters.groupOrgId}
-                onChange={(event) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    groupOrgId: event.target.value,
-                  }));
-                }}
-                onPressEnter={handleSearch}
-              />
-            ),
-          },
-          {
-            key: 'merchantOrgId',
-            label: '商户组织ID',
-            content: (
-              <Input
-                allowClear
-                placeholder="请输入商户组织ID"
-                value={draftFilters.merchantOrgId}
-                onChange={(event) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    merchantOrgId: event.target.value,
-                  }));
-                }}
-                onPressEnter={handleSearch}
-              />
-            ),
-          },
-          {
-            key: 'storeOrgId',
-            label: '门店组织ID',
-            content: (
-              <Input
-                allowClear
-                placeholder="请输入门店组织ID"
-                value={draftFilters.storeOrgId}
-                onChange={(event) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    storeOrgId: event.target.value,
-                  }));
-                }}
-                onPressEnter={handleSearch}
-              />
-            ),
-          },
-          {
-            key: 'sn',
-            label: '编号',
-            content: (
-              <Input
-                allowClear
-                placeholder="请输入编号"
-                value={draftFilters.sn}
-                onChange={(event) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    sn: event.target.value,
-                  }));
-                }}
-                onPressEnter={handleSearch}
-              />
-            ),
-          },
-          {
-            key: 'printerChannelId',
-            label: '打印通道ID',
-            content: (
-              <Input
-                allowClear
-                placeholder="请输入打印通道ID"
-                value={draftFilters.printerChannelId}
-                onChange={(event) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    printerChannelId: event.target.value,
-                  }));
-                }}
-                onPressEnter={handleSearch}
-              />
-            ),
-          },
-          {
-            key: 'printerChannelCode',
-            label: '打印通道编码',
-            content: (
-              <Input
-                allowClear
-                placeholder="请输入打印通道编码"
-                value={draftFilters.printerChannelCode}
-                onChange={(event) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    printerChannelCode: event.target.value,
-                  }));
-                }}
-                onPressEnter={handleSearch}
-              />
-            ),
-          },
-          {
-            key: 'model',
-            label: '型号',
-            content: (
-              <Input
-                allowClear
-                placeholder="请输入型号"
-                value={draftFilters.model}
-                onChange={(event) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    model: event.target.value,
-                  }));
-                }}
-                onPressEnter={handleSearch}
-              />
-            ),
-          },
-          {
-            key: 'printType',
-            label: '打印类型',
-            content: (
-              <Select
-                allowClear
-                placeholder="请选择"
-                value={draftFilters.printType}
-                options={PRINT_TYPE_OPTIONS}
-                onChange={(value) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    printType: value,
-                  }));
-                }}
-              />
-            ),
-          },
-          {
-            key: 'connectType',
-            label: '连接类型',
-            content: (
-              <Select
-                allowClear
-                placeholder="请选择"
-                value={draftFilters.connectType}
-                options={CONNECT_TYPE_OPTIONS}
-                onChange={(value) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    connectType: value,
-                  }));
-                }}
-              />
-            ),
-          },
-          {
-            key: 'state',
-            label: '状态',
-            content: (
-              <Select
-                allowClear
-                placeholder="请选择"
-                value={draftFilters.state}
-                options={[
-                  { label: '启用', value: '1' },
-                  { label: '禁用', value: '0' },
-                ]}
-                onChange={(value) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    state: value,
-                  }));
-                }}
-              />
-            ),
-          },
-          {
-            key: 'bindName',
-            label: '绑定名称',
-            content: (
-              <Input
-                allowClear
-                placeholder="请输入绑定名称"
-                value={draftFilters.bindName}
-                onChange={(event) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    bindName: event.target.value,
-                  }));
-                }}
-                onPressEnter={handleSearch}
-              />
-            ),
-          },
-          {
-            key: 'snList',
-            label: '设备号集合',
-            content: (
-              <Input
-                allowClear
-                placeholder="多个编号用逗号或空格分隔"
-                value={draftFilters.snList}
-                onChange={(event) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    snList: event.target.value,
-                  }));
-                }}
-                onPressEnter={handleSearch}
-              />
-            ),
-          },
-          {
-            key: 'startSn',
-            label: '起始设备号',
-            content: (
-              <Input
-                allowClear
-                placeholder="请输入起始设备号"
-                value={draftFilters.startSn}
-                onChange={(event) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    startSn: event.target.value,
-                  }));
-                }}
-                onPressEnter={handleSearch}
-              />
-            ),
-          },
-          {
-            key: 'endSn',
-            label: '结束设备号',
-            content: (
-              <Input
-                allowClear
-                placeholder="请输入结束设备号"
-                value={draftFilters.endSn}
-                onChange={(event) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    endSn: event.target.value,
-                  }));
-                }}
-                onPressEnter={handleSearch}
-              />
-            ),
-          },
-        ]}
+        fields={
+          [
+            isPlatform && {
+              key: 'agentOrgId',
+              label: '代理组织ID',
+              content: (
+                <OrganizationPickerInput
+                  placeholder="请选择代理组织"
+                  value={draftFilters.agentOrgId}
+                  onChange={(value) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      agentOrgId: value,
+                    }));
+                  }}
+                />
+              ),
+            },
+            (isPlatform || isAgent) && {
+              key: 'groupOrgId',
+              label: '集团组织ID',
+              content: (
+                <Input
+                  allowClear
+                  placeholder="请输入集团组织ID"
+                  value={draftFilters.groupOrgId}
+                  onChange={(event) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      groupOrgId: event.target.value,
+                    }));
+                  }}
+                  onPressEnter={handleSearch}
+                />
+              ),
+            },
+            (isPlatform || isAgent) && {
+              key: 'merchantOrgId',
+              label: '商户组织ID',
+              content: (
+                <Input
+                  allowClear
+                  placeholder="请输入商户组织ID"
+                  value={draftFilters.merchantOrgId}
+                  onChange={(event) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      merchantOrgId: event.target.value,
+                    }));
+                  }}
+                  onPressEnter={handleSearch}
+                />
+              ),
+            },
+            (isPlatform || isAgent || isMerchant) && {
+              key: 'storeOrgId',
+              label: '门店组织ID',
+              content: (
+                <Input
+                  allowClear
+                  placeholder="请输入门店组织ID"
+                  value={draftFilters.storeOrgId}
+                  onChange={(event) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      storeOrgId: event.target.value,
+                    }));
+                  }}
+                  onPressEnter={handleSearch}
+                />
+              ),
+            },
+            {
+              key: 'sn',
+              label: '编号',
+              content: (
+                <Input
+                  allowClear
+                  placeholder="请输入编号"
+                  value={draftFilters.sn}
+                  onChange={(event) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      sn: event.target.value,
+                    }));
+                  }}
+                  onPressEnter={handleSearch}
+                />
+              ),
+            },
+            {
+              key: 'printerChannelId',
+              label: '打印通道ID',
+              content: (
+                <Input
+                  allowClear
+                  placeholder="请输入打印通道ID"
+                  value={draftFilters.printerChannelId}
+                  onChange={(event) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      printerChannelId: event.target.value,
+                    }));
+                  }}
+                  onPressEnter={handleSearch}
+                />
+              ),
+            },
+            {
+              key: 'printerChannelCode',
+              label: '打印通道编码',
+              content: (
+                <Input
+                  allowClear
+                  placeholder="请输入打印通道编码"
+                  value={draftFilters.printerChannelCode}
+                  onChange={(event) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      printerChannelCode: event.target.value,
+                    }));
+                  }}
+                  onPressEnter={handleSearch}
+                />
+              ),
+            },
+            {
+              key: 'model',
+              label: '型号',
+              content: (
+                <Input
+                  allowClear
+                  placeholder="请输入型号"
+                  value={draftFilters.model}
+                  onChange={(event) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      model: event.target.value,
+                    }));
+                  }}
+                  onPressEnter={handleSearch}
+                />
+              ),
+            },
+            {
+              key: 'printType',
+              label: '打印类型',
+              content: (
+                <Select
+                  allowClear
+                  placeholder="请选择"
+                  value={draftFilters.printType}
+                  options={PRINT_TYPE_OPTIONS}
+                  onChange={(value) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      printType: value,
+                    }));
+                  }}
+                />
+              ),
+            },
+            {
+              key: 'connectType',
+              label: '连接类型',
+              content: (
+                <Select
+                  allowClear
+                  placeholder="请选择"
+                  value={draftFilters.connectType}
+                  options={CONNECT_TYPE_OPTIONS}
+                  onChange={(value) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      connectType: value,
+                    }));
+                  }}
+                />
+              ),
+            },
+            {
+              key: 'state',
+              label: '状态',
+              content: (
+                <Select
+                  allowClear
+                  placeholder="请选择"
+                  value={draftFilters.state}
+                  options={[
+                    { label: '启用', value: '1' },
+                    { label: '禁用', value: '0' },
+                  ]}
+                  onChange={(value) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      state: value,
+                    }));
+                  }}
+                />
+              ),
+            },
+            {
+              key: 'bindName',
+              label: '绑定名称',
+              content: (
+                <Input
+                  allowClear
+                  placeholder="请输入绑定名称"
+                  value={draftFilters.bindName}
+                  onChange={(event) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      bindName: event.target.value,
+                    }));
+                  }}
+                  onPressEnter={handleSearch}
+                />
+              ),
+            },
+            {
+              key: 'snList',
+              label: '设备号集合',
+              content: (
+                <Input
+                  allowClear
+                  placeholder="多个编号用逗号或空格分隔"
+                  value={draftFilters.snList}
+                  onChange={(event) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      snList: event.target.value,
+                    }));
+                  }}
+                  onPressEnter={handleSearch}
+                />
+              ),
+            },
+            {
+              key: 'startSn',
+              label: '起始设备号',
+              content: (
+                <Input
+                  allowClear
+                  placeholder="请输入起始设备号"
+                  value={draftFilters.startSn}
+                  onChange={(event) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      startSn: event.target.value,
+                    }));
+                  }}
+                  onPressEnter={handleSearch}
+                />
+              ),
+            },
+            {
+              key: 'endSn',
+              label: '结束设备号',
+              content: (
+                <Input
+                  allowClear
+                  placeholder="请输入结束设备号"
+                  value={draftFilters.endSn}
+                  onChange={(event) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      endSn: event.target.value,
+                    }));
+                  }}
+                  onPressEnter={handleSearch}
+                />
+              ),
+            },
+          ].filter(Boolean) as any
+        }
       />
 
       <div className="content-card printer-table-card">

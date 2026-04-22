@@ -70,13 +70,43 @@ const LoginMessage: React.FC<{
   );
 };
 
+type LoginErrorState = {
+  code?: string | number;
+  message: string;
+} | null;
+
+function getDefaultLoginInlineMessage(loginType: string) {
+  return loginType === 'mobile' ? '验证码错误' : '账户或密码错误';
+}
+
+function normalizeLoginError(
+  error: unknown,
+  loginType: string,
+  defaultMessage: string,
+): LoginErrorState {
+  const bizCode =
+    (error as any)?.info?.errorCode ?? (error as any)?.response?.status;
+  const bizMessage =
+    (error as any)?.info?.errorMessage ??
+    (error as any)?.response?.data?.msg ??
+    (error as any)?.response?.data?.message ??
+    (error as any)?.response?.data?.errorMessage ??
+    (error as any)?.message;
+
+  return {
+    code: bizCode,
+    message:
+      bizMessage || getDefaultLoginInlineMessage(loginType) || defaultMessage,
+  };
+}
+
 const Login: React.FC = () => {
-  const [userLoginState, setUserLoginState] = useState<API.LoginResult>({});
   const [type, setType] = useState<string>('account');
-  const [loginErrorText, setLoginErrorText] = useState<string | undefined>();
+  const [loginError, setLoginError] = useState<LoginErrorState>(null);
   const [logoutReasonText, setLogoutReasonText] = useState<
     string | undefined
   >();
+  const [submitting, setSubmitting] = useState<boolean>(false);
   const { message } = App.useApp();
   const intl = useIntl();
   const { setInitialState } = useModel('@@initialState');
@@ -111,8 +141,10 @@ const Login: React.FC = () => {
   // 移除缩放逻辑，改用响应式布局
 
   const handleSubmit = async (values: API.LoginParams) => {
+    setSubmitting(true);
     try {
-      setLoginErrorText(undefined);
+      setLoginError(null);
+      setLogoutReasonText(undefined);
       if (devBypassAuth) {
         // ... bypass 逻辑，这里没动
         return;
@@ -124,26 +156,18 @@ const Login: React.FC = () => {
         loginType: 'PC',
       } as any);
 
-      // --- 以下是我的主要修改 ---
-
-      // 1. 改动：优先从 res.token 取 token（真实接口），并兼容 tokenValue
+      // 兼容不同登录接口返回中的 token 字段。
       const token =
         (res as any)?.token ??
         (res as any)?.tokenValue ??
         (res as any)?.data?.tokenValue ??
-        (res as any)?.token ??
         (res as any)?.data?.token;
 
-      // 2. 新增：打印返回和 token，方便你调试
-      console.log('login response:', res);
-      console.log('token:', token);
-
-      // 3. 新增：如果没取到 token，就抛出错误，避免“假成功”
+      // 没取到 token 时视为登录未完成，交给当前页面展示错误。
       if (typeof token !== 'string' || token.length === 0) {
         throw new Error('登录成功但未获取到 tokenValue');
       }
 
-      // 4. 改动：setToken 存本地，这行没变，但意义明确了
       setToken(token);
       clearSelectedOrgCode();
 
@@ -222,8 +246,7 @@ const Login: React.FC = () => {
         },
       }));
 
-      setUserLoginState({ status: 'ok', type });
-      setLoginErrorText(undefined);
+      setLoginError(null);
       markLoginPendingIdentity();
 
       const redirect =
@@ -241,29 +264,17 @@ const Login: React.FC = () => {
       }
       return;
     } catch (error) {
-      // ... 错误处理逻辑，这里没动
-      setUserLoginState({ status: 'error', type });
       const defaultLoginFailureMessage = intl.formatMessage({
         id: 'pages.login.failure',
         defaultMessage: '登录失败，请重试！',
       });
-      console.log(error);
-
-      const bizMessage =
-        (error as any)?.info?.errorMessage ??
-        (error as any)?.response?.data?.msg ??
-        (error as any)?.response?.data?.message ??
-        (error as any)?.response?.data?.errorMessage ??
-        (error as any)?.message;
-
-      const defaultInlineMessage =
-        type === 'mobile' ? '验证码错误' : '账户或密码错误';
-      const finalMessage =
-        bizMessage || defaultInlineMessage || defaultLoginFailureMessage;
-      setLoginErrorText(finalMessage);
+      setLoginError(
+        normalizeLoginError(error, type, defaultLoginFailureMessage),
+      );
+    } finally {
+      setSubmitting(false);
     }
   };
-  const { status } = userLoginState;
 
   const appTitle = typeof Settings.title === 'string' ? Settings.title : '';
   const pageTitle = `${intl.formatMessage({
@@ -357,8 +368,7 @@ const Login: React.FC = () => {
                   activeKey={type}
                   onChange={(key) => {
                     setType(key);
-                    setUserLoginState({});
-                    setLoginErrorText(undefined);
+                    setLoginError(null);
                     form.resetFields();
                     form.setFieldsValue({ autoLogin: true });
                   }}
@@ -374,7 +384,7 @@ const Login: React.FC = () => {
                   ]}
                 />
 
-                {logoutReasonText && (
+                {!loginError && logoutReasonText && (
                   <Alert
                     style={{ marginBottom: 24 }}
                     type="warning"
@@ -383,14 +393,7 @@ const Login: React.FC = () => {
                   />
                 )}
 
-                {status === 'error' && (
-                  <LoginMessage
-                    content={
-                      loginErrorText ||
-                      (type === 'mobile' ? '验证码错误' : '账户或密码错误')
-                    }
-                  />
-                )}
+                {loginError && <LoginMessage content={loginError.message} />}
 
                 <Form
                   className="form"
@@ -499,6 +502,7 @@ const Login: React.FC = () => {
                       className="submitBtn"
                       type="primary"
                       htmlType="submit"
+                      loading={submitting}
                     >
                       登录
                     </Button>

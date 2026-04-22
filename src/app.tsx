@@ -38,7 +38,10 @@ import DashboardHomeSplitMenu from '@/components/Layout/DashboardHomeSplitMenu';
 import OtherMenusSplitMenu from '@/components/Layout/OtherMenusSplitMenu';
 import RouteTabsKeepAlive from '@/components/Layout/RouteTabsKeepAlive';
 import WorkplaceCommonMenu from '@/components/Workplace/WorkplaceCommonMenu';
-import { DEFAULT_COMMON_ACTIONS } from '@/config/menu.config';
+import {
+  type CommonAction,
+  DEFAULT_COMMON_ACTIONS,
+} from '@/config/menu.config';
 import {
   clearPostLoginRedirect,
   redirectToLogin,
@@ -72,6 +75,96 @@ const devBypassAuth =
 const HEADER_USER_AVATAR_SRC =
   'https://api.dicebear.com/7.x/miniavs/svg?seed=antd-yangkun';
 let logoutInFlight: Promise<void> | null = null;
+
+function normalizeCommonActionId(value: string) {
+  return value.replace(/[^a-zA-Z0-9:_/-]/g, '_');
+}
+
+function getMenuItemTargetId(item: MenuDataItem) {
+  const rawTargetId = (item as any)?.targetId;
+  if (rawTargetId === undefined || rawTargetId === null) return undefined;
+  const targetId = String(rawTargetId).trim();
+  return targetId || undefined;
+}
+
+function getMenuItemSourceSystem(item: MenuDataItem) {
+  const sourceSystem = Number((item as any)?.sourceSystem);
+  return Number.isFinite(sourceSystem) ? sourceSystem : undefined;
+}
+
+function getCommonActionTitle(item: MenuDataItem, fallback: string) {
+  const rawTitle = item?.name ?? item?.locale;
+  const title =
+    typeof rawTitle === 'string' || typeof rawTitle === 'number'
+      ? String(rawTitle).trim()
+      : '';
+  return title || fallback;
+}
+
+function buildCommonActionFromMenuItem(
+  item: MenuDataItem,
+  fallback: string,
+): CommonAction | undefined {
+  const path = typeof item?.path === 'string' ? item.path.trim() : '';
+  if (!path) return undefined;
+  const title = getCommonActionTitle(item, fallback);
+  const targetId = getMenuItemTargetId(item);
+  const sourceSystem = getMenuItemSourceSystem(item);
+  const rawId = item?.key ?? targetId ?? path ?? title ?? fallback;
+  return {
+    id: normalizeCommonActionId(
+      [path, targetId, rawId, title, fallback]
+        .filter(
+          (value) => value !== undefined && value !== null && value !== '',
+        )
+        .map((value) => String(value))
+        .join('__') || fallback,
+    ),
+    title,
+    path,
+    targetId,
+    sourceSystem,
+  };
+}
+
+function buildDefaultCommonActionsFromMenu(
+  menuData: MenuDataItem[] | undefined,
+) {
+  const collected: CommonAction[] = [];
+  const seen = new Set<string>();
+  const walk = (items: MenuDataItem[] | undefined, prefix: string) => {
+    if (!Array.isArray(items)) return;
+    items.forEach((item, index) => {
+      const children = Array.isArray(item?.children)
+        ? (item.children as MenuDataItem[])
+        : [];
+      if (children.length > 0) {
+        walk(children, `${prefix}-${index}`);
+        return;
+      }
+      const action = buildCommonActionFromMenuItem(item, `${prefix}-${index}`);
+      if (!action) return;
+      const key = [
+        action.title,
+        action.sourceSystem ?? '',
+        action.targetId ?? '',
+        action.path,
+      ].join('::');
+      if (seen.has(key)) return;
+      seen.add(key);
+      collected.push(action);
+    });
+  };
+  walk(menuData, 'current-menu');
+  const localActions = collected.filter(
+    (item) => item.path !== '/app' && item.sourceSystem !== 1,
+  );
+  const iframeActions = collected.filter(
+    (item) => item.path === '/app' || item.sourceSystem === 1,
+  );
+  const result = [...localActions, ...iframeActions].slice(0, 7);
+  return result.length > 0 ? result : DEFAULT_COMMON_ACTIONS;
+}
 
 const apiBase = typeof __API_BASE__ !== 'undefined' ? __API_BASE__ : undefined;
 const NAV_THEME_STORAGE_KEY = 'pc_admin_nav_theme';
@@ -463,12 +556,15 @@ export const layout: RunTimeLayoutConfig = ({
   // 常用数据管理
   const storageKey = `workplace_common_actions_${
     initialState?.currentUser?.name ?? 'guest'
-  }`;
+  }_${initialState?.currentOrgCode ?? 'no-org'}_${initialState?.currentBusinessCode ?? 'no-business'}`;
 
   const loadCommonActions = () => {
-    if (typeof window === 'undefined') return DEFAULT_COMMON_ACTIONS;
+    const menuDefaultActions = buildDefaultCommonActionsFromMenu(
+      initialState?.permContextMenu,
+    );
+    if (typeof window === 'undefined') return menuDefaultActions;
     const stored = readCommonActionsFromStorage(storageKey);
-    return stored || DEFAULT_COMMON_ACTIONS;
+    return stored || menuDefaultActions;
   };
 
   const saveCommonActions = (actions: any[]) => {
@@ -788,7 +884,7 @@ export const layout: RunTimeLayoutConfig = ({
 
       const storageKey = `workplace_common_actions_${
         initialState?.currentUser?.name ?? 'guest'
-      }`;
+      }_${initialState?.currentOrgCode ?? 'no-org'}_${initialState?.currentBusinessCode ?? 'no-business'}`;
 
       const commonActions = resolvedCommonActions;
       const setCommonActions = saveCommonActions;
@@ -1011,6 +1107,9 @@ export const layout: RunTimeLayoutConfig = ({
                   ...preInitialState,
                   settings,
                 }));
+                // 打印最新设置到控制台，作为拷贝失效的临时替代方案
+                console.log('--- 当前布局最新配置（拷贝失败请复制这里） ---');
+                console.log(JSON.stringify(settings, null, 2));
               }}
             />
           )}

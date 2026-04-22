@@ -6,7 +6,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { history } from '@umijs/max';
-import { Avatar, Input, Modal, message, Upload } from 'antd';
+import { Avatar, Input, message, Upload } from 'antd';
 import React, { useMemo, useState } from 'react';
 import { uploadAttachment } from '@/api/cloudStorage';
 import { saveUserAvatar } from '@/api/user';

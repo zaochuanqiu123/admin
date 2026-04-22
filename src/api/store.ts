@@ -65,6 +65,9 @@ export type AddStorePayload = {
   storeProvince: string;
   storeCity: string;
   storeArea: string;
+  storeProvinceCode: string;
+  storeCityCode: string;
+  storeAreaCode: string;
   storeDetailAddress: string;
   longitude: string;
   latitude: string;
@@ -107,6 +110,9 @@ export type StoreDetailRecord = {
   storeProvince?: string;
   storeCity?: string;
   storeArea?: string;
+  storeProvinceCode?: string;
+  storeCityCode?: string;
+  storeAreaCode?: string;
   storeDetailAddress?: string;
   originShopId?: string;
   storeType?: number;
@@ -120,6 +126,11 @@ export type StoreDetailRecord = {
   storeLatitude?: string | number;
 };
 
+export type StoreNumVO = {
+  storeNum?: number;
+  remainingStoresToCreate?: number;
+};
+
 export async function getStorePage(
   data: StorePageQueryParams,
   options?: { [key: string]: any },
@@ -127,6 +138,13 @@ export async function getStorePage(
   return apiData<StorePageResult>('/api/admin/org/v1/store/page', {
     method: 'POST',
     data,
+    ...(options || {}),
+  });
+}
+
+export async function getStoreNum(options?: { [key: string]: any }) {
+  return apiData<StoreNumVO>('/api/admin/org/v1/merchant/getStoreNum', {
+    method: 'GET',
     ...(options || {}),
   });
 }

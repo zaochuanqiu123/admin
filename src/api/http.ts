@@ -1,4 +1,10 @@
 import { request } from '@umijs/max';
+import {
+  type AppRequestMeta,
+  type AppRequestOptions,
+  getRequestMeta,
+  shouldSkipAuthRedirect,
+} from '@/api/requestMeta';
 import { getSelectedOrgCode, getToken } from '@/api/storage';
 import { handleAuthExpiredByCode } from '@/utils/auth-expired';
 
@@ -88,7 +94,7 @@ function parseResponseText(text: string) {
 
 function requestFormData<TResponse>(
   url: string,
-  options: { [key: string]: any },
+  options: AppRequestOptions,
 ): Promise<TResponse> {
   const formData = toFormData(options.data);
   const token = getToken();
@@ -143,7 +149,15 @@ type ApiErrorInfo = {
   showType?: number;
   data?: unknown;
   authHandled?: boolean;
+  requestMeta?: AppRequestMeta;
 };
+
+function normalizeApiUrl(url: string): string {
+  if (url.startsWith('/api/')) {
+    return url.replace(/^\/api\//, '/mp-api/');
+  }
+  return url;
+}
 
 /**
  * 构造一个 BizError：
@@ -172,15 +186,17 @@ function isSuccessCode(code: unknown): boolean {
 
 export async function apiRequest<TResponse = any>(
   url: string,
-  options?: { [key: string]: any },
+  options?: AppRequestOptions,
 ): Promise<TResponse> {
+  const normalizedUrl = normalizeApiUrl(url);
   const requestOptions = { ...(options || {}) };
+  const requestMeta = getRequestMeta(requestOptions);
   const isFormDataRequest = requestOptions.requestType === 'form-data';
   delete requestOptions.requestType;
 
   const res = isFormDataRequest
-    ? await requestFormData<TResponse>(url, requestOptions)
-    : await request<TResponse>(url, {
+    ? await requestFormData<TResponse>(normalizedUrl, requestOptions)
+    : await request<TResponse>(normalizedUrl, {
         ...requestOptions,
       });
 
@@ -188,12 +204,15 @@ export async function apiRequest<TResponse = any>(
     if (isCodeResponse(res)) {
       if (!isSuccessCode(res.code)) {
         const errorMessage = String(res.msg ?? res.message ?? 'Request failed');
-        const authHandled = handleAuthExpiredByCode(res.code, errorMessage);
+        const authHandled = shouldSkipAuthRedirect(requestMeta)
+          ? false
+          : handleAuthExpiredByCode(res.code, errorMessage);
         throw createBizError(errorMessage, {
           errorCode: res.code,
           errorMessage,
           data: res.data,
           authHandled,
+          requestMeta,
         });
       }
       return res;
@@ -204,16 +223,16 @@ export async function apiRequest<TResponse = any>(
         const errorMessage = String(
           res.errorMessage ?? res.message ?? 'Request failed',
         );
-        const authHandled = handleAuthExpiredByCode(
-          res.errorCode,
-          errorMessage,
-        );
+        const authHandled = shouldSkipAuthRedirect(requestMeta)
+          ? false
+          : handleAuthExpiredByCode(res.errorCode, errorMessage);
         throw createBizError(errorMessage, {
           errorCode: res.errorCode,
           errorMessage,
           showType: res.showType,
           data: res.data,
           authHandled,
+          requestMeta,
         });
       }
     }
@@ -224,7 +243,7 @@ export async function apiRequest<TResponse = any>(
 
 export async function apiData<TData>(
   url: string,
-  options?: { [key: string]: any },
+  options?: AppRequestOptions,
 ): Promise<TData> {
   /**
    * 常用的“解包”方法：

@@ -1,6 +1,13 @@
 /* Component overrides entry.
    Keep force-overrides with clear [force] comments in this layer. */
 
+body
+  .ant-btn:not(.ant-btn-link):not(.ant-btn-text):not(.ant-btn-circle):not(
+    .ant-btn-icon-only
+  ):not(.ant-btn-compact-item):not(.submitBtn) {
+  border-radius: 999px;
+}
+
 /* [force] antd Drawer 行内样式优先级高，透明抽屉必须强制覆盖 */
 .ant-pro-drawer-sider .ant-drawer-content-wrapper {
   background: transparent !important;
@@ -35,7 +42,7 @@
 /* [force] @ant-design/pro-components 2.7.x + layout=mix + qiankun 场景下，ProLayout 会渲染 ant-pro-layout-bg-list 渐变层，需强制回退为纯色背景 */
 .ant-pro-layout,
 .ant-layout {
-  background: #e7edfb !important;
+  background: var(--ant-color-bg-layout) !important;
   background-image: none !important;
 }
 

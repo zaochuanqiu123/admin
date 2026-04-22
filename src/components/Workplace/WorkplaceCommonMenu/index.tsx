@@ -1,4 +1,8 @@
-import { CloseOutlined, SendOutlined } from '@ant-design/icons';
+import {
+  AppstoreOutlined,
+  CloseOutlined,
+  SendOutlined,
+} from '@ant-design/icons';
 import type { UniqueIdentifier } from '@dnd-kit/core';
 import {
   closestCenter,
@@ -31,13 +35,267 @@ import {
   readGroupOrderFromStorage,
   writeGroupOrderToStorage,
 } from '@/utils/commonActions.storage';
-import WorkplaceCommonTopRouteTabs from '../WorkplaceCommonTopRouteTabs';
 import CandidateRow from './CandidateRow';
 import CommonChip from './CommonChip';
 import GroupRow from './GroupRow';
 import SubGroupRow from './SubGroupRow';
 
 const OPEN_COMMON_ACTIONS_DRAWER_EVENT = 'pc-admin-open-common-actions-drawer';
+
+function getMenuNodeChildren(node: any): any[] {
+  return Array.isArray(node?.children) ? node.children : [];
+}
+
+function getMenuNodeTitle(node: any, fallback: string) {
+  const rawTitle = node?.name ?? node?.title ?? node?.label;
+  const title =
+    typeof rawTitle === 'string' || typeof rawTitle === 'number'
+      ? String(rawTitle).trim()
+      : '';
+  return title || fallback;
+}
+
+function getMenuNodePath(node: any, inheritedPath?: string) {
+  const path = typeof node?.path === 'string' ? node.path.trim() : '';
+  return path || inheritedPath || '';
+}
+
+function getMenuNodeTargetId(node: any) {
+  const rawTargetId = node?.targetId;
+  if (rawTargetId === undefined || rawTargetId === null) return undefined;
+  const targetId = String(rawTargetId).trim();
+  return targetId || undefined;
+}
+
+function getMenuNodeSourceSystem(node: any) {
+  const sourceSystem = Number(node?.sourceSystem);
+  return Number.isFinite(sourceSystem) ? sourceSystem : undefined;
+}
+
+function getMenuNodeSort(node: any) {
+  const sort = Number(node?.sort);
+  return Number.isFinite(sort) ? sort : 0;
+}
+
+function sortMenuNodes(nodes: any[]) {
+  return [...nodes].sort((a, b) => getMenuNodeSort(a) - getMenuNodeSort(b));
+}
+
+function normalizeMergeKey(value: string) {
+  return value.replace(/\s+/g, '').toLowerCase();
+}
+
+function normalizeCommonId(value: string) {
+  return value.replace(/[^a-zA-Z0-9:_/-]/g, '_');
+}
+
+function buildActionId(
+  node: any,
+  path: string,
+  title: string,
+  fallback: string,
+) {
+  const targetId = getMenuNodeTargetId(node);
+  const rawId =
+    node?.key ??
+    node?.id ??
+    node?.menuId ??
+    node?.permId ??
+    targetId ??
+    path ??
+    title ??
+    fallback;
+  return normalizeCommonId(
+    [path, targetId, rawId, title, fallback]
+      .filter((item) => item !== undefined && item !== null && item !== '')
+      .map((item) => String(item))
+      .join('__') || fallback,
+  );
+}
+
+function collectMenuActions(
+  node: any,
+  fallbackPrefix: string,
+  inheritedPath?: string,
+): CommonAction[] {
+  const children = sortMenuNodes(getMenuNodeChildren(node));
+  const path = getMenuNodePath(node, inheritedPath);
+  const title = getMenuNodeTitle(node, fallbackPrefix);
+
+  if (children.length === 0) {
+    if (!path) return [];
+    return [
+      {
+        id: buildActionId(node, path, title, fallbackPrefix),
+        title,
+        path,
+        targetId: getMenuNodeTargetId(node),
+        sourceSystem: getMenuNodeSourceSystem(node),
+      },
+    ];
+  }
+
+  return children.flatMap((child, index) =>
+    collectMenuActions(child, `${fallbackPrefix}-${index}`, path),
+  );
+}
+
+function dedupeActions(actions: CommonAction[]) {
+  const seen = new Set<string>();
+  return actions.filter((item) => {
+    const key = [
+      item.title,
+      item.sourceSystem ?? '',
+      item.targetId ?? '',
+      item.path,
+    ].join('::');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function mergeMenuNodesByTitle(nodes: any[], fallbackPrefix: string): any[] {
+  const mergedMap = new Map<string, any>();
+  const result: any[] = [];
+
+  sortMenuNodes(nodes).forEach((node, index) => {
+    const title = getMenuNodeTitle(node, `${fallbackPrefix}-${index}`);
+    const children = getMenuNodeChildren(node);
+    const key = normalizeMergeKey(title) || `${fallbackPrefix}-${index}`;
+    const existing = mergedMap.get(key);
+    const normalizedNode = {
+      ...node,
+      name: title,
+      children: mergeMenuNodesByTitle(children, `${fallbackPrefix}-${key}`),
+    };
+
+    if (!existing) {
+      mergedMap.set(key, normalizedNode);
+      result.push(normalizedNode);
+      return;
+    }
+
+    const mergedChildren = mergeMenuNodesByTitle(
+      [...getMenuNodeChildren(existing), ...children],
+      `${fallbackPrefix}-${key}`,
+    );
+    const mergedNode = {
+      ...existing,
+      children: mergedChildren,
+    };
+    mergedMap.set(key, mergedNode);
+    const existingIndex = result.indexOf(existing);
+    if (existingIndex >= 0) {
+      result[existingIndex] = mergedNode;
+    }
+  });
+
+  return result;
+}
+
+function mergeCommonSubGroups(subGroups: CommonGroup['children']) {
+  const mergedMap = new Map<string, CommonGroup['children'][number]>();
+  subGroups.forEach((subGroup) => {
+    const key = normalizeMergeKey(subGroup.title) || subGroup.id;
+    const existing = mergedMap.get(key);
+    if (!existing) {
+      mergedMap.set(key, {
+        ...subGroup,
+        children: dedupeActions(subGroup.children),
+      });
+      return;
+    }
+    mergedMap.set(key, {
+      ...existing,
+      children: dedupeActions([...existing.children, ...subGroup.children]),
+    });
+  });
+  return Array.from(mergedMap.values()).filter(
+    (item) => item.children.length > 0,
+  );
+}
+
+function mergeCommonGroups(groups: CommonGroup[]) {
+  const mergedMap = new Map<string, CommonGroup>();
+  groups.forEach((group) => {
+    const key = normalizeMergeKey(group.title) || group.id;
+    const existing = mergedMap.get(key);
+    if (!existing) {
+      mergedMap.set(key, {
+        ...group,
+        children: mergeCommonSubGroups(group.children),
+      });
+      return;
+    }
+    mergedMap.set(key, {
+      ...existing,
+      children: mergeCommonSubGroups([...existing.children, ...group.children]),
+    });
+  });
+  return Array.from(mergedMap.values()).filter(
+    (group) => group.children.length > 0,
+  );
+}
+
+function buildCommonGroupsFromMenuData(menuData?: any[]): CommonGroup[] {
+  if (!Array.isArray(menuData) || menuData.length === 0) return [];
+
+  const groups = mergeMenuNodesByTitle(menuData, 'root')
+    .map((groupNode, groupIndex) => {
+      const groupTitle = getMenuNodeTitle(groupNode, `菜单${groupIndex + 1}`);
+      const groupId = buildActionId(
+        groupNode,
+        getMenuNodePath(groupNode),
+        groupTitle,
+        `group-${groupIndex}`,
+      );
+      const childNodes = sortMenuNodes(getMenuNodeChildren(groupNode));
+      const subGroups =
+        childNodes.length > 0
+          ? childNodes.map((subNode, subIndex) => {
+              const subTitle = getMenuNodeTitle(
+                subNode,
+                `${groupTitle}${subIndex + 1}`,
+              );
+              const subId = buildActionId(
+                subNode,
+                getMenuNodePath(subNode, getMenuNodePath(groupNode)),
+                subTitle,
+                `${groupId}-${subIndex}`,
+              );
+              return {
+                id: subId,
+                title: subTitle,
+                children: dedupeActions(
+                  collectMenuActions(
+                    subNode,
+                    `${groupId}-${subIndex}`,
+                    getMenuNodePath(groupNode),
+                  ),
+                ),
+              };
+            })
+          : [
+              {
+                id: `${groupId}-all`,
+                title: '全部',
+                children: dedupeActions(
+                  collectMenuActions(groupNode, `${groupId}-all`),
+                ),
+              },
+            ];
+
+      return {
+        id: groupId,
+        title: groupTitle,
+        icon: React.createElement(AppstoreOutlined),
+        children: subGroups.filter((item) => item.children.length > 0),
+      };
+    })
+    .filter((group) => group.children.length > 0);
+  return mergeCommonGroups(groups);
+}
 
 const WorkplaceCommonMenu: React.FC<{
   storageKey: string;
@@ -74,16 +332,35 @@ const WorkplaceCommonMenu: React.FC<{
   const drawerOverlayBg = token.colorFillTertiary;
   const drawerOverlayIconBg = token.colorFillSecondary;
   const drawerOverlayShadow = token.boxShadowSecondary;
+  const commonGroups = React.useMemo(() => {
+    const groups = buildCommonGroupsFromMenuData(
+      (initialState as any)?.permContextMenu,
+    );
+    return groups.length > 0 ? groups : COMMON_GROUPS;
+  }, [(initialState as any)?.permContextMenu]);
+  const commonGroupIds = React.useMemo(
+    () => commonGroups.map((group) => group.id),
+    [commonGroups],
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     setDraftList(commonActions);
 
-    const defaultOrder = COMMON_GROUPS.map((g) => g.id);
+    const defaultOrder = commonGroupIds;
     const groupOrder = readGroupOrderFromStorage(storageKey, defaultOrder);
     setSavedGroupOrder(groupOrder);
     setDraftGroupOrder(groupOrder);
-  }, [storageKey, commonActions]);
+  }, [storageKey, commonActions, commonGroupIds]);
+
+  useEffect(() => {
+    if (commonGroups.length === 0) return;
+    setActiveGroupId((prev) =>
+      commonGroups.some((group) => group.id === prev)
+        ? prev
+        : commonGroups[0]?.id || '',
+    );
+  }, [commonGroups]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -205,14 +482,19 @@ const WorkplaceCommonMenu: React.FC<{
   });
 
   const orderedGroups = React.useMemo(() => {
-    const map = new Map(COMMON_GROUPS.map((g) => [g.id, g] as const));
+    const map = new Map(commonGroups.map((g) => [g.id, g] as const));
     return draftGroupOrder
       .map((id) => map.get(id))
       .filter(Boolean) as CommonGroup[];
-  }, [draftGroupOrder]);
+  }, [commonGroups, draftGroupOrder]);
 
   const activeGroup =
     orderedGroups.find((g) => g.id === activeGroupId) ?? orderedGroups[0];
+
+  const selectGroup = React.useCallback((group: CommonGroup) => {
+    setActiveGroupId(group.id);
+    setActiveSubGroupId(group.children?.[0]?.id ?? '');
+  }, []);
 
   React.useEffect(() => {
     const first = activeGroup?.children?.[0]?.id ?? '';
@@ -461,10 +743,6 @@ const WorkplaceCommonMenu: React.FC<{
               </span>
             </div>
 
-            <div style={{ padding: '12px 24px 0' }}>
-              <WorkplaceCommonTopRouteTabs />
-            </div>
-
             <div
               style={{
                 flex: 1,
@@ -505,7 +783,7 @@ const WorkplaceCommonMenu: React.FC<{
                         id={g.id}
                         isDarkMode={isDarkMode}
                         active={g.id === activeGroupId}
-                        onClick={() => setActiveGroupId(g.id)}
+                        onClick={() => selectGroup(g)}
                         icon={g.icon}
                         title={g.title}
                       />
@@ -669,7 +947,7 @@ const WorkplaceCommonMenu: React.FC<{
                           height: 14,
                           borderRadius: '50%',
                           background: drawerOverlayIconBg,
-                          color: '#fff',
+                          color: 'var(--ant-color-text-light-solid, #fff)',
                           fontSize: 8,
                         }}
                       >

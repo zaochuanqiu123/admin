@@ -1,22 +1,38 @@
 // https://umijs.org/config/
 
-import { join } from 'node:path';
 import { defineConfig } from '@umijs/max';
 import defaultSettings from './defaultSettings';
 import proxy from './proxy';
 
 import routes from './routes';
 
-const { REACT_APP_ENV = 'dev', REACT_APP_ENABLE_QIANKUN = 'false' } =
-  process.env;
+const {
+  APP_PUBLIC_PATH,
+  REACT_APP_ENV = 'dev',
+  REACT_APP_ENABLE_QIANKUN = 'false',
+} = process.env;
 const enableQiankun = REACT_APP_ENABLE_QIANKUN === 'true';
+
+function normalizePublicPath(publicPath?: string) {
+  if (!publicPath) return '/';
+  const trimmedPath = publicPath.trim();
+
+  if (!trimmedPath || trimmedPath === '/') return '/';
+  const pathWithLeadingSlash = trimmedPath.startsWith('/')
+    ? trimmedPath
+    : `/${trimmedPath}`;
+
+  return pathWithLeadingSlash.endsWith('/')
+    ? pathWithLeadingSlash
+    : `${pathWithLeadingSlash}/`;
+}
 
 /**
  * @name 使用公共路径
  * @description 部署时的路径，如果部署在非根目录下，需要配置这个变量
  * @doc https://umijs.org/docs/api/config#publicpath
  */
-const PUBLIC_PATH: string = '/';
+const PUBLIC_PATH = normalizePublicPath(APP_PUBLIC_PATH || '/mp/');
 
 export default defineConfig({
   /**
@@ -26,6 +42,7 @@ export default defineConfig({
    */
   hash: true,
 
+  base: PUBLIC_PATH,
   publicPath: PUBLIC_PATH,
 
   /**
@@ -202,6 +219,9 @@ export default defineConfig({
         },
         token: {
           fontFamily: 'AlibabaSans, sans-serif',
+          colorLink: '#1677ff',
+          colorLinkHover: '#69b1ff',
+          colorLinkActive: '#0958d9',
         },
       },
     },
@@ -254,7 +274,7 @@ export default defineConfig({
    */
   headScripts: [
     // 解决首次加载时白屏的问题
-    { src: join(PUBLIC_PATH, 'scripts/loading.js'), async: true },
+    { src: `${PUBLIC_PATH}scripts/loading.js`, async: true },
   ],
 
   //================ pro 插件配置 =================

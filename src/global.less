@@ -119,6 +119,59 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --pc-color-primary: var(--ant-color-primary, #1890ff);
+  --pc-color-primary-hover: var(--ant-color-primary-hover, var(--pc-color-primary));
+  --pc-color-primary-active: var(--ant-color-primary-active, var(--pc-color-primary));
+  --pc-color-primary-bg: var(--ant-color-primary-bg, color-mix(in srgb, var(--pc-color-primary) 10%, transparent));
+  --pc-color-danger: var(--ant-color-error, #ff4d4f);
+  --pc-color-danger-bg: var(--ant-color-error-bg, color-mix(in srgb, var(--pc-color-danger) 10%, transparent));
+  --pc-color-danger-border: var(--ant-color-error-border, color-mix(in srgb, var(--pc-color-danger) 35%, transparent));
+  --pc-color-warning: var(--ant-color-warning, #faad14);
+  --pc-color-warning-bg: var(--ant-color-warning-bg, color-mix(in srgb, var(--pc-color-warning) 10%, transparent));
+  --pc-color-warning-border: var(--ant-color-warning-border, color-mix(in srgb, var(--pc-color-warning) 35%, transparent));
+  --pc-color-success: var(--ant-color-success, #52c41a);
+  --pc-color-success-bg: var(--ant-color-success-bg, color-mix(in srgb, var(--pc-color-success) 10%, transparent));
+  --pc-color-success-border: var(--ant-color-success-border, color-mix(in srgb, var(--pc-color-success) 35%, transparent));
+  --pc-color-info: var(--ant-color-info, var(--pc-color-primary));
+  --pc-color-link: var(--ant-color-link, var(--ant-blue, #1677ff));
+  --pc-color-link-hover: var(--ant-color-link-hover, var(--ant-blue-4, #69b1ff));
+  --pc-color-link-active: var(--ant-color-link-active, var(--ant-blue-7, #0958d9));
+  --pc-color-text-light-solid: var(--ant-color-text-light-solid, #fff);
+  --pc-color-text: var(--ant-color-text, rgba(0, 0, 0, 0.88));
+  --pc-color-text-secondary: var(--ant-color-text-secondary, rgba(0, 0, 0, 0.65));
+  --pc-color-text-tertiary: var(--ant-color-text-tertiary, rgba(0, 0, 0, 0.45));
+  --pc-color-fill: var(--ant-color-fill, rgba(0, 0, 0, 0.15));
+  --pc-color-fill-secondary: var(--ant-color-fill-secondary, rgba(0, 0, 0, 0.06));
+  --pc-color-fill-tertiary: var(--ant-color-fill-tertiary, rgba(0, 0, 0, 0.04));
+  --pc-color-fill-quaternary: var(--ant-color-fill-quaternary, rgba(0, 0, 0, 0.02));
+  --pc-color-border: var(--ant-color-border-secondary, rgba(0, 0, 0, 0.06));
+  --pc-color-border-base: var(--ant-color-border, rgba(0, 0, 0, 0.15));
+  --pc-color-split: var(--ant-color-split, rgba(0, 0, 0, 0.06));
+  --pc-color-bg-page: var(--ant-color-bg-layout, #f5f5f5);
+  --pc-color-bg-container: var(--ant-color-bg-container, #fff);
+  --pc-color-bg-elevated: var(--ant-color-bg-elevated, var(--pc-color-bg-container));
+  --pc-color-bg-mask: var(--ant-color-bg-mask, rgba(0, 0, 0, 0.45));
+  --pc-sider-bg: var(--pc-color-bg-container);
+  --pc-sider-text: var(--pc-color-text);
+  --pc-sider-text-secondary: var(--pc-color-text-secondary);
+  --pc-sider-text-tertiary: var(--pc-color-text-tertiary);
+  --pc-sider-text-active: var(--pc-color-primary);
+  --pc-sider-hover-bg: var(--pc-color-primary-bg);
+  --pc-sider-active-bg: var(--pc-color-primary-bg);
+  --pc-sider-panel-bg: var(--pc-color-bg-container);
+}
+
+body .ant-btn.ant-btn-link:not(.ant-btn-dangerous):not(.ant-btn-color-dangerous) {
+  color: var(--pc-color-link);
+}
+
+body .ant-btn.ant-btn-link:not(.ant-btn-dangerous):not(.ant-btn-color-dangerous):hover,
+body .ant-btn.ant-btn-link:not(.ant-btn-dangerous):not(.ant-btn-color-dangerous):focus {
+  color: var(--pc-color-link-hover);
+}
+
+body .ant-btn.ant-btn-link:not(.ant-btn-dangerous):not(.ant-btn-color-dangerous):active {
+  color: var(--pc-color-link-active);
 }
 
 ul,
@@ -224,12 +277,12 @@ ol {
 }
 
 .route-loading-dark {
-  background: #141414 !important;
+  background: var(--pc-dark-bg-page, #141414) !important;
 }
 
 .route-loading-dark .ant-skeleton .ant-skeleton-title,
 .route-loading-dark .ant-skeleton .ant-skeleton-paragraph > li {
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: var(--ant-color-fill-secondary, rgba(255, 255, 255, 0.08)) !important;
 }
 
 .route-loading-dark.ant-skeleton-active .ant-skeleton-title,
@@ -238,9 +291,9 @@ ol {
 .route-loading-dark .ant-skeleton.ant-skeleton-active .ant-skeleton-paragraph > li {
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.08) 25%,
-    rgba(255, 255, 255, 0.14) 37%,
-    rgba(255, 255, 255, 0.08) 63%
+    var(--ant-color-fill-secondary, rgba(255, 255, 255, 0.08)) 25%,
+    var(--ant-color-fill, rgba(255, 255, 255, 0.14)) 37%,
+    var(--ant-color-fill-secondary, rgba(255, 255, 255, 0.08)) 63%
   ) !important;
 }
 

@@ -33,7 +33,7 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
     --ant-color-primary-hover,
     var(--ant-color-primary)
   );
-  --staff-selected-bg: rgba(22, 119, 255, 0.1);
+  --staff-selected-bg: var(--ant-color-primary-bg);
   --staff-border: var(--ant-color-border-secondary);
   --staff-filter-height: 76px;
   --staff-content-gap: 16px;
@@ -220,9 +220,9 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
   min-width: 30px;
   height: 18px;
   padding: 0 6px;
-  border: 1px solid #91caff;
+  border: 1px solid var(--ant-color-primary-border, var(--ant-color-primary));
   border-radius: 999px;
-  background: #e6f4ff;
+  background: var(--ant-color-primary-bg);
   color: var(--staff-accent);
   font-size: 11px;
   line-height: 16px;
@@ -310,14 +310,6 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
 .staff-detail-actions {
   margin-left: auto;
 
-  .ant-btn {
-    height: 32px;
-    padding: 0 14px;
-    border-radius: 4px;
-    background: transparent;
-    box-shadow: none;
-  }
-
   .staff-action-btn.is-edit {
     border-color: var(--staff-accent);
     color: var(--staff-accent);
@@ -356,21 +348,6 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
   }
 }
 
-.store-staff-create-btn.ant-btn {
-  height: 40px;
-  padding: 0 22px;
-  border: none;
-  border-radius: 999px;
-  background: var(--staff-accent);
-  box-shadow: none;
-  font-weight: 500;
-}
-
-.store-staff-create-btn.ant-btn:hover,
-.store-staff-create-btn.ant-btn:focus {
-  background: var(--staff-accent-hover);
-}
-
 .staff-detail-section {
   position: relative;
   padding: 18px 0 22px;
@@ -395,7 +372,7 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
   position: absolute;
   top: 11px;
   right: 0;
-  color: var(--staff-accent);
+  color: var(--pc-color-link);
 }
 
 .staff-info-grid {
@@ -478,8 +455,8 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
 }
 
 .staff-permission-detail {
-  display: grid;
-  grid-template-columns: 78px minmax(0, 700px);
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   margin-top: 18px;
   margin-left: 70px;
@@ -487,7 +464,6 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
 
 .staff-permission-empty,
 .staff-permission-loading {
-  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -498,28 +474,47 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
 }
 
 .staff-permission-roles {
-  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 16px 14px;
+  border: 1px solid var(--staff-border);
   border-radius: 6px;
   background: var(--ant-color-fill-quaternary);
 
   button {
-    display: block;
-    width: 100%;
-    height: 40px;
-    border: 0;
-    background: transparent;
+    height: 32px;
+    padding: 0 16px;
+    border: 1px solid var(--ant-color-border-secondary);
+    border-radius: 999px;
+    background: var(--ant-color-bg-container);
     cursor: pointer;
     color: var(--ant-color-text);
+    font-size: 14px;
+    line-height: 30px;
+    transition:
+      color 0.2s,
+      border-color 0.2s,
+      background 0.2s;
+  }
+
+  button:hover {
+    border-color: var(--ant-color-primary-border);
+    color: var(--ant-color-primary);
   }
 
   .is-active {
-    background: var(--staff-accent);
-    color: #fff;
+    border-color: var(--ant-color-primary);
+    background: var(--ant-color-primary-bg);
+    color: var(--ant-color-primary);
     font-weight: 600;
   }
 }
 
 .staff-permission-panel {
+  min-width: 0;
   overflow: hidden;
   border: 1px solid var(--staff-border);
   border-radius: 6px;
@@ -532,8 +527,27 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
   background: var(--ant-color-fill-quaternary);
 
   .ant-tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
     margin: 0;
-    border-radius: 6px;
+    padding: 0 14px;
+    border-color: var(--ant-color-border-secondary);
+    border-radius: 999px;
+    background: var(--ant-color-bg-container);
+    color: var(--ant-color-text);
+    line-height: 30px;
+  }
+
+  .ant-tag.is-active {
+    border-color: var(--ant-color-primary-border, var(--ant-color-primary));
+    background: var(--ant-color-primary-bg);
+    color: var(--ant-color-primary);
+  }
+
+  .ant-checkbox-wrapper {
+    display: inline-flex;
+    align-items: center;
   }
 
   .ant-checkbox-disabled + span {
@@ -542,17 +556,23 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
 }
 
 .staff-permission-matrix {
-  display: grid;
-  grid-template-columns: 150px 250px minmax(240px, 1fr);
+  display: flex;
   min-height: 420px;
+  overflow-x: auto;
 }
 
 .staff-permission-column {
+  flex: 0 0 170px;
   min-width: 0;
   border-right: 1px solid var(--staff-border);
 }
 
+.staff-permission-column.is-page {
+  flex-basis: 220px;
+}
+
 .staff-permission-column.is-actions {
+  flex: 1 0 240px;
   border-right: 0;
 }
 
@@ -566,21 +586,29 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
 }
 
 .staff-permission-column-body {
+  max-height: 388px;
   padding: 8px;
+  overflow-y: auto;
+  .mixin-hide-scrollbar();
 
   button {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 8px;
     width: 100%;
-    min-height: 34px;
+    min-height: 32px;
     padding: 0 10px;
     border: 0;
     border-radius: 6px;
     background: transparent;
     cursor: pointer;
     color: var(--ant-color-text);
+    text-align: left;
+  }
+
+  button > span {
+    min-width: 0;
     text-align: left;
   }
 
@@ -613,7 +641,7 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
 .staff-permission-column-body .ant-checkbox-disabled.ant-checkbox-checked .ant-checkbox-inner::after,
 .staff-permission-action-list .ant-checkbox-disabled.ant-checkbox-checked .ant-checkbox-inner::after,
 .staff-permission-tags .ant-checkbox-disabled.ant-checkbox-checked .ant-checkbox-inner::after {
-  border-color: #fff;
+  border-color: var(--ant-color-text-light-solid, #fff);
 }
 
 .staff-permission-action-list .ant-checkbox-wrapper-disabled {
@@ -758,29 +786,32 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
 }
 
 .staff-dashed-btn.ant-btn {
-  min-width: 112px;
-  height: 30px;
-  padding: 0 10px;
   border-color: var(--staff-accent);
   border-style: dashed;
-  border-radius: 4px;
-  background: rgba(0, 168, 32, 0.04);
+  background: transparent;
   color: var(--staff-accent);
+}
+
+.staff-dashed-btn.ant-btn:hover,
+.staff-dashed-btn.ant-btn:focus {
+  border-color: var(--staff-accent-hover);
+  background: transparent;
+  color: var(--staff-accent-hover);
 }
 
 .staff-select-pill {
   display: inline-flex;
   align-items: center;
   width: fit-content;
-  height: 26px;
-  padding: 0 10px;
-  border-color: #91caff;
+  height: 32px;
+  padding: 0 12px;
+  border-color: var(--ant-color-primary-border, var(--ant-color-primary));
   border-style: solid;
   border-width: 1px;
-  border-radius: 4px;
-  background: #e6f4ff;
+  border-radius: 999px;
+  background: var(--ant-color-primary-bg);
   color: var(--staff-accent);
-  line-height: 24px;
+  line-height: 30px;
   box-shadow: none;
 }
 
@@ -788,6 +819,8 @@ body.pc-store-staff-fixed-page .ant-pro-layout .ant-pro-layout-content {
   margin: 0;
 
   .ant-tag-close-icon {
+    display: inline-flex;
+    align-items: center;
     margin-left: 6px;
     color: var(--staff-accent);
   }
@@ -909,9 +942,9 @@ body.theme-black-mode .staff-permission-panel {
 
 body.theme-black-mode .store-staff-page,
 body.theme-black-mode .store-staff-create-page {
-  --staff-accent: #4f9dff;
-  --staff-accent-hover: #74b6ff;
-  --staff-selected-bg: rgba(79, 157, 255, 0.14);
+  --staff-accent: var(--ant-color-primary);
+  --staff-accent-hover: var(--ant-color-primary-hover, var(--ant-color-primary));
+  --staff-selected-bg: var(--ant-color-primary-bg);
   --staff-border: var(--pc-dark-border);
 }
 

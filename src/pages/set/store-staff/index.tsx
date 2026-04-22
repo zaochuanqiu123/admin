@@ -17,7 +17,6 @@ import {
   message,
   Pagination,
   Popconfirm,
-  Select,
   Space,
   Spin,
   Switch,
@@ -48,24 +47,27 @@ import {
   imageUploadRequest,
   normalizeUploadFileList,
   resolveUploadAttachmentId,
-  resolveUploadImageUrl,
 } from '@/pages/form/shared/upload';
 import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
 import './index.less';
-type StaffPermissionItem = {
+type StaffPermissionNode = {
   key: string;
   name: string;
+  permissionId?: string;
+  isButtonPermission: boolean;
   checked: boolean;
+  children: StaffPermissionNode[];
 };
-type StaffPermissionPage = {
-  key: string;
-  name: string;
-  permissions: StaffPermissionItem[];
+type StaffPermissionPage = StaffPermissionNode;
+type StaffPermissionModule = StaffPermissionNode;
+type StaffPermissionCheckedState = {
+  checked: boolean;
+  indeterminate: boolean;
 };
-type StaffPermissionModule = {
-  key: string;
-  name: string;
-  pages: StaffPermissionPage[];
+type StaffPermissionActiveState = {
+  sceneKey: string;
+  moduleKey: string;
+  pageKey: string;
 };
 type StaffPermissionBusiness = {
   key: string;
@@ -207,6 +209,9 @@ function getPermissionNodeKey(node: any, index: number) {
     node?.businessCode ??
     node?.targetId ??
     node?.pathUrl ??
+    node?.permCode ??
+    node?.permissionCode ??
+    node?.code ??
     `${node?.name || node?.permName || 'node'}-${index}`;
   return String(rawKey);
 }
@@ -217,55 +222,45 @@ function getPermissionBusinessKey(node: any, index: number) {
 }
 
 function getPermissionId(node: any) {
-  const rawKey = node?.id ?? node?.permId ?? node?.menuId;
+  const rawKey =
+    node?.permCode ??
+    node?.permissionCode ??
+    node?.code ??
+    node?.id ??
+    node?.permId ??
+    node?.menuId;
   if (rawKey === undefined || rawKey === null || rawKey === '') return '';
   return String(rawKey);
 }
 
-function toStaffPermissionItems(
+function isButtonPermissionNode(node: any) {
+  return String(node?.permType ?? '') === '3';
+}
+
+function toStaffPermissionNodes(
   nodes: any[],
   checkedPermSet: Set<string>,
-): StaffPermissionItem[] {
+): StaffPermissionNode[] {
   return (nodes || []).map((node, index) => {
     const permissionId = getPermissionId(node);
-    return {
+    const children = toStaffPermissionNodes(
+      getPermissionNodeChildren(node),
+      checkedPermSet,
+    );
+    const checked = permissionId ? checkedPermSet.has(permissionId) : false;
+    const nextNode: StaffPermissionNode = {
       key: permissionId || getPermissionNodeKey(node, index),
       name: getPermissionNodeName(node, index),
-      checked: permissionId ? checkedPermSet.has(permissionId) : true,
+      permissionId: permissionId || undefined,
+      isButtonPermission: isButtonPermissionNode(node),
+      checked,
+      children,
     };
-  });
-}
-
-function toStaffPermissionPages(
-  nodes: any[],
-  checkedPermSet: Set<string>,
-): StaffPermissionPage[] {
-  return (nodes || []).map((node, index) => {
-    const children = getPermissionNodeChildren(node);
+    if (children.length === 0) return nextNode;
+    const childState = getPermissionNodeCheckedState(nextNode);
     return {
-      key: getPermissionNodeKey(node, index),
-      name: getPermissionNodeName(node, index),
-      permissions:
-        children.length > 0
-          ? toStaffPermissionItems(children, checkedPermSet)
-          : toStaffPermissionItems([node], checkedPermSet),
-    };
-  });
-}
-
-function toStaffPermissionModules(
-  nodes: any[],
-  checkedPermSet: Set<string>,
-): StaffPermissionModule[] {
-  return (nodes || []).map((node, index) => {
-    const children = getPermissionNodeChildren(node);
-    return {
-      key: getPermissionNodeKey(node, index),
-      name: getPermissionNodeName(node, index),
-      pages:
-        children.length > 0
-          ? toStaffPermissionPages(children, checkedPermSet)
-          : toStaffPermissionPages([node], checkedPermSet),
+      ...nextNode,
+      checked: checked || childState.checked,
     };
   });
 }
@@ -283,7 +278,7 @@ function toStaffPermissionScenes(
       businesses: businessNodes.map((businessNode, businessIndex) => ({
         key: getPermissionBusinessKey(businessNode, businessIndex),
         name: getPermissionNodeName(businessNode, businessIndex),
-        modules: toStaffPermissionModules(
+        modules: toStaffPermissionNodes(
           getPermissionNodeChildren(businessNode),
           checkedPermSet,
         ),
@@ -314,6 +309,116 @@ function collectPermissionIds(nodes: any[]): string[] {
   return Array.from(new Set(result));
 }
 
+function getPermissionNodeCheckedState(
+  node?: StaffPermissionNode,
+): StaffPermissionCheckedState {
+  if (!node) {
+    return {
+      checked: false,
+      indeterminate: false,
+    };
+  }
+  if (node.children.length === 0) {
+    return {
+      checked: node.checked,
+      indeterminate: false,
+    };
+  }
+  const childStates: StaffPermissionCheckedState[] = node.children.map(
+    getPermissionNodeCheckedState,
+  );
+  const checked =
+    childStates.length > 0 && childStates.every((item) => item.checked);
+  const hasCheckedChild = childStates.some(
+    (item) => item.checked || item.indeterminate,
+  );
+  return {
+    checked,
+    indeterminate: hasCheckedChild && !checked,
+  };
+}
+
+function setPermissionNodeChecked(
+  node: StaffPermissionNode,
+  checked: boolean,
+): StaffPermissionNode {
+  return {
+    ...node,
+    checked,
+    children: node.children.map((child) =>
+      setPermissionNodeChecked(child, checked),
+    ),
+  };
+}
+
+function syncPermissionNodeChecked(node: StaffPermissionNode) {
+  const state = getPermissionNodeCheckedState(node);
+  return {
+    ...node,
+    checked: state.checked,
+  };
+}
+
+function updatePermissionNodeChecked(
+  node: StaffPermissionNode,
+  targetKey: string,
+  checked: boolean,
+): StaffPermissionNode {
+  if (node.key === targetKey) {
+    return setPermissionNodeChecked(node, checked);
+  }
+  if (node.children.length === 0) return node;
+  return syncPermissionNodeChecked({
+    ...node,
+    children: node.children.map((child) =>
+      updatePermissionNodeChecked(child, targetKey, checked),
+    ),
+  });
+}
+
+function applyCheckedSetToPermissionNode(
+  node: StaffPermissionNode,
+  checkedSet: Set<string>,
+  inheritedChecked = false,
+): StaffPermissionNode {
+  const nodeChecked =
+    inheritedChecked ||
+    (node.permissionId
+      ? checkedSet.has(node.permissionId) || checkedSet.has(node.key)
+      : checkedSet.has(node.key));
+  if (node.children.length === 0) {
+    return {
+      ...node,
+      checked: nodeChecked,
+    };
+  }
+  const children = node.children.map((child) =>
+    applyCheckedSetToPermissionNode(child, checkedSet, nodeChecked),
+  );
+  return syncPermissionNodeChecked({
+    ...node,
+    checked: nodeChecked,
+    children,
+  });
+}
+
+function collectCheckedPermissionNodeIds(nodes: StaffPermissionNode[]) {
+  const result: string[] = [];
+  const walk = (items: StaffPermissionNode[], depth: number) => {
+    items.forEach((item) => {
+      if (item.children.length > 0) {
+        walk(item.children, depth + 1);
+        return;
+      }
+      if (item.checked && (item.isButtonPermission || depth >= 3)) {
+        result.push(item.permissionId || item.key);
+      }
+    });
+  };
+  walk(nodes, 0);
+  return Array.from(new Set(result));
+}
+
 function applyOverridePermIds(
   scenes: StaffPermissionScene[],
   overridePermIds?: Record<string, string[]>,
@@ -332,16 +437,9 @@ function applyOverridePermIds(
       );
       return {
         ...business,
-        modules: business.modules.map((moduleItem) => ({
-          ...moduleItem,
-          pages: moduleItem.pages.map((page) => ({
-            ...page,
-            permissions: page.permissions.map((permission) => ({
-              ...permission,
-              checked: checkedSet.has(permission.key),
-            })),
-          })),
-        })),
+        modules: business.modules.map((moduleItem) =>
+          applyCheckedSetToPermissionNode(moduleItem, checkedSet),
+        ),
       };
     }),
   }));
@@ -380,7 +478,7 @@ function getActivePermissionTree(
 function getInitialPermissionState(
   permissionScenes?: StaffPermissionScene[],
   fallbackTree: StaffPermissionModule[] = EMPTY_PERMISSION_TREE,
-) {
+): StaffPermissionActiveState {
   const firstScene = permissionScenes?.[0];
   const firstTree = firstScene?.businesses[0]?.modules || fallbackTree;
   const { moduleKey, pageKey } = getInitialPermissionKeys(firstTree);
@@ -388,6 +486,42 @@ function getInitialPermissionState(
     sceneKey: firstScene?.key || '',
     moduleKey,
     pageKey,
+  };
+}
+
+function getStablePermissionState(
+  permissionScenes: StaffPermissionScene[] | undefined,
+  fallbackTree: StaffPermissionModule[] = EMPTY_PERMISSION_TREE,
+  currentState?: StaffPermissionActiveState,
+): StaffPermissionActiveState {
+  const initialState = getInitialPermissionState(
+    permissionScenes,
+    fallbackTree,
+  );
+  const sceneKey =
+    currentState?.sceneKey &&
+    (permissionScenes?.some((scene) => scene.key === currentState.sceneKey) ||
+      !permissionScenes?.length)
+      ? currentState.sceneKey
+      : initialState.sceneKey;
+  const activeTree = getActivePermissionTree(
+    permissionScenes,
+    sceneKey,
+    fallbackTree,
+  ).tree;
+  const activeModule =
+    activeTree.find((item) => item.key === currentState?.moduleKey) ||
+    activeTree.find((item) => item.key === initialState.moduleKey) ||
+    activeTree[0];
+  const activePage =
+    activeModule?.children.find((item) => item.key === currentState?.pageKey) ||
+    activeModule?.children.find((item) => item.key === initialState.pageKey) ||
+    activeModule?.children[0];
+
+  return {
+    sceneKey,
+    moduleKey: activeModule?.key || '',
+    pageKey: activePage?.key || '',
   };
 }
 
@@ -503,27 +637,16 @@ function buildOrgUserPageParams(
 }
 function getInitialPermissionKeys(permissionTree?: StaffPermissionModule[]) {
   const moduleKey = permissionTree?.[0]?.key || '';
-  const pageKey = permissionTree?.[0]?.pages[0]?.key || '';
+  const pageKey = permissionTree?.[0]?.children[0]?.key || '';
   return { moduleKey, pageKey };
 }
 
 function getPageCheckedState(page?: StaffPermissionPage) {
-  const permissions = page?.permissions || [];
-  const checkedCount = permissions.filter((item) => item.checked).length;
-  return {
-    checked: permissions.length > 0 && checkedCount === permissions.length,
-    indeterminate: checkedCount > 0 && checkedCount < permissions.length,
-  };
+  return getPermissionNodeCheckedState(page);
 }
 
 function getModuleCheckedState(moduleItem?: StaffPermissionModule) {
-  const permissions =
-    moduleItem?.pages.flatMap((page) => page.permissions) || [];
-  const checkedCount = permissions.filter((item) => item.checked).length;
-  return {
-    checked: permissions.length > 0 && checkedCount === permissions.length,
-    indeterminate: checkedCount > 0 && checkedCount < permissions.length,
-  };
+  return getPermissionNodeCheckedState(moduleItem);
 }
 
 function updatePermissionScenesChecked(
@@ -551,29 +674,25 @@ function updatePermissionScenesChecked(
             if (options.moduleKey && moduleItem.key !== options.moduleKey) {
               return moduleItem;
             }
-            return {
+            if (!options.pageKey && !options.permissionKey) {
+              return setPermissionNodeChecked(moduleItem, options.checked);
+            }
+            return syncPermissionNodeChecked({
               ...moduleItem,
-              pages: moduleItem.pages.map((page) => {
+              children: moduleItem.children.map((page) => {
                 if (options.pageKey && page.key !== options.pageKey) {
                   return page;
                 }
-                return {
-                  ...page,
-                  permissions: page.permissions.map((permission) => {
-                    if (
-                      options.permissionKey &&
-                      permission.key !== options.permissionKey
-                    ) {
-                      return permission;
-                    }
-                    return {
-                      ...permission,
-                      checked: options.checked,
-                    };
-                  }),
-                };
+                if (!options.permissionKey) {
+                  return setPermissionNodeChecked(page, options.checked);
+                }
+                return updatePermissionNodeChecked(
+                  page,
+                  options.permissionKey,
+                  options.checked,
+                );
               }),
-            };
+            });
           }),
         };
       }),
@@ -585,13 +704,7 @@ function buildOverridePermIds(permissionScenes?: StaffPermissionScene[]) {
   const result: Record<string, string[]> = {};
   (permissionScenes || []).forEach((scene) => {
     scene.businesses.forEach((business) => {
-      const checkedIds = business.modules.flatMap((moduleItem) =>
-        moduleItem.pages.flatMap((page) =>
-          page.permissions
-            .filter((permission) => permission.checked)
-            .map((permission) => permission.key),
-        ),
-      );
+      const checkedIds = collectCheckedPermissionNodeIds(business.modules);
       result[business.key] = Array.from(new Set(checkedIds));
     });
   });
@@ -653,6 +766,13 @@ function scrollToFormSection(key: string) {
     behavior: 'smooth',
   });
 }
+
+function getPermissionColumnTitle(levelIndex: number) {
+  if (levelIndex === 0) return '模块';
+  if (levelIndex === 1) return '目录/菜单';
+  return '菜单';
+}
+
 const StaffAvatar: React.FC<{ staff: StaffRecord; size?: number }> = ({
   staff,
   size = 48,
@@ -698,6 +818,9 @@ const StaffPermissionMatrix: React.FC<StaffPermissionMatrixProps> = ({
   editable = false,
   onPermissionScenesChange,
 }) => {
+  const [activeNestedKeys, setActiveNestedKeys] = useState<
+    Record<number, string>
+  >({});
   const activePermission = getActivePermissionTree(
     permissionScenes,
     activePermissionScene,
@@ -716,10 +839,73 @@ const StaffPermissionMatrix: React.FC<StaffPermissionMatrixProps> = ({
     displayPermissionTree.find((item) => item.key === activeModuleKey) ||
     displayPermissionTree[0];
   const activePage =
-    activeModule?.pages.find((item) => item.key === activePageKey) ||
-    activeModule?.pages[0];
+    activeModule?.children.find((item) => item.key === activePageKey) ||
+    activeModule?.children[0];
   const activeSceneKey = activePermission.scene?.key;
   const activeBusinessKey = activePermission.business?.key;
+  const nestedColumns: {
+    key: string;
+    title: string;
+    items: StaffPermissionNode[];
+    activeKey: string;
+    levelIndex: number;
+  }[] = [];
+  let activePermissionParent = activePage;
+  let activePermissionItems: StaffPermissionNode[] = [];
+  let levelIndex = 2;
+  while (activePermissionParent?.children.length) {
+    const items = activePermissionParent.children;
+    const permissionItems = items.filter((item) => item.isButtonPermission);
+    const navigationItems = items.filter((item) => !item.isButtonPermission);
+    const hasNextLevel = navigationItems.some(
+      (item) => item.children.length > 0,
+    );
+    if (navigationItems.length === 0) {
+      activePermissionItems =
+        permissionItems.length > 0 ? permissionItems : items;
+      break;
+    }
+    if (levelIndex >= 3 && !hasNextLevel && permissionItems.length === 0) {
+      activePermissionItems = navigationItems;
+      break;
+    }
+    const activeKey = activeNestedKeys[levelIndex];
+    const activeItem =
+      navigationItems.find((item) => item.key === activeKey) ||
+      navigationItems[0];
+    nestedColumns.push({
+      key: `level-${levelIndex}`,
+      title: getPermissionColumnTitle(levelIndex),
+      items: navigationItems,
+      activeKey: activeItem?.key || '',
+      levelIndex,
+    });
+    if (!activeItem || activeItem.children.length === 0) {
+      activePermissionItems = [];
+      break;
+    }
+    activePermissionParent = activeItem;
+    levelIndex += 1;
+  }
+  const selectNestedPermission = (
+    nextLevelIndex: number,
+    permissionKey: string,
+  ) => {
+    setActiveNestedKeys((prev) => {
+      const next: Record<number, string> = {};
+      Object.entries(prev).forEach(([key, value]) => {
+        const numericKey = Number(key);
+        if (numericKey < nextLevelIndex) {
+          next[numericKey] = value;
+        }
+      });
+      next[nextLevelIndex] = permissionKey;
+      return next;
+    });
+  };
+  useEffect(() => {
+    setActiveNestedKeys({});
+  }, [activePermissionScene, activeModuleKey, activePageKey]);
   const updateChecked = (options: {
     moduleKey?: string;
     pageKey?: string;
@@ -755,7 +941,7 @@ const StaffPermissionMatrix: React.FC<StaffPermissionMatrixProps> = ({
               onPermissionSceneChange(
                 scene.key,
                 firstModule?.key,
-                firstModule?.pages[0]?.key,
+                firstModule?.children[0]?.key,
               );
             }}
           >
@@ -765,7 +951,7 @@ const StaffPermissionMatrix: React.FC<StaffPermissionMatrixProps> = ({
       </div>
       <div className="staff-permission-panel">
         <div className="staff-permission-tags">
-          <Tag color="blue">
+          <Tag className="staff-permission-business-tag is-active">
             <Checkbox checked disabled>
               {activePermission.business?.name || '门店视角'}
             </Checkbox>
@@ -775,71 +961,119 @@ const StaffPermissionMatrix: React.FC<StaffPermissionMatrixProps> = ({
           <div className="staff-permission-column">
             <div className="staff-permission-column-title">模块</div>
             <div className="staff-permission-column-body">
-              {displayPermissionTree.map((moduleItem) => (
-                <button
-                  key={moduleItem.key}
-                  type="button"
-                  className={
-                    moduleItem.key === activeModule?.key ? 'is-active' : ''
-                  }
-                  onClick={() =>
-                    onModuleChange(
-                      moduleItem.key,
-                      moduleItem.pages[0]?.key || '',
-                    )
-                  }
-                >
-                  <Checkbox
-                    checked={getModuleCheckedState(moduleItem).checked}
-                    indeterminate={
-                      getModuleCheckedState(moduleItem).indeterminate
+              {displayPermissionTree.map((moduleItem) => {
+                const checkedState = getModuleCheckedState(moduleItem);
+                return (
+                  <button
+                    key={moduleItem.key}
+                    type="button"
+                    className={
+                      moduleItem.key === activeModule?.key ? 'is-active' : ''
                     }
-                    disabled={!editable}
-                    onClick={(event) => event.stopPropagation()}
-                    onChange={(event) =>
-                      updateChecked({
-                        moduleKey: moduleItem.key,
-                        checked: event.target.checked,
-                      })
+                    onClick={() =>
+                      onModuleChange(
+                        moduleItem.key,
+                        moduleItem.children[0]?.key || '',
+                      )
                     }
-                  />
-                  <span>{moduleItem.name}</span>
-                </button>
-              ))}
+                  >
+                    <Checkbox
+                      checked={checkedState.checked}
+                      indeterminate={checkedState.indeterminate}
+                      disabled={!editable}
+                      onClick={(event) => event.stopPropagation()}
+                      onChange={(event) =>
+                        updateChecked({
+                          moduleKey: moduleItem.key,
+                          checked: event.target.checked,
+                        })
+                      }
+                    />
+                    <span>{moduleItem.name}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
           <div className="staff-permission-column is-page">
-            <div className="staff-permission-column-title">页面</div>
+            <div className="staff-permission-column-title">目录/菜单</div>
             <div className="staff-permission-column-body">
-              {activeModule?.pages.map((page) => (
-                <button
-                  key={page.key}
-                  type="button"
-                  className={page.key === activePage?.key ? 'is-active' : ''}
-                  onClick={() => onPageChange(page.key)}
-                >
-                  <Checkbox
-                    checked={getPageCheckedState(page).checked}
-                    indeterminate={getPageCheckedState(page).indeterminate}
-                    disabled={!editable}
-                    onClick={(event) => event.stopPropagation()}
-                    onChange={(event) =>
-                      updateChecked({
-                        moduleKey: activeModule.key,
-                        pageKey: page.key,
-                        checked: event.target.checked,
-                      })
-                    }
-                  />
-                  <span>{page.name}</span>
-                </button>
-              ))}
+              {activeModule?.children.map((page) => {
+                const checkedState = getPageCheckedState(page);
+                return (
+                  <button
+                    key={page.key}
+                    type="button"
+                    className={page.key === activePage?.key ? 'is-active' : ''}
+                    onClick={() => onPageChange(page.key)}
+                  >
+                    <Checkbox
+                      checked={checkedState.checked}
+                      indeterminate={checkedState.indeterminate}
+                      disabled={!editable}
+                      onClick={(event) => event.stopPropagation()}
+                      onChange={(event) =>
+                        updateChecked({
+                          moduleKey: activeModule.key,
+                          pageKey: page.key,
+                          checked: event.target.checked,
+                        })
+                      }
+                    />
+                    <span>{page.name}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
+          {nestedColumns.map((column) => (
+            <div key={column.key} className="staff-permission-column">
+              <div className="staff-permission-column-title">
+                {column.title}
+              </div>
+              <div className="staff-permission-column-body">
+                {column.items.map((permission) => {
+                  const checkedState =
+                    getPermissionNodeCheckedState(permission);
+                  return (
+                    <button
+                      key={permission.key}
+                      type="button"
+                      className={
+                        permission.key === column.activeKey ? 'is-active' : ''
+                      }
+                      onClick={() =>
+                        selectNestedPermission(
+                          column.levelIndex,
+                          permission.key,
+                        )
+                      }
+                    >
+                      <Checkbox
+                        checked={checkedState.checked}
+                        indeterminate={checkedState.indeterminate}
+                        disabled={!editable}
+                        onClick={(event) => event.stopPropagation()}
+                        onChange={(event) =>
+                          updateChecked({
+                            moduleKey: activeModule?.key,
+                            pageKey: activePage?.key,
+                            permissionKey: permission.key,
+                            checked: event.target.checked,
+                          })
+                        }
+                      />
+                      <span>{permission.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
           <div className="staff-permission-column is-actions">
             <div className="staff-permission-column-title">权限</div>
             <div className="staff-permission-action-list">
-              {activePage?.permissions.map((permission) => (
+              {activePermissionItems.map((permission) => (
                 <Checkbox
                   key={permission.key}
                   checked={permission.checked}
@@ -856,6 +1090,12 @@ const StaffPermissionMatrix: React.FC<StaffPermissionMatrixProps> = ({
                   {permission.name}
                 </Checkbox>
               ))}
+              {activePermissionItems.length === 0 ? (
+                <Empty
+                  description="暂无下级权限"
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                />
+              ) : null}
             </div>
           </div>
         </div>
@@ -1082,6 +1322,9 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
   const [activePageKey, setActivePageKey] = useState(
     initialPermissionState.pageKey,
   );
+  const activePermissionStateRef = useRef<StaffPermissionActiveState>(
+    initialPermissionState,
+  );
   const [activeFormSection, setActiveFormSection] =
     useState<StaffFormSectionKey>(STAFF_FORM_SECTIONS[0].key);
   const isEdit = mode === 'edit';
@@ -1098,9 +1341,18 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
   }, [form, staff]);
 
   useEffect(() => {
-    const nextState = getInitialPermissionState(
+    activePermissionStateRef.current = {
+      sceneKey: activePermissionScene,
+      moduleKey: activeModuleKey,
+      pageKey: activePageKey,
+    };
+  }, [activePermissionScene, activeModuleKey, activePageKey]);
+
+  useEffect(() => {
+    const nextState = getStablePermissionState(
       permissionScenes,
       permissionTree,
+      activePermissionStateRef.current,
     );
     setActivePermissionScene(nextState.sceneKey);
     setActiveModuleKey(nextState.moduleKey);
@@ -1457,7 +1709,7 @@ const StoreStaffListPage: React.FC = () => {
   const [selectedStaffId, setSelectedStaffId] = useState('');
   const [staffKeyword, setStaffKeyword] = useState('');
   const [queryKeyword, setQueryKeyword] = useState('');
-  const [staffStatus, setStaffStatus] = useState<string>();
+  const [staffStatus] = useState<string>();
   const [listVersion, setListVersion] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(STAFF_LIST_MIN_PAGE_SIZE);

@@ -20,9 +20,6 @@ const NoticeBell: React.FC = () => {
   const cardBg = token.colorBgContainer;
   const primaryText = token.colorText;
   const secondaryText = token.colorTextSecondary;
-  const bellBorderColor = token.colorBorderSecondary;
-  const bellBg = token.colorFillQuaternary;
-  const bellColor = token.colorTextSecondary;
 
   const dataSource = useMemo<Record<string, NoticeItem[]>>(
     () => ({

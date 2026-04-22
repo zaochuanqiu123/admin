@@ -7,7 +7,7 @@ const Settings: ProLayoutProps & {
   pwa?: boolean;
 } = {
   navTheme: 'light',
-  colorPrimary: '#1890ff',
+  colorPrimary: '#1677FF',
   layout: 'mix',
   contentWidth: 'Fluid',
   fixedHeader: false,
@@ -27,9 +27,9 @@ const Settings: ProLayoutProps & {
       colorTextMenu: 'var(--ant-color-text)',
     },
     header: {
-      colorTextMenuActive: '#005bf8',
+      colorTextMenuActive: 'var(--ant-color-primary)',
       heightLayoutHeader: 60,
-      colorTextMenuSelected: '#005bf8',
+      colorTextMenuSelected: 'var(--ant-color-primary)',
       colorBgMenuItemHover: 'transparent',
     },
   },

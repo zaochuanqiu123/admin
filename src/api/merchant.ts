@@ -1,4 +1,4 @@
-import { apiData } from '@/api/http';
+import { apiData, apiRequest } from '@/api/http';
 
 export type MerchantPageParams = {
   current: number;
@@ -38,6 +38,9 @@ export type MerchantAddParams = {
   merchantProvince: string;
   merchantCity: string;
   merchantArea: string;
+  merchantProvinceCode: string;
+  merchantCityCode: string;
+  merchantAreaCode: string;
   merchantDetailAddress: string;
   sourceType?: number;
   merchantManagerPhone: string;
@@ -56,8 +59,16 @@ export type MerchantModifyParams = {
   merchantProvince: string;
   merchantCity: string;
   merchantArea: string;
+  merchantProvinceCode: string;
+  merchantCityCode: string;
+  merchantAreaCode: string;
   merchantDetailAddress: string;
   sourceType?: number;
+};
+
+export type BuyMerchantStoreParams = {
+  merchantOrgId: string;
+  buyNum: number;
 };
 
 export type MerchantDetailRecord = {
@@ -73,6 +84,9 @@ export type MerchantDetailRecord = {
   merchantProvince?: string;
   merchantCity?: string;
   merchantArea?: string;
+  merchantProvinceCode?: string;
+  merchantCityCode?: string;
+  merchantAreaCode?: string;
   merchantDetailAddress?: string;
   sourceType?: number;
   storeNum?: number;
@@ -122,6 +136,17 @@ export async function modifyMerchant(
   options?: { [key: string]: any },
 ) {
   return apiData<any>('/api/admin/org/v1/merchant/modify', {
+    method: 'POST',
+    data,
+    ...(options || {}),
+  });
+}
+
+export async function buyMerchantStore(
+  data: BuyMerchantStoreParams,
+  options?: { [key: string]: any },
+) {
+  return apiRequest<any>('/api/admin/org/v1/merchant/buyStore', {
     method: 'POST',
     data,
     ...(options || {}),

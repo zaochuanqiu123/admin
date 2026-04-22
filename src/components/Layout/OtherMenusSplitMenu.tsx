@@ -132,23 +132,6 @@ function buildNodes(
   return result;
 }
 
-function hasPathInTree(node: MenuNode, pathname: string): boolean {
-  const stack: MenuNode[] = [node];
-  const visited = new Set<string>();
-  while (stack.length > 0) {
-    const current = stack.pop() as MenuNode;
-    if (visited.has(current.key)) continue;
-    visited.add(current.key);
-    if (current.path && isPathMatch(current.path, pathname)) return true;
-    if (current.children && current.children.length > 0) {
-      for (const child of current.children) {
-        stack.push(child);
-      }
-    }
-  }
-  return false;
-}
-
 function hasTargetIdInTree(node: MenuNode, targetId: string): boolean {
   const stack: MenuNode[] = [node];
   const visited = new Set<string>();
@@ -262,6 +245,10 @@ function getMenuSourceNodes(node: MenuNode | undefined): MenuNode[] {
     return node.children;
   }
   return [node];
+}
+
+function isFocusVisible(element: HTMLElement) {
+  return element.matches(':focus-visible');
 }
 
 const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
@@ -582,6 +569,29 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
     setHoverOpenKeys([]);
   }, [clearCloseCleanupTimer, clearCloseTimer]);
 
+  React.useEffect(() => {
+    closeHoverPanelsImmediately();
+  }, [closeHoverPanelsImmediately, currentTargetId, pathname]);
+
+  React.useEffect(() => {
+    const handleWindowLeave = () => {
+      closeHoverPanelsImmediately();
+      suppressMenuHoverAutoOpen();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        handleWindowLeave();
+      }
+    };
+
+    window.addEventListener('blur', handleWindowLeave);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('blur', handleWindowLeave);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [closeHoverPanelsImmediately]);
+
   const openHoverPanels = React.useCallback(
     (topKey?: string) => {
       clearCloseTimer();
@@ -718,7 +728,8 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
                 aria-label={node.name}
                 onMouseEnter={() => queueHoverIntent(node.key)}
                 onMouseMove={() => queueHoverIntent(node.key, true)}
-                onFocus={() => {
+                onFocus={(event) => {
+                  if (!isFocusVisible(event.currentTarget)) return;
                   clearHoverIntent();
                   resumeMenuHoverAutoOpen();
                   openHoverPanels(node.key);

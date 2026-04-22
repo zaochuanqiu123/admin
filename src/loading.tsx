@@ -12,7 +12,7 @@ function readDarkMode() {
   if (typeof window === 'undefined') return false;
   try {
     return window.localStorage.getItem(NAV_THEME_STORAGE_KEY) === 'realDark';
-  } catch (error) {
+  } catch {
     return false;
   }
 }

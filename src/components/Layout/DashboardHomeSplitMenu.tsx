@@ -269,6 +269,10 @@ function getSelectedKeysFromMeta(
   return matchedKey ? [matchedKey] : [];
 }
 
+function isFocusVisible(element: HTMLElement) {
+  return element.matches(':focus-visible');
+}
+
 const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
   topMenus,
   pathname,
@@ -390,6 +394,8 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
           menuCommonActions.map((action, index) => {
             const childKey = `common-action-${action.id}-${index}`;
             pathByKey.set(childKey, action.path);
+            targetIdByKey.set(childKey, action.targetId);
+            sourceSystemByKey.set(childKey, action.sourceSystem);
             parentByKey.set(childKey, commonActionsKey);
             return {
               key: childKey,
@@ -562,6 +568,37 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
     }, 120);
   }, [clearCloseTimer, clearHoverIntent]);
 
+  const closeHoverPanelImmediately = React.useCallback(() => {
+    clearCloseTimer();
+    clearHoverIntent();
+    setHoverPanelOpen(false);
+    setHoveredTopKey('');
+    setHoverOpenKeys([]);
+  }, [clearCloseTimer, clearHoverIntent]);
+
+  React.useEffect(() => {
+    closeHoverPanelImmediately();
+  }, [closeHoverPanelImmediately, currentTargetId, pathname]);
+
+  React.useEffect(() => {
+    const handleWindowLeave = () => {
+      closeHoverPanelImmediately();
+      suppressMenuHoverAutoOpen();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        handleWindowLeave();
+      }
+    };
+
+    window.addEventListener('blur', handleWindowLeave);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('blur', handleWindowLeave);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [closeHoverPanelImmediately]);
+
   React.useEffect(() => {
     return () => {
       clearHoverIntent();
@@ -607,7 +644,8 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
                 aria-label={node.name}
                 onMouseEnter={() => queueHoverIntent(node.key)}
                 onMouseMove={() => queueHoverIntent(node.key, true)}
-                onFocus={() => {
+                onFocus={(event) => {
+                  if (!isFocusVisible(event.currentTarget)) return;
                   clearHoverIntent();
                   resumeMenuHoverAutoOpen();
                   openHoverPanel(node.key);

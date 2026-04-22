@@ -1,4 +1,5 @@
 import { PlusOutlined } from '@ant-design/icons';
+import { useModel } from '@umijs/max';
 import {
   Alert,
   Empty,
@@ -31,6 +32,10 @@ import {
   PermissionVisible,
 } from '@/components';
 import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
+import {
+  getCurrentIdentityItem,
+  getIdentityItemsFromStorage,
+} from '@/utils/identity';
 import { BatchChangeTemplateModal } from './components/BatchChangeTemplateModal';
 import { BindQrCodeModal } from './components/BindQrCodeModal';
 import { CreateQrCodeModal } from './components/CreateQrCodeModal';
@@ -158,21 +163,23 @@ function isBound(record: QrCodeRecord) {
   );
 }
 
-function getOrgDisplay(record: QrCodeRecord) {
-  return (
-    [readText(record?.agentOrg?.orgName), readText(record?.groupOrg?.orgName)]
-      .filter(Boolean)
-      .join(' / ') ||
-    readText(record?.agentOrgId, record?.groupOrgId) ||
-    '-'
-  );
-}
-
 function showPendingActionMessage(label: string) {
   message.info(`${label}功能暂未接入，等你确认接口后再补。`);
 }
 
 const StoreQrCodeListPage: React.FC = () => {
+  const { initialState } = useModel('@@initialState');
+  const identityItems = useMemo(() => getIdentityItemsFromStorage(), []);
+  const currentIdentity = useMemo(
+    () => getCurrentIdentityItem(initialState?.currentOrgCode, identityItems),
+    [initialState?.currentOrgCode, identityItems],
+  );
+  const accountRole = currentIdentity?.levelName || '';
+  const isStore = accountRole.includes('门店');
+  const isMerchant = accountRole.includes('商户');
+  const isAgent = accountRole.includes('代理');
+  const isPlatform = !isMerchant && !isStore && !isAgent;
+
   const [loading, setLoading] = useState(false);
   const [listInitialized, setListInitialized] = useState(false);
   const [listError, setListError] = useState<string>();
@@ -376,132 +383,181 @@ const StoreQrCodeListPage: React.FC = () => {
   );
 
   const columns = useMemo<ColumnsType<QrCodeRecord>>(
-    () => [
-      {
-        title: '批次号',
-        dataIndex: 'batchSn',
-        width: 140,
-        ellipsis: true,
-        render: (value) => value || '-',
-      },
-      {
-        title: '编号',
-        dataIndex: 'sn',
-        width: 140,
-        ellipsis: true,
-        render: (value) => value || '-',
-      },
-      {
-        title: '二维码',
-        dataIndex: ['qrcodeTemplate', 'prevImageUrl'],
-        width: 140,
-        render: (_value, record) => {
-          const imageUrl = getPreviewImage(record);
-          if (imageUrl) {
+    () =>
+      [
+        {
+          title: '批次号',
+          dataIndex: 'batchSn',
+          width: 140,
+          ellipsis: true,
+          render: (value: string) => value || '-',
+        },
+        {
+          title: '编号',
+          dataIndex: 'sn',
+          width: 140,
+          ellipsis: true,
+          render: (value: string) => value || '-',
+        },
+        {
+          title: '二维码',
+          dataIndex: ['qrcodeTemplate', 'prevImageUrl'],
+          width: 140,
+          render: (_value: unknown, record: QrCodeRecord) => {
+            const imageUrl = getPreviewImage(record);
+            if (imageUrl) {
+              return (
+                <div className="qr-code-preview-box">
+                  <img
+                    src={imageUrl}
+                    alt={getTemplateName(record) || '收款码预览'}
+                    className="qr-code-preview-image"
+                    onClick={() => {
+                      setPreviewImage(imageUrl);
+                      setPreviewOpen(true);
+                    }}
+                  />
+                </div>
+              );
+            }
+
             return (
-              <div className="qr-code-preview-box">
-                <img
-                  src={imageUrl}
-                  alt={getTemplateName(record) || '收款码预览'}
-                  className="qr-code-preview-image"
-                  onClick={() => {
-                    setPreviewImage(imageUrl);
-                    setPreviewOpen(true);
-                  }}
-                />
+              <div className="qr-code-preview-box qr-code-preview-box-placeholder">
+                <span>暂无预览</span>
               </div>
             );
-          }
-
-          return (
-            <div className="qr-code-preview-box qr-code-preview-box-placeholder">
-              <span>暂无预览</span>
-            </div>
-          );
+          },
         },
-      },
-      {
-        title: '打开方式',
-        dataIndex: 'openType',
-        width: 120,
-        render: (value) => formatOpenType(value),
-      },
-      {
-        title: '类型',
-        dataIndex: 'bizType',
-        width: 130,
-        render: (value) => (
-          <span className="qr-code-chip is-muted">{formatBizType(value)}</span>
-        ),
-      },
-      {
-        title: '型号',
-        dataIndex: 'model',
-        width: 120,
-        ellipsis: true,
-        render: (value) => value || '-',
-      },
-      {
-        title: '机构',
-        key: 'orgInfo',
-        width: 180,
-        render: (_, record) => getOrgDisplay(record),
-      },
-      {
-        title: '创建时间',
-        dataIndex: 'createTime',
-        width: 180,
-        ellipsis: true,
-        render: (value) => value || '-',
-      },
-      {
-        title: '划拨时间',
-        dataIndex: 'transferTime',
-        width: 180,
-        ellipsis: true,
-        render: (value) => value || '-',
-      },
-      {
-        title: '状态',
-        dataIndex: 'state',
-        width: 120,
-        render: (value) => (
-          <Switch
-            checked={Number(value) === 1}
-            checkedChildren="启用"
-            unCheckedChildren="禁用"
-            disabled
-          />
-        ),
-      },
-      {
-        title: '操作',
-        key: 'action',
-        width: 120,
-        fixed: 'right',
-        render: (_, record) => {
-          const hasBindInfo = isBound(record);
-
-          return (
-            <div className="qr-code-action-links">
-              {hasBindInfo ? (
-                <PermissionVisible perm={QR_CODE_PERMS.unbind}>
-                  <a
-                    className="is-danger"
-                    onClick={() => {
-                      void handleUnbind(record);
-                    }}
-                  >
-                    解绑
-                  </a>
-                </PermissionVisible>
-              ) : null}
-            </div>
-          );
+        {
+          title: '打开方式',
+          dataIndex: 'openType',
+          width: 120,
+          render: (value: string) => formatOpenType(value),
         },
-      },
-    ],
-    [handleUnbind],
+        {
+          title: '类型',
+          dataIndex: 'bizType',
+          width: 130,
+          render: (value: string) => (
+            <span className="qr-code-chip is-muted">
+              {formatBizType(value)}
+            </span>
+          ),
+        },
+        {
+          title: '型号',
+          dataIndex: 'model',
+          width: 120,
+          ellipsis: true,
+          render: (value: string) => value || '-',
+        },
+        ...(isPlatform
+          ? [
+              {
+                title: '代理组织',
+                key: 'agentOrg',
+                width: 150,
+                ellipsis: true,
+                render: (_: any, record: QrCodeRecord) =>
+                  readText(record?.agentOrg?.orgName) ||
+                  readText(record?.agentOrgId) ||
+                  '-',
+              },
+            ]
+          : []),
+        ...(isPlatform || isAgent
+          ? [
+              {
+                title: '集团组织',
+                key: 'groupOrg',
+                width: 150,
+                ellipsis: true,
+                render: (_: any, record: QrCodeRecord) =>
+                  readText(record?.groupOrg?.orgName) ||
+                  readText(record?.groupOrgId) ||
+                  '-',
+              },
+              {
+                title: '商户组织',
+                key: 'merchantOrg',
+                width: 150,
+                ellipsis: true,
+                render: (_: any, record: QrCodeRecord) =>
+                  readText(record?.merchantOrg?.orgName) ||
+                  readText(record?.merchantOrgId) ||
+                  '-',
+              },
+            ]
+          : []),
+        ...(isPlatform || isAgent || isMerchant
+          ? [
+              {
+                title: '门店组织',
+                key: 'storeOrg',
+                width: 150,
+                ellipsis: true,
+                render: (_: any, record: QrCodeRecord) =>
+                  readText(record?.storeOrg?.orgName) ||
+                  readText(record?.storeOrgId) ||
+                  '-',
+              },
+            ]
+          : []),
+        {
+          title: '创建时间',
+          dataIndex: 'createTime',
+          width: 180,
+          ellipsis: true,
+          render: (value: string) => value || '-',
+        },
+        {
+          title: '划拨时间',
+          dataIndex: 'transferTime',
+          width: 180,
+          ellipsis: true,
+          render: (value: string) => value || '-',
+        },
+        {
+          title: '状态',
+          dataIndex: 'state',
+          width: 120,
+          render: (value: string | number) => (
+            <Switch
+              checked={Number(value) === 1}
+              checkedChildren="启用"
+              unCheckedChildren="禁用"
+              disabled
+            />
+          ),
+        },
+        {
+          title: '操作',
+          key: 'action',
+          width: 120,
+          fixed: 'right',
+          render: (_: unknown, record: QrCodeRecord) => {
+            const hasBindInfo = isBound(record);
+
+            return (
+              <div className="qr-code-action-links">
+                {hasBindInfo ? (
+                  <PermissionVisible perm={QR_CODE_PERMS.unbind}>
+                    <a
+                      className="is-danger"
+                      onClick={() => {
+                        void handleUnbind(record);
+                      }}
+                    >
+                      解绑
+                    </a>
+                  </PermissionVisible>
+                ) : null}
+              </div>
+            );
+          },
+        },
+      ].filter(Boolean) as ColumnsType<QrCodeRecord>,
+    [handleUnbind, isPlatform, isAgent, isMerchant, isStore],
   );
 
   const handleSearch = () => {
@@ -546,94 +602,106 @@ const StoreQrCodeListPage: React.FC = () => {
         onSearch={handleSearch}
         onReset={handleReset}
         fields={[
-          {
-            key: 'agentOrgId',
-            label: '代理组织ID',
-            content: (
-              <OrganizationPickerInput
-                placeholder="请选择代理组织"
-                value={draftFilters.agentOrgId}
-                onChange={(value) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    agentOrgId: value,
-                  }));
-                }}
-              />
-            ),
-          },
-          {
-            key: 'groupOrgId',
-            label: '集团组织ID',
-            content: (
-              <Input
-                allowClear
-                placeholder="请输入集团组织ID"
-                value={draftFilters.groupOrgId}
-                onChange={(event) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    groupOrgId: event.target.value,
-                  }));
-                }}
-                onPressEnter={handleSearch}
-              />
-            ),
-          },
-          {
-            key: 'merchantOrgId',
-            label: '商户组织ID',
-            content: (
-              <Input
-                allowClear
-                placeholder="请输入商户组织ID"
-                value={draftFilters.merchantOrgId}
-                onChange={(event) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    merchantOrgId: event.target.value,
-                  }));
-                }}
-                onPressEnter={handleSearch}
-              />
-            ),
-          },
-          {
-            key: 'storeOrgId',
-            label: '门店组织ID',
-            content: (
-              <Input
-                allowClear
-                placeholder="请输入门店组织ID"
-                value={draftFilters.storeOrgId}
-                onChange={(event) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    storeOrgId: event.target.value,
-                  }));
-                }}
-                onPressEnter={handleSearch}
-              />
-            ),
-          },
-          {
-            key: 'storeOrgUserId',
-            label: '门店员工ID',
-            content: (
-              <Input
-                allowClear
-                placeholder="请输入门店员工ID"
-                value={draftFilters.storeOrgUserId}
-                onChange={(event) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    storeOrgUserId: event.target.value,
-                  }));
-                }}
-                onPressEnter={handleSearch}
-              />
-            ),
-          },
+          ...(isPlatform
+            ? [
+                {
+                  key: 'agentOrgId',
+                  label: '代理组织ID',
+                  content: (
+                    <OrganizationPickerInput
+                      placeholder="请选择代理组织"
+                      value={draftFilters.agentOrgId}
+                      onChange={(value) => {
+                        setDraftFilters((prev) => ({
+                          ...prev,
+                          agentOrgId: value,
+                        }));
+                      }}
+                    />
+                  ),
+                },
+              ]
+            : []),
+          ...(isPlatform || isAgent
+            ? [
+                {
+                  key: 'groupOrgId',
+                  label: '集团组织ID',
+                  content: (
+                    <Input
+                      allowClear
+                      placeholder="请输入集团组织ID"
+                      value={draftFilters.groupOrgId}
+                      onChange={(event) => {
+                        setDraftFilters((prev) => ({
+                          ...prev,
+                          groupOrgId: event.target.value,
+                        }));
+                      }}
+                      onPressEnter={handleSearch}
+                    />
+                  ),
+                },
+                {
+                  key: 'merchantOrgId',
+                  label: '商户组织ID',
+                  content: (
+                    <Input
+                      allowClear
+                      placeholder="请输入商户组织ID"
+                      value={draftFilters.merchantOrgId}
+                      onChange={(event) => {
+                        setDraftFilters((prev) => ({
+                          ...prev,
+                          merchantOrgId: event.target.value,
+                        }));
+                      }}
+                      onPressEnter={handleSearch}
+                    />
+                  ),
+                },
+              ]
+            : []),
+          ...(isPlatform || isAgent || isMerchant
+            ? [
+                {
+                  key: 'storeOrgId',
+                  label: '门店组织ID',
+                  content: (
+                    <Input
+                      allowClear
+                      placeholder="请输入门店组织ID"
+                      value={draftFilters.storeOrgId}
+                      onChange={(event) => {
+                        setDraftFilters((prev) => ({
+                          ...prev,
+                          storeOrgId: event.target.value,
+                        }));
+                      }}
+                      onPressEnter={handleSearch}
+                    />
+                  ),
+                },
+                {
+                  key: 'storeOrgUserId',
+                  label: '门店员工ID',
+                  content: (
+                    <Input
+                      allowClear
+                      placeholder="请输入门店员工ID"
+                      value={draftFilters.storeOrgUserId}
+                      onChange={(event) => {
+                        setDraftFilters((prev) => ({
+                          ...prev,
+                          storeOrgUserId: event.target.value,
+                        }));
+                      }}
+                      onPressEnter={handleSearch}
+                    />
+                  ),
+                },
+              ]
+            : []),
           {
             key: 'sn',
             label: '编号',

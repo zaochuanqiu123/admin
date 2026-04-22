@@ -1,5 +1,15 @@
 import type { CommonAction } from '@/config/menu.config';
 
+const LEGACY_PLACEHOLDER_ACTION_IDS = new Set([
+  'recharge',
+  'coupon',
+  'batch-pay',
+  'withdraw',
+  'bill-download',
+  'pay-gift',
+  'transfer',
+]);
+
 /**
  * 从 localStorage 读取常用操作列表
  */
@@ -19,7 +29,20 @@ export function readCommonActionsFromStorage(
           typeof x.title === 'string' &&
           typeof x.path === 'string',
       )
-      .map((x: any) => ({ id: x.id, title: x.title, path: x.path }));
+      .map((x: any) => ({
+        id: x.id,
+        title: x.title,
+        path: x.path,
+        targetId: typeof x.targetId === 'string' ? x.targetId : undefined,
+        sourceSystem:
+          typeof x.sourceSystem === 'number' ? x.sourceSystem : undefined,
+      }));
+    if (
+      list.length > 0 &&
+      list.every((item) => LEGACY_PLACEHOLDER_ACTION_IDS.has(item.id))
+    ) {
+      return null;
+    }
     return list.length ? list : null;
   } catch {
     return null;

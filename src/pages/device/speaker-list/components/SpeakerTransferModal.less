@@ -97,17 +97,17 @@
       align-items: center;
       justify-content: center;
       border: none;
-      background: #eef2fe;
+      background: var(--ant-color-primary-bg);
       color: var(--ant-color-primary);
 
       &:disabled {
-        background: #f5f5f5;
-        color: rgba(0, 0, 0, 0.25);
+        background: var(--ant-color-fill-tertiary);
+        color: var(--ant-color-text-disabled);
       }
 
       &:hover:not(:disabled) {
         background: var(--ant-color-primary);
-        color: #fff;
+        color: var(--ant-color-text-light-solid, #fff);
       }
     }
   }
@@ -148,17 +148,17 @@ body.theme-black-mode .speaker-transfer-modal {
 
   .speaker-shuttle-actions {
     .ant-btn {
-      background: rgba(255, 255, 255, 0.12);
+      background: var(--ant-color-fill-secondary);
       color: var(--pc-dark-text);
 
       &:disabled {
-        background: rgba(255, 255, 255, 0.04);
-        color: rgba(255, 255, 255, 0.25);
+        background: var(--ant-color-fill-quaternary);
+        color: var(--ant-color-text-disabled);
       }
 
       &:hover:not(:disabled) {
         background: var(--ant-color-primary);
-        color: #fff;
+        color: var(--ant-color-text-light-solid, #fff);
       }
     }
   }

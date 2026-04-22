@@ -2,6 +2,8 @@
 
 .role-permission-page {
   min-height: calc(100vh - 112px);
+  --role-permission-border: var(--ant-color-border-secondary);
+  --role-permission-selected-bg: var(--ant-color-primary-bg);
 }
 
 .role-permission-content-card {
@@ -17,7 +19,7 @@
   font-size: 18px;
   font-weight: 600;
   line-height: 1;
-  color: #1f2837;
+  color: var(--ant-color-text);
 }
 
 .role-permission-toolbar {
@@ -43,36 +45,21 @@
   width: 280px;
 }
 
-.role-permission-create-btn.ant-btn {
-  height: 40px;
-  padding: 0 22px;
-  border: none;
-  border-radius: 999px;
-  background: var(--ant-color-primary);
-  box-shadow: none;
-  font-weight: 500;
-}
-
-.role-permission-create-btn.ant-btn:hover,
-.role-permission-create-btn.ant-btn:focus {
-  background: var(--ant-color-primary-hover, var(--ant-color-primary));
-}
-
 .role-permission-info-banner {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 10px;
   padding: 12px 14px;
-  border: 1px solid #9bc9ff;
+  border: 1px solid var(--ant-color-primary-border, var(--ant-color-primary));
   border-radius: 8px;
-  background: #e8f3ff;
-  color: #1f2837;
+  background: var(--ant-color-primary-bg);
+  color: var(--ant-color-text);
 }
 
 .role-permission-info-icon {
   flex-shrink: 0;
-  color: #1677ff;
+  color: var(--ant-color-primary);
   font-size: 16px;
 }
 
@@ -125,29 +112,181 @@
   gap: 16px;
 }
 
-.role-permission-tree-panel {
-  padding: 12px 16px;
-  border: 1px solid var(--ant-color-border-secondary);
-  border-radius: 12px;
-  background: var(--ant-color-fill-quaternary);
+.role-permission-matrix-form-item {
+  margin-bottom: 0;
 }
 
-.role-permission-tree-scroll {
-  height: 260px;
-  overflow-y: scroll;
+.role-permission-matrix-wrap {
+  min-width: 0;
+}
+
+.role-permission-matrix-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  border: 1px solid var(--role-permission-border);
+  border-radius: 6px;
+  background: var(--ant-color-bg-container);
+}
+
+.role-permission-matrix-empty.is-panel-empty {
+  min-height: 420px;
+  border: 0;
+  border-radius: 0;
+}
+
+.role-permission-matrix-scenes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+  padding: 16px 14px;
+  border: 1px solid var(--role-permission-border);
+  border-radius: 6px;
+  background: var(--ant-color-fill-quaternary);
+
+  button {
+    height: 32px;
+    padding: 0 16px;
+    border: 1px solid var(--ant-color-border-secondary);
+    border-radius: 999px;
+    background: var(--ant-color-bg-container);
+    cursor: pointer;
+    color: var(--ant-color-text);
+    font-size: 14px;
+    line-height: 30px;
+    transition:
+      color 0.2s,
+      border-color 0.2s,
+      background 0.2s;
+  }
+
+  button:hover {
+    border-color: var(--ant-color-primary-border);
+    color: var(--ant-color-primary);
+  }
+
+  .is-active {
+    border-color: var(--ant-color-primary);
+    background: var(--ant-color-primary-bg);
+    color: var(--ant-color-primary);
+    font-weight: 600;
+  }
+}
+
+.role-permission-matrix-panel {
+  min-width: 0;
+  margin-top: 8px;
+  overflow: hidden;
+  border: 1px solid var(--role-permission-border);
+  border-radius: 6px;
+  background: var(--ant-color-bg-container);
+}
+
+.role-permission-matrix-tags {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--role-permission-border);
+  background: var(--ant-color-fill-quaternary);
+
+  .ant-tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    margin: 0 8px 0 0;
+    padding: 0 14px;
+    border-color: var(--ant-color-border-secondary);
+    border-radius: 999px;
+    background: var(--ant-color-bg-container);
+    color: var(--ant-color-text);
+    cursor: pointer;
+    line-height: 30px;
+  }
+
+  .ant-tag.is-active {
+    border-color: var(--ant-color-primary-border, var(--ant-color-primary));
+    background: var(--ant-color-primary-bg);
+    color: var(--ant-color-primary);
+  }
+
+  .ant-checkbox-wrapper {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .ant-tag.is-active .ant-checkbox + span {
+    color: var(--ant-color-primary);
+  }
+}
+
+.role-permission-matrix {
+  display: flex;
+  min-height: 420px;
   overflow-x: auto;
 }
 
-.role-permission-tree-scroll::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+.role-permission-matrix-column {
+  flex: 0 0 170px;
+  min-width: 0;
+  border-right: 1px solid var(--role-permission-border);
 }
 
-.role-permission-tree-scroll::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: rgba(31, 40, 55, 0.22);
+.role-permission-matrix-column.is-page {
+  flex-basis: 220px;
 }
 
-.role-permission-tree-scroll::-webkit-scrollbar-track {
-  background: transparent;
+.role-permission-matrix-column.is-actions {
+  flex: 1 0 240px;
+  border-right: 0;
+}
+
+.role-permission-matrix-column-title {
+  height: 32px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--role-permission-border);
+  background: var(--ant-color-fill-quaternary);
+  color: var(--ant-color-text);
+  line-height: 32px;
+}
+
+.role-permission-matrix-column-body {
+  max-height: 388px;
+  padding: 8px;
+  overflow-y: auto;
+  .mixin-hide-scrollbar();
+
+  button {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+    min-height: 32px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    color: var(--ant-color-text);
+    text-align: left;
+  }
+
+  button > span {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .is-active {
+    background: var(--role-permission-selected-bg);
+  }
+}
+
+.role-permission-matrix-action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 388px;
+  padding: 14px 16px;
+  overflow-y: auto;
 }

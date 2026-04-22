@@ -26,8 +26,10 @@ import { getCurrentStoreBusiness } from '@/api/business';
 import {
   addStore,
   getStoreDetail,
+  getStoreNum,
   modifyStore,
   type StoreDetailRecord,
+  type StoreNumVO,
 } from '@/api/store';
 import { type SearchUserResult, searchUserByPhone } from '@/api/user';
 import { ROUTE_TAB_REFRESH_EVENT } from '@/components/Layout/RouteTabsKeepAlive';
@@ -412,6 +414,14 @@ function getDetailAttachmentId(value: string | undefined) {
   return text && !/^https?:\/\//i.test(text) ? text : '';
 }
 
+function formatStoreNum(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : '--';
+}
+
 function findRegionOptionByText(
   options: RegionOption[],
   target: string | undefined,
@@ -485,6 +495,8 @@ export default function StoreCreatePage() {
   const [matchedAdmin, setMatchedAdmin] = useState<SearchUserResult>();
   const [detailRecord, setDetailRecord] = useState<StoreDetailRecord>();
   const [detailLoading, setDetailLoading] = useState(false);
+  const [storeNumInfo, setStoreNumInfo] = useState<StoreNumVO>();
+  const [storeNumLoading, setStoreNumLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -786,11 +798,30 @@ export default function StoreCreatePage() {
         if (!cancelled) setRegionLoading(false);
       }
     };
-    void Promise.all([loadBaseOptions(), loadRegionTree()]);
+    const loadStoreNumInfo = async () => {
+      if (isUpdateMode) {
+        setStoreNumInfo(undefined);
+        return;
+      }
+      setStoreNumLoading(true);
+      try {
+        const res = await getStoreNum({ skipErrorHandler: true });
+        if (!cancelled) {
+          setStoreNumInfo(res || {});
+        }
+      } catch {
+        if (!cancelled) {
+          setStoreNumInfo(undefined);
+        }
+      } finally {
+        if (!cancelled) setStoreNumLoading(false);
+      }
+    };
+    void Promise.all([loadBaseOptions(), loadRegionTree(), loadStoreNumInfo()]);
     return () => {
       cancelled = true;
     };
-  }, [form]);
+  }, [form, isUpdateMode]);
 
   useEffect(() => {
     if (!isUpdateMode) {
@@ -870,10 +901,17 @@ export default function StoreCreatePage() {
     }
     let cancelled = false;
     const fillRegionCodes = async () => {
-      const province = findRegionOptionByText(
-        regionOptions,
-        detailRecord.storeProvince,
-      );
+      const provinceTarget = String(
+        detailRecord.storeProvinceCode || detailRecord.storeProvince || '',
+      ).trim();
+      const cityTarget = String(
+        detailRecord.storeCityCode || detailRecord.storeCity || '',
+      ).trim();
+      const areaTarget = String(
+        detailRecord.storeAreaCode || detailRecord.storeArea || '',
+      ).trim();
+
+      const province = findRegionOptionByText(regionOptions, provinceTarget);
       if (!province) {
         return;
       }
@@ -885,10 +923,7 @@ export default function StoreCreatePage() {
         province.children = buildRegionOptions(cityList, 2);
         setRegionOptions((prev) => [...prev]);
       }
-      const city = findRegionOptionByText(
-        province.children || [],
-        detailRecord.storeCity,
-      );
+      const city = findRegionOptionByText(province.children || [], cityTarget);
       if (!city) {
         return;
       }
@@ -900,10 +935,7 @@ export default function StoreCreatePage() {
         city.children = buildRegionOptions(areaList, 3);
         setRegionOptions((prev) => [...prev]);
       }
-      const area = findRegionOptionByText(
-        city.children || [],
-        detailRecord.storeArea,
-      );
+      const area = findRegionOptionByText(city.children || [], areaTarget);
       if (!area || cancelled) {
         return;
       }
@@ -1102,6 +1134,9 @@ export default function StoreCreatePage() {
         storeProvince: String(regionPath[0]?.label || '').trim(),
         storeCity: String(regionPath[1]?.label || '').trim(),
         storeArea: String(regionPath[2]?.label || '').trim(),
+        storeProvinceCode: String(regionPath[0]?.value || '').trim(),
+        storeCityCode: String(regionPath[1]?.value || '').trim(),
+        storeAreaCode: String(regionPath[2]?.value || '').trim(),
         storeDetailAddress: String(values.storeDetailAddress || '').trim(),
         longitude: String(values.longitude || '').trim(),
         latitude: String(values.latitude || '').trim(),
@@ -1198,7 +1233,25 @@ export default function StoreCreatePage() {
               items={[{ title: '基础信息' }, { title: '管理员信息' }]}
             />
           ) : null}
-          <div className="store-create-step-title">{pageTitle}</div>
+          <div className="store-create-step-heading">
+            <div className="store-create-step-title">{pageTitle}</div>
+            {!isUpdateMode ? (
+              <div className="store-create-quota">
+                <span>
+                  可创建门店：
+                  {storeNumLoading
+                    ? '--'
+                    : formatStoreNum(storeNumInfo?.storeNum)}
+                </span>
+                <span>
+                  剩余：
+                  {storeNumLoading
+                    ? '--'
+                    : formatStoreNum(storeNumInfo?.remainingStoresToCreate)}
+                </span>
+              </div>
+            ) : null}
+          </div>
           <Form<StoreCreateFormValues>
             form={form}
             className="store-create-form"

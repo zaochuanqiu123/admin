@@ -81,11 +81,13 @@ function getMerchantLogoId(detail?: MerchantDetailRecord) {
   return logoId && !/^https?:\/\//i.test(logoId) ? logoId : '';
 }
 
-function findOptionByLabel(options: RegionOption[], label?: string) {
-  const normalizedLabel = normalizeText(label);
-  if (!normalizedLabel) return undefined;
+function findOptionByValueOrLabel(options: RegionOption[], target?: string) {
+  const normalizedTarget = normalizeText(target);
+  if (!normalizedTarget) return undefined;
   return options.find(
-    (option) => normalizeText(String(option.label || '')) === normalizedLabel,
+    (option) =>
+      normalizeText(String(option.value || '')) === normalizedTarget ||
+      normalizeText(String(option.label || '')) === normalizedTarget,
   );
 }
 
@@ -267,10 +269,16 @@ export default function MerchantCreatePage() {
       return;
     }
 
-    const provinceName = normalizeText(detailRecord?.merchantProvince);
-    const cityName = normalizeText(detailRecord?.merchantCity);
-    const areaName = normalizeText(detailRecord?.merchantArea);
-    if (!provinceName || !cityName || !areaName) {
+    const provinceCode =
+      normalizeText(detailRecord?.merchantProvinceCode) ||
+      normalizeText(detailRecord?.merchantProvince);
+    const cityCode =
+      normalizeText(detailRecord?.merchantCityCode) ||
+      normalizeText(detailRecord?.merchantCity);
+    const areaCode =
+      normalizeText(detailRecord?.merchantAreaCode) ||
+      normalizeText(detailRecord?.merchantArea);
+    if (!provinceCode || !cityCode || !areaCode) {
       setRegionPatched(true);
       return;
     }
@@ -279,7 +287,7 @@ export default function MerchantCreatePage() {
 
     const patchRegionCodes = async () => {
       const nextOptions = cloneRegionOptions(regionOptions);
-      const province = findOptionByLabel(nextOptions, provinceName);
+      const province = findOptionByValueOrLabel(nextOptions, provinceCode);
       if (!province) {
         setRegionPatched(true);
         return;
@@ -294,7 +302,7 @@ export default function MerchantCreatePage() {
         province.children = buildRegionOptions(cityNodes, 2);
       }
 
-      const city = findOptionByLabel(province.children || [], cityName);
+      const city = findOptionByValueOrLabel(province.children || [], cityCode);
       if (!city) {
         setRegionPatched(true);
         return;
@@ -309,7 +317,7 @@ export default function MerchantCreatePage() {
         city.children = buildRegionOptions(areaNodes, 3);
       }
 
-      const area = findOptionByLabel(city.children || [], areaName);
+      const area = findOptionByValueOrLabel(city.children || [], areaCode);
       if (!area || cancelled) {
         setRegionPatched(true);
         return;
@@ -428,6 +436,9 @@ export default function MerchantCreatePage() {
       merchantProvince: String(province.label || '').trim(),
       merchantCity: String(city.label || '').trim(),
       merchantArea: String(area.label || '').trim(),
+      merchantProvinceCode: String(province.value || '').trim(),
+      merchantCityCode: String(city.value || '').trim(),
+      merchantAreaCode: String(area.value || '').trim(),
     };
   };
 
@@ -495,6 +506,9 @@ export default function MerchantCreatePage() {
       merchantProvince: regionLabels.merchantProvince,
       merchantCity: regionLabels.merchantCity,
       merchantArea: regionLabels.merchantArea,
+      merchantProvinceCode: regionLabels.merchantProvinceCode,
+      merchantCityCode: regionLabels.merchantCityCode,
+      merchantAreaCode: regionLabels.merchantAreaCode,
       merchantDetailAddress,
       sourceType,
     };

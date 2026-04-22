@@ -888,12 +888,7 @@ const RouteTabsKeepAlive: React.FC<{
                   }}
                   style={{
                     ...tabBaseStyle,
-                    border: active ? '1px solid #8fb4ff' : '1px solid #d6e0f3',
-                    background:
-                      'linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%)',
-                    color: active ? '#0f4fd6' : '#42526b',
                     fontWeight: active ? 600 : 400,
-                    boxShadow: 'none',
                   }}
                 >
                   <span className="pc-admin-route-tab-title">{tab.title}</span>

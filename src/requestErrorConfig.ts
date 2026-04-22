@@ -1,6 +1,11 @@
 ﻿import type { RequestOptions } from '@@/plugin-request/request';
 import type { RequestConfig } from '@umijs/max';
 import { message, notification } from 'antd';
+import {
+  getRequestMeta,
+  shouldSkipAuthRedirect,
+  shouldSkipGlobalBizError,
+} from '@/api/requestMeta';
 import { getSelectedOrgCode, getToken } from '@/api/storage';
 import {
   forceLogoutAndRedirect,
@@ -9,6 +14,11 @@ import {
 
 const devBypassAuth =
   typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
+
+function normalizeApiUrl(url?: string) {
+  if (!url?.startsWith('/api/')) return url;
+  return url.replace(/^\/api\//, '/mp-api/');
+}
 
 // 错误处理方案： 错误类型
 enum ErrorShowType {
@@ -26,6 +36,7 @@ interface ResponseStructure {
   errorMessage?: string;
   showType?: ErrorShowType;
   authHandled?: boolean;
+  requestMeta?: Record<string, any>;
 }
 
 /**
@@ -49,6 +60,8 @@ export const errorConfig: RequestConfig = {
     },
     // 错误接收及处理
     errorHandler: (error: any, opts: any) => {
+      const requestMeta =
+        error?.info?.requestMeta || getRequestMeta(opts as { meta?: any });
       if (opts?.skipErrorHandler) throw error;
       // 我们的 errorThrower 抛出的错误。
       if (error.name === 'BizError') {
@@ -56,6 +69,9 @@ export const errorConfig: RequestConfig = {
         if (errorInfo) {
           const { errorMessage, errorCode, authHandled } = errorInfo;
           if (authHandled) {
+            return;
+          }
+          if (shouldSkipGlobalBizError(requestMeta)) {
             return;
           }
           if (handleAuthExpiredByCode(errorCode, errorMessage)) {
@@ -91,13 +107,16 @@ export const errorConfig: RequestConfig = {
           if (devBypassAuth) {
             return;
           }
+          if (shouldSkipAuthRedirect(requestMeta)) {
+            return;
+          }
           forceLogoutAndRedirect(undefined, 'expired');
           return;
         }
         message.error(`Response status:${error.response.status}`);
       } else if (error.request) {
         // 请求已经成功发起，但没有收到响应
-        // \`error.request\` 在浏览器中是 XMLHttpRequest 的实例，
+        // `error.request` 在浏览器中是 XMLHttpRequest 的实例，
         // 而在node.js中是 http.ClientRequest 的实例
         message.error('None response! Please retry.');
       } else {
@@ -113,6 +132,7 @@ export const errorConfig: RequestConfig = {
       // 拦截请求配置，进行个性化处理。
       const token = getToken();
       const orgCode = getSelectedOrgCode();
+      const url = normalizeApiUrl(config.url);
       const isFormData =
         typeof FormData !== 'undefined' && config.data instanceof FormData;
       const hasAuthorizationHeader = Boolean(
@@ -130,7 +150,7 @@ export const errorConfig: RequestConfig = {
         delete (headers as Record<string, any>)['content-type'];
       }
 
-      return { ...config, headers };
+      return { ...config, url, headers };
     },
   ],
 

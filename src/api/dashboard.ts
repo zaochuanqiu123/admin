@@ -154,6 +154,79 @@ type MallUserStatResponse = {
   data?: MallUserStatItem[];
 };
 
+export type AgentMerchantTrendItem = {
+  time?: string;
+  count?: string | number;
+};
+
+export type AgentDataAnalyseOverview = {
+  merchant_total_count?: string | number;
+  today_add_merchant_count?: string | number;
+  add_merchant_count?: string | number;
+  merchant_valid_count?: string | number;
+  merchant_invalid_count?: string | number;
+  merchant_forbidden_count?: string | number;
+  merchant_total_count_trend?: AgentMerchantTrendItem[];
+};
+
+type AgentDataAnalyseResponse = {
+  status?: string | number;
+  message?: string;
+  msg?: string;
+  data?: AgentDataAnalyseOverview;
+};
+
+export type AgentLatestPlugItem = {
+  id?: string;
+  plug_name?: string;
+  identification?: string;
+  icon_url?: string;
+};
+
+type AgentLatestPlugResponse = {
+  status?: string | number;
+  message?: string;
+  msg?: string;
+  data?: AgentLatestPlugItem[];
+};
+
+export type AdminDataAnalyseOverview = {
+  agent_total_count?: string | number;
+  add_agent_count?: string | number;
+  today_add_agent_count?: string | number;
+  agent_valid_count?: string | number;
+  agent_invalid_count?: string | number;
+  agent_forbidden_count?: string | number;
+  agent_total_count_trend?: AgentMerchantTrendItem[];
+  merchant_total_count?: string | number;
+  add_merchant_count?: string | number;
+  merchant_valid_count?: string | number;
+  merchant_invalid_count?: string | number;
+  merchant_forbidden_count?: string | number;
+  merchant_total_count_trend?: AgentMerchantTrendItem[];
+};
+
+type AdminDataAnalyseResponse = {
+  status?: string | number;
+  message?: string;
+  msg?: string;
+  data?: AdminDataAnalyseOverview;
+};
+
+export type AdminLatestPlugItem = {
+  id?: string;
+  plug_name?: string;
+  identification?: string;
+  icon_url?: string;
+};
+
+type AdminLatestPlugResponse = {
+  status?: string | number;
+  message?: string;
+  msg?: string;
+  data?: AdminLatestPlugItem[];
+};
+
 export async function getIncomeCensus(params: {
   startTime: string;
   endTime: string;
@@ -242,6 +315,124 @@ export async function getSuperPlugRanking() {
         icon_url: resolvePhpUrl(item?.icon_url || ''),
         information: item?.information || '',
         origin_type: item?.origin_type || '',
+      }))
+    : [];
+}
+
+export async function getAgentDataAnalyse(params: {
+  startTime?: string;
+  endTime?: string;
+}) {
+  const formData = new FormData();
+  formData.append('debug', '1');
+  if (params.startTime) {
+    formData.append('start_time', params.startTime);
+  }
+  if (params.endTime) {
+    formData.append('end_time', params.endTime);
+  }
+
+  const response = await phpRequest<AgentDataAnalyseResponse>(
+    '/Agent/Index/getDataAnalyse',
+    {
+      method: 'POST',
+      data: formData,
+      tokenHeaderName: 'Authorization',
+      tokenPrefix: 'bearer ',
+    },
+  );
+
+  if (response?.status !== 1 && response?.status !== '1') {
+    throw new Error(
+      response?.message || response?.msg || '获取商户数量分析失败',
+    );
+  }
+
+  return response?.data || {};
+}
+
+export async function getAgentLatestPlug() {
+  const formData = new FormData();
+  formData.append('debug', '1');
+
+  const response = await phpRequest<AgentLatestPlugResponse>(
+    '/Agent/Index/getLatestPlug',
+    {
+      method: 'POST',
+      data: formData,
+      tokenHeaderName: 'Authorization',
+      tokenPrefix: 'bearer ',
+    },
+  );
+
+  if (response?.status !== 1 && response?.status !== '1') {
+    throw new Error(response?.message || response?.msg || '获取最新插件失败');
+  }
+
+  return Array.isArray(response?.data)
+    ? response.data.map((item, index) => ({
+        id: item?.id || String(index),
+        plug_name: item?.plug_name || '',
+        identification: item?.identification || '',
+        icon_url: resolvePhpUrl(item?.icon_url || ''),
+      }))
+    : [];
+}
+
+export async function getAdminDataAnalyse(params: {
+  startTime?: string;
+  endTime?: string;
+}) {
+  const formData = new FormData();
+  if (params.startTime) {
+    formData.append('start_time', params.startTime);
+  }
+  if (params.endTime) {
+    formData.append('end_time', params.endTime);
+  }
+
+  const response = await phpRequest<AdminDataAnalyseResponse>(
+    '/Admin/Index/getDataAnalyse',
+    {
+      method: 'POST',
+      data: formData,
+      tokenHeaderName: 'Authorization',
+      tokenPrefix: 'bearer ',
+    },
+  );
+
+  if (response?.status !== 1 && response?.status !== '1') {
+    throw new Error(
+      response?.message || response?.msg || '获取平台代理商与商户统计失败',
+    );
+  }
+
+  return response?.data || {};
+}
+
+export async function getAdminLatestPlug() {
+  const response = await phpRequest<AdminLatestPlugResponse>(
+    '/Admin/Index/getLatestPlug',
+    {
+      method: 'POST',
+      data: new FormData(),
+      tokenHeaderName: 'Authorization',
+      tokenPrefix: 'bearer ',
+    },
+  );
+
+  if (response?.status !== 1 && response?.status !== '1') {
+    throw new Error(
+      response?.message || response?.msg || '获取平台最新插件失败',
+    );
+  }
+
+  return Array.isArray(response?.data)
+    ? response.data.map((item, index) => ({
+        id: item?.id || String(index),
+        plug_name: item?.plug_name || '',
+        identification: item?.identification || '',
+        icon_url: resolvePhpUrl(item?.icon_url || ''),
       }))
     : [];
 }

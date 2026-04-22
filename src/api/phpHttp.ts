@@ -41,8 +41,8 @@ export async function phpRequest<TResponse = any>(
   const {
     headers,
     skipTokenHeader = false,
-    tokenHeaderName = 'token',
-    tokenPrefix = '',
+    tokenHeaderName = 'Authorization',
+    tokenPrefix = 'bearer ',
     tokenValuePrefix = 'JAVA-',
     ...restOptions
   } = options || {};
@@ -51,6 +51,7 @@ export async function phpRequest<TResponse = any>(
   return request<TResponse>(resolvePhpUrl(url), {
     ...restOptions,
     headers: {
+      'Request-Source': 'web',
       ...(headers || {}),
       ...(!skipTokenHeader && token
         ? {

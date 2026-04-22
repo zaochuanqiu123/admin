@@ -44,7 +44,7 @@ const useStyles = createStyles(({ token }) => {
     },
     taobao: {
       display: 'block',
-      color: '#ff4000',
+      color: token.colorError,
       fontSize: '48px',
       lineHeight: '48px',
       borderRadius: token.borderRadius,
@@ -52,14 +52,14 @@ const useStyles = createStyles(({ token }) => {
     dingding: {
       margin: '2px',
       padding: '6px',
-      color: '#fff',
+      color: token.colorTextLightSolid,
       fontSize: '32px',
       lineHeight: '32px',
-      backgroundColor: '#2eabff',
+      backgroundColor: token.colorPrimary,
       borderRadius: token.borderRadius,
     },
     alipay: {
-      color: '#2eabff',
+      color: token.colorPrimary,
       fontSize: '48px',
       lineHeight: '48px',
       borderRadius: token.borderRadius,

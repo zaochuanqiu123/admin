@@ -1,11 +1,23 @@
-﻿import { InfoCircleOutlined } from '@ant-design/icons';
+﻿import {
+  AppstoreAddOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  InfoCircleOutlined,
+  ShopOutlined,
+  StopOutlined,
+  TeamOutlined,
+} from '@ant-design/icons';
 import { Area, Pie } from '@ant-design/plots';
 import { useModel } from '@umijs/max';
-import { DatePicker, Empty, message, Select } from 'antd';
+import { DatePicker, Empty, message, Select, theme } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import { useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import {
+  getAdminDataAnalyse,
+  getAdminLatestPlug,
+  getAgentDataAnalyse,
+  getAgentLatestPlug,
   getAppletMallTransactUser,
   getAppletMallVisitUser,
   getGoodsAnalysis,
@@ -45,6 +57,13 @@ type StatItem = {
   iconActive?: string;
 };
 
+type AgentStatItem = {
+  key: string;
+  label: string;
+  value: string;
+  icon: ReactNode;
+};
+
 type RankItem = {
   key: string;
   name: string;
@@ -68,12 +87,32 @@ type MemberRankItem = {
 type TrendPoint = {
   date: string;
   value: number;
+  series?: string;
 };
 
 type PiePoint = {
   type: string;
   value: number;
   ratio?: string;
+};
+
+const toRgba = (color: string, alpha: number) => {
+  const hex = color.replace('#', '').trim();
+  if (!/^[0-9a-f]{3}([0-9a-f]{3})?$/i.test(hex)) return color;
+
+  const normalized =
+    hex.length === 3
+      ? hex
+          .split('')
+          .map((char) => char + char)
+          .join('')
+      : hex;
+  const value = Number.parseInt(normalized, 16);
+  const red = (value >> 16) & 255;
+  const green = (value >> 8) & 255;
+  const blue = value & 255;
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 };
 
 const merchantOverviewStatMeta: Omit<StatItem, 'value'>[] = [
@@ -139,21 +178,6 @@ const goodsTrendMetricMeta = [
   { key: 'buyerCount', label: '交易人数' },
   { key: 'unitPrice', label: '客单价' },
   { key: 'visitCount', label: '商品访问人数' },
-] as const;
-
-const offlineGoodsStatKeys = [
-  'goodsTotal',
-  'paidGoods',
-  'tradeCount',
-  'buyerCount',
-  'unitPrice',
-  'refundMoney',
-] as const;
-
-const onlineGoodsStatKeys = [
-  ...offlineGoodsStatKeys,
-  'visitCount',
-  'tradeRate',
 ] as const;
 
 const emptyGoodsStats = {
@@ -235,6 +259,116 @@ const emptyMallUserData = {
   trade: [] as PiePoint[],
 };
 
+const emptyAgentOverviewData = {
+  merchantTotalCount: '0',
+  todayAddMerchantCount: '0',
+  addMerchantCount: '0',
+  merchantValidCount: '0',
+  merchantInvalidCount: '0',
+  merchantForbiddenCount: '0',
+  merchantTotalCountTrend: [] as TrendPoint[],
+};
+
+const emptyPlatformOverviewData = {
+  agentTotalCount: '0',
+  addAgentCount: '0',
+  todayAddAgentCount: '0',
+  agentValidCount: '0',
+  agentInvalidCount: '0',
+  agentForbiddenCount: '0',
+  agentTotalCountTrend: [] as TrendPoint[],
+  merchantTotalCount: '0',
+  addMerchantCount: '0',
+  merchantValidCount: '0',
+  merchantInvalidCount: '0',
+  merchantForbiddenCount: '0',
+  merchantTotalCountTrend: [] as TrendPoint[],
+};
+
+const agentOverviewStatMeta: Array<Omit<AgentStatItem, 'value'>> = [
+  {
+    key: 'merchantTotalCount',
+    label: '总商户数',
+    icon: <ShopOutlined />,
+  },
+  {
+    key: 'todayAddMerchantCount',
+    label: '今日新增商户数',
+    icon: <AppstoreAddOutlined />,
+  },
+  {
+    key: 'merchantValidCount',
+    label: '使用中商户',
+    icon: <CheckCircleOutlined />,
+  },
+  {
+    key: 'merchantForbiddenCount',
+    label: '已禁用商户',
+    icon: <StopOutlined />,
+  },
+  {
+    key: 'merchantInvalidCount',
+    label: '已过期商户',
+    icon: <ClockCircleOutlined />,
+  },
+];
+
+const platformAgentStatMeta: Array<Omit<AgentStatItem, 'value'>> = [
+  {
+    key: 'agentTotalCount',
+    label: '代理商总数',
+    icon: <TeamOutlined />,
+  },
+  {
+    key: 'todayAddAgentCount',
+    label: '今日新增代理数',
+    icon: <AppstoreAddOutlined />,
+  },
+  {
+    key: 'agentValidCount',
+    label: '使用中代理',
+    icon: <CheckCircleOutlined />,
+  },
+  {
+    key: 'agentForbiddenCount',
+    label: '已禁用代理',
+    icon: <StopOutlined />,
+  },
+  {
+    key: 'agentInvalidCount',
+    label: '已过期代理',
+    icon: <ClockCircleOutlined />,
+  },
+];
+
+const platformMerchantStatMeta: Array<Omit<AgentStatItem, 'value'>> = [
+  {
+    key: 'merchantTotalCount',
+    label: '总商户数',
+    icon: <ShopOutlined />,
+  },
+  {
+    key: 'addMerchantCount',
+    label: '新增商户数',
+    icon: <AppstoreAddOutlined />,
+  },
+  {
+    key: 'merchantValidCount',
+    label: '使用中商户',
+    icon: <CheckCircleOutlined />,
+  },
+  {
+    key: 'merchantForbiddenCount',
+    label: '已禁用商户',
+    icon: <StopOutlined />,
+  },
+  {
+    key: 'merchantInvalidCount',
+    label: '已到期商户',
+    icon: <ClockCircleOutlined />,
+  },
+];
+
 function toNumber(value: string | number | undefined) {
   const num = Number(value || 0);
   return Number.isFinite(num) ? num : 0;
@@ -246,6 +380,11 @@ function formatMoney(value: string | number | undefined) {
 
 function formatCount(value: string | number | undefined) {
   return toNumber(value).toLocaleString();
+}
+
+function getDashboardYAxisPadding(max: number) {
+  const labelLength = formatCount(max).length;
+  return Math.min(Math.max(labelLength * 8 + 28, 72), 100);
 }
 
 function formatRate(value: string | number | undefined) {
@@ -281,6 +420,7 @@ function mapTrendData(
         time?: string;
         amount?: string | number;
         value?: string | number;
+        count?: string | number;
       }>
     | undefined,
 ) {
@@ -289,8 +429,102 @@ function mapTrendData(
   }
   return list.map((item) => ({
     date: String(item?.time || '').trim() || '-',
-    value: toNumber(item?.amount ?? item?.value),
+    value: toNumber(item?.amount ?? item?.value ?? item?.count),
   }));
+}
+
+function parseDashboardXAxisDate(value: unknown) {
+  const rawValue = String(value || '').trim();
+  if (!rawValue || rawValue === '-') return undefined;
+
+  const parsed = dayjs(rawValue.replace(/\//g, '-'));
+  return parsed.isValid() ? parsed : undefined;
+}
+
+function getDashboardXAxisMonthStep(ticks: string[]) {
+  const parsedTicks = ticks
+    .map((tick) => parseDashboardXAxisDate(tick))
+    .filter((tick): tick is Dayjs => Boolean(tick));
+  const firstTick = parsedTicks[0];
+  const lastTick = parsedTicks[parsedTicks.length - 1];
+  if (!firstTick || !lastTick) return 1;
+
+  const monthCount =
+    lastTick.startOf('month').diff(firstTick.startOf('month'), 'month') + 1;
+  if (monthCount <= 24) return 1;
+  if (monthCount <= 48) return 2;
+  return 3;
+}
+
+function shouldShowDashboardXAxisTick(
+  datum: string,
+  index: number,
+  ticks: string[],
+) {
+  const total = ticks.length;
+  if (total <= 31) return true;
+  if (index === 0 || index === total - 1) return true;
+
+  const currentTick = parseDashboardXAxisDate(datum);
+  if (!currentTick) {
+    const fallbackStep = Math.ceil(total / 12);
+    return index === 0 || index === total - 1 || index % fallbackStep === 0;
+  }
+
+  const currentMonth = currentTick.format('YYYY-MM');
+  const firstMonthIndex = ticks.findIndex(
+    (tick) => parseDashboardXAxisDate(tick)?.format('YYYY-MM') === currentMonth,
+  );
+  if (index !== firstMonthIndex) return false;
+
+  const firstTick = parseDashboardXAxisDate(ticks[0]);
+  if (!firstTick) return true;
+
+  const monthOffset = currentTick
+    .startOf('month')
+    .diff(firstTick.startOf('month'), 'month');
+  return monthOffset % getDashboardXAxisMonthStep(ticks) === 0;
+}
+
+function shouldUseDashboardMonthXAxisLabel(data: TrendPoint[]) {
+  const timestamps = data
+    .map((item) => parseDashboardXAxisDate(item.date)?.valueOf())
+    .filter((value): value is number => typeof value === 'number');
+  if (timestamps.length === 0) return data.length > 31;
+
+  const startTime = Math.min(...timestamps);
+  const endTime = Math.max(...timestamps);
+  return dayjs(endTime).diff(dayjs(startTime), 'day') + 1 > 31;
+}
+
+function getDashboardXAxisBoundaryTimes(data: TrendPoint[]) {
+  const timestamps = data
+    .map((item) => parseDashboardXAxisDate(item.date)?.valueOf())
+    .filter((value): value is number => typeof value === 'number');
+  if (timestamps.length === 0) return undefined;
+
+  return {
+    start: Math.min(...timestamps),
+    end: Math.max(...timestamps),
+  };
+}
+
+function formatDashboardXAxisLabel(
+  value: string,
+  showMonthLabel: boolean,
+  boundaryTimes?: { start: number; end: number },
+) {
+  const parsed = parseDashboardXAxisDate(value);
+  if (!parsed) return value;
+  if (
+    showMonthLabel &&
+    boundaryTimes &&
+    (parsed.valueOf() === boundaryTimes.start ||
+      parsed.valueOf() === boundaryTimes.end)
+  ) {
+    return parsed.format('YYYY/MM/DD');
+  }
+  return showMonthLabel ? parsed.format('YYYY/MM') : parsed.format('MM/DD');
 }
 
 type DashboardAreaChartProps = {
@@ -298,6 +532,8 @@ type DashboardAreaChartProps = {
   max: number;
   tickCount: number;
   tooltipLabel?: string;
+  legendLabel?: string;
+  seriesColors?: string[];
 };
 
 const DashboardAreaChart: React.FC<DashboardAreaChartProps> = ({
@@ -305,56 +541,121 @@ const DashboardAreaChart: React.FC<DashboardAreaChartProps> = ({
   max,
   tickCount,
   tooltipLabel = '数值',
+  legendLabel,
+  seriesColors,
 }) => {
+  const { token } = theme.useToken();
+  const chartData = legendLabel
+    ? data.map((item) => ({ ...item, series: legendLabel }))
+    : data;
+  const hasSeries = chartData.some((item) => Boolean(item.series));
+  const showMonthXAxisLabel = shouldUseDashboardMonthXAxisLabel(data);
+  const xAxisBoundaryTimes = getDashboardXAxisBoundaryTimes(data);
+  const yAxisPadding = getDashboardYAxisPadding(max);
   const config: any = {
-    data,
+    data: chartData,
     xField: 'date',
     yField: 'value',
     shapeField: 'smooth',
-    legend: false,
-    point: false,
-    padding: [12, 14, 28, 46],
+    ...(hasSeries
+      ? {
+          seriesField: 'series',
+          colorField: 'series',
+          legend: {
+            color: {
+              position: 'bottom',
+              layout: {
+                justifyContent: 'center',
+              },
+            },
+          },
+        }
+      : {
+          legend: false,
+        }),
+    point: hasSeries
+      ? {
+          size: 3,
+          shape: 'circle',
+        }
+      : false,
+    padding: hasSeries
+      ? [12, 14, 52, yAxisPadding]
+      : [12, 14, 28, yAxisPadding],
+    paddingLeft: yAxisPadding,
+    paddingRight: 18,
     axis: {
       x: {
         title: false,
         tick: false,
         line: true,
-        lineStroke: '#dce4f1',
-        labelFill: '#7f899f',
+        lineStroke: token.colorBorderSecondary,
+        labelFill: token.colorTextTertiary,
         labelFontSize: 12,
+        tickFilter: (datum: string, index: number, ticks: string[]) =>
+          shouldShowDashboardXAxisTick(datum, index, ticks),
+        labelFormatter: (value: string) =>
+          formatDashboardXAxisLabel(
+            value,
+            showMonthXAxisLabel,
+            xAxisBoundaryTimes,
+          ),
         grid: true,
         gridLineDash: [4, 4],
-        gridStroke: '#e8edf7',
+        gridStroke: token.colorSplit,
       },
       y: {
         title: false,
         tick: false,
         line: false,
         grid: false,
-        labelFill: '#7f899f',
+        labelFill: token.colorTextTertiary,
         labelFontSize: 12,
+        labelSpacing: 10,
         labelFormatter: (value: string) => Number(value || 0).toLocaleString(),
       },
     },
     scale: {
       x: { range: [0, 1] },
       y: { domain: [0, max], tickCount, nice: false },
+      ...(hasSeries
+        ? {
+            color: {
+              range: seriesColors || [token.colorPrimary, token.colorSuccess],
+            },
+          }
+        : {}),
     },
-    style: {
-      stroke: '#1d76ff',
-      lineWidth: 2,
-      fill: 'linear-gradient(-90deg, rgba(77, 143, 255, 0.7) 0%, rgba(77, 143, 255, 0.06) 100%)',
-    },
+    style: hasSeries
+      ? {
+          lineWidth: 2,
+          fillOpacity: 0.08,
+        }
+      : {
+          stroke: token.colorPrimary,
+          lineWidth: 2,
+          fill: `linear-gradient(-90deg, ${toRgba(
+            token.colorPrimary,
+            0.7,
+          )} 0%, ${toRgba(token.colorPrimary, 0.06)} 100%)`,
+        },
     tooltip: {
       title: 'date',
-      items: [
-        {
-          channel: 'y',
-          name: tooltipLabel,
-          valueFormatter: (value: number) => formatCount(value),
-        },
-      ],
-      render: (event: any, { title, items }: any) => {
+      items: hasSeries
+        ? [
+            {
+              channel: 'y',
+              valueFormatter: (value: number) => formatCount(value),
+            },
+          ]
+        : [
+            {
+              channel: 'y',
+              name: tooltipLabel,
+              valueFormatter: (value: number) => formatCount(value),
+            },
+          ],
+      render: (_event: any, { title, items }: any) => {
         const currentItem = items?.[0];
         if (!currentItem) return '';
         return `
@@ -393,6 +694,7 @@ const DashboardDonutChart: React.FC<DashboardDonutChartProps> = ({
   radius = 0.7,
   innerRadius = 0.5,
 }) => {
+  const { token } = theme.useToken();
   const config: any = {
     data,
     angleField: 'value',
@@ -418,7 +720,7 @@ const DashboardDonutChart: React.FC<DashboardDonutChartProps> = ({
     innerRadius,
     radius,
     style: {
-      stroke: '#fff',
+      stroke: token.colorBgContainer,
       lineWidth: 2,
     },
     height: 220,
@@ -448,11 +750,24 @@ const DashboardDonutChart: React.FC<DashboardDonutChartProps> = ({
 };
 
 const DashboardIndexPage: React.FC = () => {
+  const { token } = theme.useToken();
   const { initialState } = useModel('@@initialState');
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
     dayjs(),
     dayjs(),
   ]);
+  const [agentOverviewLoading, setAgentOverviewLoading] = useState(false);
+  const [agentPlugLoading, setAgentPlugLoading] = useState(false);
+  const [agentOverview, setAgentOverview] = useState(emptyAgentOverviewData);
+  const [agentPlugins, setAgentPlugins] =
+    useState<RankItem[]>(emptyRankingApps);
+  const [platformOverviewLoading, setPlatformOverviewLoading] = useState(false);
+  const [platformPlugLoading, setPlatformPlugLoading] = useState(false);
+  const [platformOverview, setPlatformOverview] = useState(
+    emptyPlatformOverviewData,
+  );
+  const [platformPlugins, setPlatformPlugins] =
+    useState<RankItem[]>(emptyRankingApps);
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [overviewValues, setOverviewValues] = useState(emptyOverviewData);
   const [overviewTrendMap, setOverviewTrendMap] = useState(
@@ -500,13 +815,53 @@ const DashboardIndexPage: React.FC = () => {
       ),
     [initialState?.currentOrgCode],
   );
+  const identityLevelText = useMemo(
+    () =>
+      String(
+        currentIdentity?.levelName || currentIdentity?.groupLabel || '',
+      ).trim(),
+    [currentIdentity?.groupLabel, currentIdentity?.levelName],
+  );
+  const isPlatformView = useMemo(
+    () =>
+      ['平台', '总部', '总后台'].some((keyword) =>
+        identityLevelText.includes(keyword),
+      ),
+    [identityLevelText],
+  );
+  const isAgentView = useMemo(
+    () =>
+      !isPlatformView &&
+      ['代理', '合伙人', '服务商'].some((keyword) =>
+        identityLevelText.includes(keyword),
+      ),
+    [identityLevelText, isPlatformView],
+  );
+  const dashboardChartPalettes = useMemo(() => {
+    const colorToken = token as typeof token & Record<string, string>;
+    const primary = token.colorPrimary;
+    const success = token.colorSuccess;
+    const warning = token.colorWarning;
+    const error = token.colorError;
+    const info = token.colorInfo || primary;
+    const cyan = colorToken.colorCyan || info;
+    const purple = colorToken.colorPurple || info;
+    const orange = colorToken.colorOrange || warning;
+
+    return {
+      gender: [primary, success, warning],
+      memberLevel: [primary, success, warning, error, info, cyan],
+      memberAge: [primary, success, warning, error, info, cyan, purple, orange],
+      mallVisit: [primary, success, warning, info],
+    };
+  }, [token]);
   const isMerchantView = useMemo(() => {
-    const levelName = String(
-      currentIdentity?.levelName || currentIdentity?.groupLabel || '',
-    ).trim();
-    if (!levelName) return true;
-    return levelName.includes('商户') || levelName.includes('公司');
-  }, [currentIdentity?.groupLabel, currentIdentity?.levelName]);
+    if (isPlatformView || isAgentView) return false;
+    if (!identityLevelText) return true;
+    return (
+      identityLevelText.includes('商户') || identityLevelText.includes('公司')
+    );
+  }, [identityLevelText, isAgentView, isPlatformView]);
   const overviewStatMeta = isMerchantView
     ? merchantOverviewStatMeta
     : storeOverviewStatMeta;
@@ -547,7 +902,82 @@ const DashboardIndexPage: React.FC = () => {
   );
   const memberPieData = memberPortraitData[memberDistKey];
   const mallData = mallUserData[mallVisitKey];
-  const overviewSubtitle = `${dateRange[0].format('MM-DD')} ~ ${dateRange[1].format('MM-DD')}`;
+  const overviewSubtitle = `${dateRange[0].format('YYYY-MM-DD')} ~ ${dateRange[1].format('YYYY-MM-DD')}`;
+  const agentName =
+    currentIdentity?.name ||
+    initialState?.loginContext?.userOrgName ||
+    initialState?.loginContext?.orgName ||
+    '代理商';
+  const agentBadgeText =
+    currentIdentity?.levelName || currentIdentity?.groupLabel || '代理商视角';
+  const agentOverviewStats = useMemo(
+    () =>
+      agentOverviewStatMeta.map((item) => ({
+        ...item,
+        value:
+          agentOverview[item.key as keyof typeof agentOverview]?.toString() ||
+          '0',
+      })),
+    [agentOverview],
+  );
+  const agentTrendData = agentOverview.merchantTotalCountTrend;
+  const agentTrendMax = Math.max(
+    1,
+    ...agentTrendData.map((item) => item.value),
+  );
+  const agentProfileRows = useMemo(
+    () => [
+      {
+        key: 'merchantTotalCount',
+        label: '商户总数',
+        value: agentOverview.merchantTotalCount,
+      },
+      {
+        key: 'todayAddMerchantCount',
+        label: '今日新增',
+        value: agentOverview.todayAddMerchantCount,
+      },
+      {
+        key: 'merchantValidCount',
+        label: '使用中商户',
+        value: agentOverview.merchantValidCount,
+      },
+      {
+        key: 'range',
+        label: '统计区间',
+        value: overviewSubtitle,
+      },
+    ],
+    [agentOverview, overviewSubtitle],
+  );
+  const platformOverviewStats = useMemo(
+    () =>
+      [...platformAgentStatMeta, ...platformMerchantStatMeta].map((item) => ({
+        ...item,
+        value:
+          platformOverview[
+            item.key as keyof typeof platformOverview
+          ]?.toString() || '0',
+      })),
+    [platformOverview],
+  );
+  const platformTrendData = useMemo(
+    () => [
+      ...platformOverview.agentTotalCountTrend.map((item) => ({
+        ...item,
+        series: '代理商数量',
+      })),
+      ...platformOverview.merchantTotalCountTrend.map((item) => ({
+        ...item,
+        series: '商户数量',
+      })),
+    ],
+    [platformOverview],
+  );
+  const platformTrendMax = Math.max(
+    1,
+    ...platformTrendData.map((item) => item.value),
+  );
   const overviewStats = useMemo(
     () =>
       overviewStatMeta.map((item) => ({
@@ -609,7 +1039,189 @@ const DashboardIndexPage: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
 
+    async function loadPlatformOverview() {
+      if (!isPlatformView) {
+        setPlatformOverview(emptyPlatformOverviewData);
+        return;
+      }
+
+      setPlatformOverviewLoading(true);
+      try {
+        const data = await getAdminDataAnalyse({
+          startTime: String(dateRange[0].startOf('day').unix()),
+          endTime: String(dateRange[1].endOf('day').unix()),
+        });
+        if (cancelled) return;
+
+        setPlatformOverview({
+          agentTotalCount: formatCount(data.agent_total_count),
+          addAgentCount: formatCount(data.add_agent_count),
+          todayAddAgentCount: formatCount(data.today_add_agent_count),
+          agentValidCount: formatCount(data.agent_valid_count),
+          agentInvalidCount: formatCount(data.agent_invalid_count),
+          agentForbiddenCount: formatCount(data.agent_forbidden_count),
+          agentTotalCountTrend: mapTrendData(data.agent_total_count_trend),
+          merchantTotalCount: formatCount(data.merchant_total_count),
+          addMerchantCount: formatCount(data.add_merchant_count),
+          merchantValidCount: formatCount(data.merchant_valid_count),
+          merchantInvalidCount: formatCount(data.merchant_invalid_count),
+          merchantForbiddenCount: formatCount(data.merchant_forbidden_count),
+          merchantTotalCountTrend: mapTrendData(
+            data.merchant_total_count_trend,
+          ),
+        });
+      } catch (error: any) {
+        if (cancelled) return;
+        setPlatformOverview(emptyPlatformOverviewData);
+        message.error(error?.message || '获取平台数据统计失败');
+      } finally {
+        if (!cancelled) {
+          setPlatformOverviewLoading(false);
+        }
+      }
+    }
+
+    loadPlatformOverview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dateRange, isPlatformView]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPlatformPlugins() {
+      if (!isPlatformView) {
+        setPlatformPlugins(emptyRankingApps);
+        return;
+      }
+
+      setPlatformPlugLoading(true);
+      try {
+        const data = await getAdminLatestPlug();
+        if (cancelled) return;
+
+        setPlatformPlugins(
+          data.slice(0, 8).map((item, index) => ({
+            key: item.id || String(index),
+            name: String(item.plug_name || '').trim() || `插件 ${index + 1}`,
+            status: String(item.identification || '').trim() || '-',
+            icon: String(item.icon_url || '').trim(),
+          })),
+        );
+      } catch (error: any) {
+        if (cancelled) return;
+        setPlatformPlugins(emptyRankingApps);
+        message.error(error?.message || '获取平台最新插件失败');
+      } finally {
+        if (!cancelled) {
+          setPlatformPlugLoading(false);
+        }
+      }
+    }
+
+    loadPlatformPlugins();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isPlatformView]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAgentOverview() {
+      if (!isAgentView) {
+        setAgentOverview(emptyAgentOverviewData);
+        return;
+      }
+
+      setAgentOverviewLoading(true);
+      try {
+        const data = await getAgentDataAnalyse({
+          startTime: String(dateRange[0].startOf('day').unix()),
+          endTime: String(dateRange[1].endOf('day').unix()),
+        });
+        if (cancelled) return;
+
+        setAgentOverview({
+          merchantTotalCount: formatCount(data.merchant_total_count),
+          todayAddMerchantCount: formatCount(data.today_add_merchant_count),
+          addMerchantCount: formatCount(data.add_merchant_count),
+          merchantValidCount: formatCount(data.merchant_valid_count),
+          merchantInvalidCount: formatCount(data.merchant_invalid_count),
+          merchantForbiddenCount: formatCount(data.merchant_forbidden_count),
+          merchantTotalCountTrend: mapTrendData(
+            data.merchant_total_count_trend,
+          ),
+        });
+      } catch (error: any) {
+        if (cancelled) return;
+        message.error(error?.message || '获取商户数量分析失败');
+      } finally {
+        if (!cancelled) {
+          setAgentOverviewLoading(false);
+        }
+      }
+    }
+
+    loadAgentOverview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dateRange, isAgentView]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAgentPlugins() {
+      if (!isAgentView) {
+        setAgentPlugins(emptyRankingApps);
+        return;
+      }
+
+      setAgentPlugLoading(true);
+      try {
+        const data = await getAgentLatestPlug();
+        if (cancelled) return;
+
+        setAgentPlugins(
+          data.slice(0, 8).map((item, index) => ({
+            key: item.id || String(index),
+            name: String(item.plug_name || '').trim() || `插件 ${index + 1}`,
+            status: String(item.identification || '').trim() || '-',
+            icon: String(item.icon_url || '').trim(),
+          })),
+        );
+      } catch (error: any) {
+        if (cancelled) return;
+        message.error(error?.message || '获取最新插件失败');
+      } finally {
+        if (!cancelled) {
+          setAgentPlugLoading(false);
+        }
+      }
+    }
+
+    loadAgentPlugins();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAgentView]);
+
+  useEffect(() => {
+    let cancelled = false;
+
     async function loadOverview() {
+      if (isPlatformView || isAgentView) {
+        setOverviewValues(emptyOverviewData);
+        setOverviewTrendMap(emptyOverviewTrendMap);
+        return;
+      }
+
       setOverviewLoading(true);
       try {
         const data = await getIncomeCensus({
@@ -648,12 +1260,18 @@ const DashboardIndexPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [dateRange, isMerchantView]);
+  }, [dateRange, isAgentView, isMerchantView, isPlatformView]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadGoodsAnalysis() {
+      if (isPlatformView || isAgentView) {
+        setGoodsValues(emptyGoodsStats);
+        setGoodsTrendMap(emptyGoodsTrendMap);
+        return;
+      }
+
       setGoodsLoading(true);
       try {
         const data = await getGoodsAnalysis({
@@ -698,13 +1316,13 @@ const DashboardIndexPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [dateRange, goodsType, isMerchantView]);
+  }, [dateRange, goodsType, isAgentView, isMerchantView, isPlatformView]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadPendingOrderTotal() {
-      if (isMerchantView) {
+      if (isPlatformView || isAgentView || isMerchantView) {
         setPendingOrderTotal(emptyPendingOrderTotal);
         return;
       }
@@ -733,7 +1351,7 @@ const DashboardIndexPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [isMerchantView]);
+  }, [isAgentView, isMerchantView, isPlatformView]);
 
   useEffect(() => {
     if (goodsType === '2' && activeGoodsTrendKey === 'visitCount') {
@@ -782,6 +1400,11 @@ const DashboardIndexPage: React.FC = () => {
     let cancelled = false;
 
     async function loadGoodsRanking() {
+      if (isPlatformView || isAgentView) {
+        setGoodsRanking(emptyGoodsRanking);
+        return;
+      }
+
       try {
         const data = await getGoodsRanking({
           startTime: String(dateRange[0].startOf('day').unix()),
@@ -810,7 +1433,13 @@ const DashboardIndexPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [dateRange, goodsRankingSearchType, isMerchantView]);
+  }, [
+    dateRange,
+    goodsRankingSearchType,
+    isAgentView,
+    isMerchantView,
+    isPlatformView,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -985,6 +1614,244 @@ const DashboardIndexPage: React.FC = () => {
     };
   }, [dateRange, isMerchantView]);
 
+  if (isPlatformView) {
+    return (
+      <div className="dashboard-index-page dashboard-platform-page">
+        <div className="dashboard-platform-main">
+          <section className="dashboard-local-card dashboard-platform-overview-card">
+            <div className="dashboard-card-head">
+              <div>
+                <div className="dashboard-card-title">数据概览</div>
+              </div>
+              <div className="dashboard-card-tools">
+                <DatePicker.RangePicker
+                  className="dashboard-card-tools__date-range"
+                  value={dateRange}
+                  allowClear={false}
+                  suffixIcon={null}
+                  separator={
+                    <span className="dashboard-card-tools__range-arrow">~</span>
+                  }
+                  variant="borderless"
+                  onChange={(value) => {
+                    if (value?.[0] && value?.[1]) {
+                      setDateRange([value[0], value[1]]);
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="dashboard-platform-stat-grid">
+              {platformOverviewStats.map((item) => (
+                <div key={item.key} className="dashboard-agent-stat-item">
+                  <span className="dashboard-agent-stat-icon">{item.icon}</span>
+                  <span className="dashboard-agent-stat-content">
+                    <span className="dashboard-agent-stat-value">
+                      {item.value}
+                    </span>
+                    <span className="dashboard-agent-stat-label">
+                      {item.label}
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="dashboard-local-card dashboard-platform-chart-card">
+            <div className="dashboard-card-head">
+              <div>
+                <div className="dashboard-card-title">数据曲线图</div>
+                <div className="dashboard-card-subtitle">
+                  {platformOverviewLoading ? '趋势加载中...' : overviewSubtitle}
+                </div>
+              </div>
+            </div>
+
+            <DashboardAreaChart
+              data={platformTrendData}
+              max={platformTrendMax}
+              tickCount={4}
+              seriesColors={[token.colorPrimary, token.colorSuccess]}
+            />
+          </section>
+
+          <section className="dashboard-local-card dashboard-agent-plugin-card">
+            <div className="dashboard-card-head">
+              <div>
+                <div className="dashboard-card-title">最新插件</div>
+              </div>
+            </div>
+            {platformPlugins.length > 0 ? (
+              <div className="dashboard-agent-plugin-grid">
+                {platformPlugins.map((item) => (
+                  <div key={item.key} className="dashboard-agent-plugin-item">
+                    <span className="dashboard-agent-plugin-icon">
+                      {item.icon ? (
+                        <img src={item.icon} alt={item.name} />
+                      ) : (
+                        <AppstoreAddOutlined />
+                      )}
+                    </span>
+                    <span className="dashboard-agent-plugin-name">
+                      {item.name}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="dashboard-empty-block">
+                <Empty
+                  description={
+                    platformPlugLoading ? '插件加载中...' : '暂无插件'
+                  }
+                />
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+    );
+  }
+
+  if (isAgentView) {
+    return (
+      <div className="dashboard-index-page dashboard-agent-page">
+        <div className="dashboard-agent-layout">
+          <div className="dashboard-agent-main">
+            <section className="dashboard-local-card dashboard-agent-overview-card">
+              <div className="dashboard-card-head">
+                <div>
+                  <div className="dashboard-card-title">
+                    数据概览 <InfoCircleOutlined />
+                  </div>
+                  <div className="dashboard-card-subtitle">
+                    {agentOverviewLoading ? '数据加载中...' : overviewSubtitle}
+                  </div>
+                </div>
+                <div className="dashboard-card-tools">
+                  <DatePicker.RangePicker
+                    className="dashboard-card-tools__date-range"
+                    value={dateRange}
+                    allowClear={false}
+                    suffixIcon={null}
+                    separator={
+                      <span className="dashboard-card-tools__range-arrow">
+                        ~
+                      </span>
+                    }
+                    variant="borderless"
+                    onChange={(value) => {
+                      if (value?.[0] && value?.[1]) {
+                        setDateRange([value[0], value[1]]);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="dashboard-agent-stat-grid">
+                {agentOverviewStats.map((item) => (
+                  <div key={item.key} className="dashboard-agent-stat-item">
+                    <span className="dashboard-agent-stat-icon">
+                      {item.icon}
+                    </span>
+                    <span className="dashboard-agent-stat-content">
+                      <span className="dashboard-agent-stat-value">
+                        {item.value}
+                      </span>
+                      <span className="dashboard-agent-stat-label">
+                        {item.label}
+                      </span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="dashboard-local-card dashboard-agent-chart-card">
+              <div className="dashboard-card-head">
+                <div>
+                  <div className="dashboard-card-title">商户数量分析</div>
+                  <div className="dashboard-card-subtitle">
+                    {agentOverviewLoading ? '趋势加载中...' : overviewSubtitle}
+                  </div>
+                </div>
+              </div>
+              <DashboardAreaChart
+                data={agentTrendData}
+                max={agentTrendMax}
+                tickCount={4}
+                tooltipLabel="商家数量"
+                legendLabel="商家数量"
+              />
+            </section>
+
+            <section className="dashboard-local-card dashboard-agent-plugin-card">
+              <div className="dashboard-card-head">
+                <div>
+                  <div className="dashboard-card-title">最新插件</div>
+                  <div className="dashboard-card-subtitle">
+                    {agentPlugLoading ? '插件加载中...' : '最近更新的插件'}
+                  </div>
+                </div>
+              </div>
+              {agentPlugins.length > 0 ? (
+                <div className="dashboard-agent-plugin-grid">
+                  {agentPlugins.map((item) => (
+                    <div key={item.key} className="dashboard-agent-plugin-item">
+                      <span className="dashboard-agent-plugin-icon">
+                        {item.icon ? (
+                          <img src={item.icon} alt={item.name} />
+                        ) : (
+                          <AppstoreAddOutlined />
+                        )}
+                      </span>
+                      <span className="dashboard-agent-plugin-name">
+                        {item.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="dashboard-empty-block">
+                  <Empty
+                    description={
+                      agentPlugLoading ? '插件加载中...' : '暂无插件'
+                    }
+                  />
+                </div>
+              )}
+            </section>
+          </div>
+
+          <aside className="dashboard-agent-side">
+            <section className="dashboard-local-card dashboard-agent-profile-card">
+              <div className="dashboard-agent-profile-head">
+                <span className="dashboard-agent-avatar">
+                  <TeamOutlined />
+                </span>
+                <div className="dashboard-agent-profile-meta">
+                  <div className="dashboard-agent-name">{agentName}</div>
+                  <div className="dashboard-agent-badge">{agentBadgeText}</div>
+                </div>
+              </div>
+              <div className="dashboard-agent-profile-list">
+                {agentProfileRows.map((item) => (
+                  <div key={item.key} className="dashboard-agent-profile-row">
+                    <span>{item.label}</span>
+                    <span>{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </aside>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-index-page">
       <div className="dashboard-index-layout">
@@ -1133,7 +2000,7 @@ const DashboardIndexPage: React.FC = () => {
                     <div>
                       <div className="dashboard-card-title">门店营业额TOP</div>
                       <div className="dashboard-card-subtitle">
-                        02-25 ~ 02-25
+                        {overviewSubtitle}
                       </div>
                     </div>
                   </div>
@@ -1396,26 +2263,10 @@ const DashboardIndexPage: React.FC = () => {
                       data={memberPieData}
                       colors={
                         memberDistKey === 'gender'
-                          ? ['#5b79d1', '#84c66c', '#e8ba4a']
+                          ? dashboardChartPalettes.gender
                           : memberDistKey === 'level'
-                            ? [
-                                '#5b79d1',
-                                '#84c66c',
-                                '#e8ba4a',
-                                '#e56666',
-                                '#6f8ef6',
-                                '#60cfc7',
-                              ]
-                            : [
-                                '#5b79d1',
-                                '#84c66c',
-                                '#e8ba4a',
-                                '#e56666',
-                                '#6f8ef6',
-                                '#60cfc7',
-                                '#a56ef5',
-                                '#ff9f43',
-                              ]
+                            ? dashboardChartPalettes.memberLevel
+                            : dashboardChartPalettes.memberAge
                       }
                     />
                   ) : (
@@ -1453,7 +2304,7 @@ const DashboardIndexPage: React.FC = () => {
                   {mallData.length > 0 ? (
                     <DashboardDonutChart
                       data={mallData}
-                      colors={['#5470c6', '#91cc75', '#f6bd16', '#5ad8a6']}
+                      colors={dashboardChartPalettes.mallVisit}
                       innerRadius={0.5}
                       radius={0.7}
                     />

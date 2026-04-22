@@ -30,7 +30,7 @@ function CandidateRow({
     justifyContent: 'space-between',
     padding: '8px 0',
     background: 'transparent',
-    cursor: 'default',
+    cursor: disabled ? 'not-allowed' : 'pointer',
     userSelect: 'none',
     fontSize: 14,
     color:
@@ -45,13 +45,18 @@ function CandidateRow({
       style={style}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
+      onClick={() => {
+        if (disabled) return;
+        onAdd();
+      }}
     >
       <div style={{ whiteSpace: 'nowrap', paddingRight: 12 }}>{item.title}</div>
 
       <button
         type="button"
         disabled={disabled}
-        onClick={() => {
+        onClick={(event) => {
+          event.stopPropagation();
           if (disabled) return;
           onAdd();
         }}

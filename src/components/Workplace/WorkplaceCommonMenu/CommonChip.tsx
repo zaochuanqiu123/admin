@@ -89,7 +89,7 @@ function CommonChip({
           height: 14,
           borderRadius: '50%',
           background: chipCloseBg,
-          color: '#fff',
+          color: 'var(--ant-color-text-light-solid, #fff)',
           cursor: 'pointer',
           fontSize: 8,
           border: 0,

@@ -8,6 +8,8 @@ export type CommonAction = {
   id: string;
   title: string;
   path: string;
+  targetId?: string;
+  sourceSystem?: number;
 };
 
 export type CommonSubGroup = {
@@ -27,13 +29,7 @@ export type CommonGroup = {
  * 默认常用操作列表
  */
 export const DEFAULT_COMMON_ACTIONS: CommonAction[] = [
-  { id: 'recharge', title: '充值', path: '/finance' },
-  { id: 'coupon', title: '优惠券管理', path: '/set' },
-  { id: 'batch-pay', title: '批量付款', path: '/finance' },
-  { id: 'withdraw', title: '提现', path: '/finance' },
-  { id: 'bill-download', title: '账单下载', path: '/finance' },
-  { id: 'pay-gift', title: '支付有礼', path: '/set' },
-  { id: 'transfer', title: '转账', path: '/finance' },
+  { id: 'dashboard-index', title: '系统首页', path: '/dashboard/index' },
 ];
 
 /**

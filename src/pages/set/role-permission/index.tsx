@@ -3,6 +3,7 @@ import { useModel } from '@umijs/max';
 import {
   Alert,
   Button,
+  Checkbox,
   Empty,
   Form,
   Input,
@@ -13,7 +14,7 @@ import {
   Spin,
   Switch,
   Table,
-  Tree,
+  Tag,
 } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -48,6 +49,37 @@ type RoleTreeNode = {
   key: string;
   title: string;
   children?: RoleTreeNode[];
+};
+
+type RolePermissionCheckedState = {
+  checked: boolean;
+  indeterminate: boolean;
+};
+
+type RolePermissionMatrixNode = {
+  key: string;
+  title: string;
+  checked: boolean;
+  children: RolePermissionMatrixNode[];
+};
+
+type RolePermissionBusiness = {
+  key: string;
+  title: string;
+  modules: RolePermissionMatrixNode[];
+};
+
+type RolePermissionScene = {
+  key: string;
+  title: string;
+  businesses: RolePermissionBusiness[];
+};
+
+type RolePermissionActiveState = {
+  sceneKey: string;
+  businessKey: string;
+  moduleKey: string;
+  pageKey: string;
 };
 
 type CreateRoleFormValues = {
@@ -319,6 +351,620 @@ function extractCheckedPermissionKeys(
     .map((meta) => meta.key);
 }
 
+function getPermissionColumnTitle(levelIndex: number) {
+  if (levelIndex === 0) return '模块';
+  if (levelIndex === 1) return '目录/菜单';
+  return '菜单';
+}
+
+function getRolePermissionCheckedState(
+  node?: RolePermissionMatrixNode,
+): RolePermissionCheckedState {
+  if (!node) {
+    return {
+      checked: false,
+      indeterminate: false,
+    };
+  }
+  if (node.children.length === 0) {
+    return {
+      checked: node.checked,
+      indeterminate: false,
+    };
+  }
+  const childStates = node.children.map(getRolePermissionCheckedState);
+  const checked =
+    childStates.length > 0 && childStates.every((item) => item.checked);
+  const hasCheckedChild = childStates.some(
+    (item) => item.checked || item.indeterminate,
+  );
+  return {
+    checked,
+    indeterminate: hasCheckedChild && !checked,
+  };
+}
+
+function getRolePermissionNodesCheckedState(
+  nodes: RolePermissionMatrixNode[],
+): RolePermissionCheckedState {
+  if (nodes.length === 0) {
+    return {
+      checked: false,
+      indeterminate: false,
+    };
+  }
+  const childStates = nodes.map(getRolePermissionCheckedState);
+  const checked = childStates.every((item) => item.checked);
+  const hasCheckedChild = childStates.some(
+    (item) => item.checked || item.indeterminate,
+  );
+  return {
+    checked,
+    indeterminate: hasCheckedChild && !checked,
+  };
+}
+
+function syncRolePermissionNodeChecked(node: RolePermissionMatrixNode) {
+  const state = getRolePermissionCheckedState(node);
+  return {
+    ...node,
+    checked: state.checked,
+  };
+}
+
+function toRolePermissionMatrixNodes(
+  nodes: RoleTreeNode[] | undefined,
+  checkedSet: Set<string>,
+  inheritedChecked = false,
+): RolePermissionMatrixNode[] {
+  return (nodes || []).map((node) => {
+    const checked = inheritedChecked || checkedSet.has(node.key);
+    const children = toRolePermissionMatrixNodes(
+      node.children,
+      checkedSet,
+      checked,
+    );
+    const nextNode: RolePermissionMatrixNode = {
+      key: node.key,
+      title: node.title,
+      checked,
+      children,
+    };
+    return children.length > 0
+      ? syncRolePermissionNodeChecked(nextNode)
+      : nextNode;
+  });
+}
+
+function toRolePermissionScenes(
+  treeData: RoleTreeNode[],
+  checkedKeys: React.Key[],
+): RolePermissionScene[] {
+  const checkedSet = new Set(checkedKeys.map((key) => String(key)));
+  return (treeData || []).map((scene) => ({
+    key: scene.key,
+    title: scene.title,
+    businesses: (scene.children || []).map((business) => ({
+      key: business.key,
+      title: business.title,
+      modules: toRolePermissionMatrixNodes(business.children, checkedSet),
+    })),
+  }));
+}
+
+function setRolePermissionNodeChecked(
+  node: RolePermissionMatrixNode,
+  checked: boolean,
+): RolePermissionMatrixNode {
+  return {
+    ...node,
+    checked,
+    children: node.children.map((child) =>
+      setRolePermissionNodeChecked(child, checked),
+    ),
+  };
+}
+
+function updateRolePermissionNodeChecked(
+  node: RolePermissionMatrixNode,
+  targetKey: string,
+  checked: boolean,
+): RolePermissionMatrixNode {
+  if (node.key === targetKey) {
+    return setRolePermissionNodeChecked(node, checked);
+  }
+  if (node.children.length === 0) return node;
+  return syncRolePermissionNodeChecked({
+    ...node,
+    children: node.children.map((child) =>
+      updateRolePermissionNodeChecked(child, targetKey, checked),
+    ),
+  });
+}
+
+function updateRolePermissionScenesChecked(
+  scenes: RolePermissionScene[],
+  options: {
+    sceneKey?: string;
+    businessKey?: string;
+    moduleKey?: string;
+    pageKey?: string;
+    permissionKey?: string;
+    checked: boolean;
+  },
+) {
+  return scenes.map((scene) => {
+    if (options.sceneKey && scene.key !== options.sceneKey) return scene;
+    return {
+      ...scene,
+      businesses: scene.businesses.map((business) => {
+        if (options.businessKey && business.key !== options.businessKey) {
+          return business;
+        }
+        return {
+          ...business,
+          modules: business.modules.map((moduleItem) => {
+            if (options.moduleKey && moduleItem.key !== options.moduleKey) {
+              return moduleItem;
+            }
+            if (!options.pageKey && !options.permissionKey) {
+              return setRolePermissionNodeChecked(moduleItem, options.checked);
+            }
+            return syncRolePermissionNodeChecked({
+              ...moduleItem,
+              children: moduleItem.children.map((page) => {
+                if (options.pageKey && page.key !== options.pageKey) {
+                  return page;
+                }
+                if (!options.permissionKey) {
+                  return setRolePermissionNodeChecked(page, options.checked);
+                }
+                return updateRolePermissionNodeChecked(
+                  page,
+                  options.permissionKey,
+                  options.checked,
+                );
+              }),
+            });
+          }),
+        };
+      }),
+    };
+  });
+}
+
+function collectCheckedRolePermissionKeys(scenes: RolePermissionScene[]) {
+  const result: string[] = [];
+  const walk = (nodes: RolePermissionMatrixNode[]) => {
+    nodes.forEach((node) => {
+      if (node.checked) {
+        result.push(node.key);
+      }
+      if (node.children.length > 0) {
+        walk(node.children);
+      }
+    });
+  };
+  scenes.forEach((scene) => {
+    scene.businesses.forEach((business) => {
+      walk(business.modules);
+    });
+  });
+  return Array.from(new Set(result));
+}
+
+function getInitialRolePermissionState(
+  scenes?: RolePermissionScene[],
+): RolePermissionActiveState {
+  const firstScene = scenes?.[0];
+  const firstBusiness = firstScene?.businesses[0];
+  const firstModule = firstBusiness?.modules[0];
+  return {
+    sceneKey: firstScene?.key || '',
+    businessKey: firstBusiness?.key || '',
+    moduleKey: firstModule?.key || '',
+    pageKey: firstModule?.children[0]?.key || '',
+  };
+}
+
+function getActiveRolePermissionTree(
+  scenes: RolePermissionScene[],
+  activeState: RolePermissionActiveState,
+) {
+  const scene =
+    scenes.find((item) => item.key === activeState.sceneKey) || scenes[0];
+  const business =
+    scene?.businesses.find((item) => item.key === activeState.businessKey) ||
+    scene?.businesses[0];
+  return {
+    scene,
+    business,
+    tree: business?.modules || [],
+  };
+}
+
+function getStableRolePermissionState(
+  scenes: RolePermissionScene[],
+  currentState: RolePermissionActiveState,
+): RolePermissionActiveState {
+  const initialState = getInitialRolePermissionState(scenes);
+  const scene =
+    scenes.find((item) => item.key === currentState.sceneKey) || scenes[0];
+  const business =
+    scene?.businesses.find((item) => item.key === currentState.businessKey) ||
+    scene?.businesses.find((item) => item.key === initialState.businessKey) ||
+    scene?.businesses[0];
+  const tree = business?.modules || [];
+  const moduleItem =
+    tree.find((item) => item.key === currentState.moduleKey) ||
+    tree.find((item) => item.key === initialState.moduleKey) ||
+    tree[0];
+  const page =
+    moduleItem?.children.find((item) => item.key === currentState.pageKey) ||
+    moduleItem?.children.find((item) => item.key === initialState.pageKey) ||
+    moduleItem?.children[0];
+  return {
+    sceneKey: scene?.key || '',
+    businessKey: business?.key || '',
+    moduleKey: moduleItem?.key || '',
+    pageKey: page?.key || '',
+  };
+}
+
+type RolePermissionMatrixProps = {
+  scenes: RolePermissionScene[];
+  activeState: RolePermissionActiveState;
+  onActiveStateChange: (state: RolePermissionActiveState) => void;
+  onCheckedKeysChange: (keys: string[]) => void;
+};
+
+const RolePermissionMatrix: React.FC<RolePermissionMatrixProps> = ({
+  scenes,
+  activeState,
+  onActiveStateChange,
+  onCheckedKeysChange,
+}) => {
+  const [activeNestedKeys, setActiveNestedKeys] = useState<
+    Record<number, string>
+  >({});
+  const activePermission = getActiveRolePermissionTree(scenes, activeState);
+  const displayPermissionTree = activePermission.tree;
+  const activeModule =
+    displayPermissionTree.find((item) => item.key === activeState.moduleKey) ||
+    displayPermissionTree[0];
+  const activePage =
+    activeModule?.children.find((item) => item.key === activeState.pageKey) ||
+    activeModule?.children[0];
+  const nestedColumns: {
+    key: string;
+    title: string;
+    items: RolePermissionMatrixNode[];
+    activeKey: string;
+    levelIndex: number;
+  }[] = [];
+  let activePermissionParent = activePage;
+  let activePermissionItems: RolePermissionMatrixNode[] = [];
+  let levelIndex = 2;
+
+  while (activePermissionParent?.children.length) {
+    const items = activePermissionParent.children;
+    const navigationItems = items.filter((item) => item.children.length > 0);
+    const actionItems = items.filter((item) => item.children.length === 0);
+    const hasNextLevel = navigationItems.some(
+      (item) => item.children.length > 0,
+    );
+
+    if (navigationItems.length === 0) {
+      activePermissionItems = actionItems.length > 0 ? actionItems : items;
+      break;
+    }
+
+    if (levelIndex >= 3 && !hasNextLevel && actionItems.length === 0) {
+      activePermissionItems = navigationItems;
+      break;
+    }
+
+    const activeKey = activeNestedKeys[levelIndex];
+    const activeItem =
+      navigationItems.find((item) => item.key === activeKey) ||
+      navigationItems[0];
+    nestedColumns.push({
+      key: `level-${levelIndex}`,
+      title: getPermissionColumnTitle(levelIndex),
+      items: navigationItems,
+      activeKey: activeItem?.key || '',
+      levelIndex,
+    });
+
+    if (!activeItem || activeItem.children.length === 0) {
+      activePermissionItems = [];
+      break;
+    }
+    activePermissionParent = activeItem;
+    levelIndex += 1;
+  }
+
+  useEffect(() => {
+    setActiveNestedKeys({});
+  }, [
+    activeState.businessKey,
+    activeState.moduleKey,
+    activeState.pageKey,
+    activeState.sceneKey,
+  ]);
+
+  const updateChecked = (options: {
+    businessKey?: string;
+    moduleKey?: string;
+    pageKey?: string;
+    permissionKey?: string;
+    checked: boolean;
+  }) => {
+    const { businessKey, ...restOptions } = options;
+    const nextScenes = updateRolePermissionScenesChecked(scenes, {
+      sceneKey: activePermission.scene?.key,
+      businessKey: businessKey ?? activePermission.business?.key,
+      ...restOptions,
+    });
+    onCheckedKeysChange(collectCheckedRolePermissionKeys(nextScenes));
+  };
+
+  const selectNestedPermission = (
+    nextLevelIndex: number,
+    permissionKey: string,
+  ) => {
+    setActiveNestedKeys((prev) => {
+      const next: Record<number, string> = {};
+      Object.entries(prev).forEach(([key, value]) => {
+        const numericKey = Number(key);
+        if (numericKey < nextLevelIndex) {
+          next[numericKey] = value;
+        }
+      });
+      next[nextLevelIndex] = permissionKey;
+      return next;
+    });
+  };
+
+  if (scenes.length === 0) {
+    return (
+      <div className="role-permission-matrix-empty">
+        <Empty description="暂无权限数据" />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="role-permission-matrix-scenes">
+        {scenes.map((scene) => (
+          <button
+            key={scene.key}
+            type="button"
+            className={
+              scene.key === activePermission.scene?.key ? 'is-active' : ''
+            }
+            onClick={() => {
+              const firstBusiness = scene.businesses[0];
+              const firstModule = firstBusiness?.modules[0];
+              onActiveStateChange({
+                sceneKey: scene.key,
+                businessKey: firstBusiness?.key || '',
+                moduleKey: firstModule?.key || '',
+                pageKey: firstModule?.children[0]?.key || '',
+              });
+            }}
+          >
+            {scene.title}
+          </button>
+        ))}
+      </div>
+      <div className="role-permission-matrix-panel">
+        {(activePermission.scene?.businesses.length || 0) > 0 ? (
+          <div className="role-permission-matrix-tags">
+            {activePermission.scene?.businesses.map((business) => {
+              const businessCheckedState = getRolePermissionNodesCheckedState(
+                business.modules,
+              );
+              const activateBusiness = () => {
+                const firstModule = business.modules[0];
+                onActiveStateChange({
+                  sceneKey: activePermission.scene?.key || '',
+                  businessKey: business.key,
+                  moduleKey: firstModule?.key || '',
+                  pageKey: firstModule?.children[0]?.key || '',
+                });
+              };
+              return (
+                <Tag
+                  key={business.key}
+                  className={
+                    business.key === activePermission.business?.key
+                      ? 'is-active'
+                      : ''
+                  }
+                  onClick={activateBusiness}
+                >
+                  <Checkbox
+                    checked={businessCheckedState.checked}
+                    indeterminate={businessCheckedState.indeterminate}
+                    onClick={(event) => event.stopPropagation()}
+                    onChange={(event) => {
+                      activateBusiness();
+                      updateChecked({
+                        businessKey: business.key,
+                        checked: event.target.checked,
+                      });
+                    }}
+                  >
+                    {business.title}
+                  </Checkbox>
+                </Tag>
+              );
+            })}
+          </div>
+        ) : null}
+        {displayPermissionTree.length === 0 ? (
+          <div className="role-permission-matrix-empty is-panel-empty">
+            <Empty description="暂无权限数据" />
+          </div>
+        ) : (
+          <div className="role-permission-matrix">
+            <div className="role-permission-matrix-column">
+              <div className="role-permission-matrix-column-title">模块</div>
+              <div className="role-permission-matrix-column-body">
+                {displayPermissionTree.map((moduleItem) => {
+                  const checkedState =
+                    getRolePermissionCheckedState(moduleItem);
+                  return (
+                    <button
+                      key={moduleItem.key}
+                      type="button"
+                      className={
+                        moduleItem.key === activeModule?.key ? 'is-active' : ''
+                      }
+                      onClick={() =>
+                        onActiveStateChange({
+                          sceneKey: activePermission.scene?.key || '',
+                          businessKey: activePermission.business?.key || '',
+                          moduleKey: moduleItem.key,
+                          pageKey: moduleItem.children[0]?.key || '',
+                        })
+                      }
+                    >
+                      <Checkbox
+                        checked={checkedState.checked}
+                        indeterminate={checkedState.indeterminate}
+                        onClick={(event) => event.stopPropagation()}
+                        onChange={(event) =>
+                          updateChecked({
+                            moduleKey: moduleItem.key,
+                            checked: event.target.checked,
+                          })
+                        }
+                      />
+                      <span>{moduleItem.title}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="role-permission-matrix-column is-page">
+              <div className="role-permission-matrix-column-title">
+                目录/菜单
+              </div>
+              <div className="role-permission-matrix-column-body">
+                {activeModule?.children.map((page) => {
+                  const checkedState = getRolePermissionCheckedState(page);
+                  return (
+                    <button
+                      key={page.key}
+                      type="button"
+                      className={
+                        page.key === activePage?.key ? 'is-active' : ''
+                      }
+                      onClick={() =>
+                        onActiveStateChange({
+                          ...activeState,
+                          pageKey: page.key,
+                        })
+                      }
+                    >
+                      <Checkbox
+                        checked={checkedState.checked}
+                        indeterminate={checkedState.indeterminate}
+                        onClick={(event) => event.stopPropagation()}
+                        onChange={(event) =>
+                          updateChecked({
+                            moduleKey: activeModule.key,
+                            pageKey: page.key,
+                            checked: event.target.checked,
+                          })
+                        }
+                      />
+                      <span>{page.title}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {nestedColumns.map((column) => (
+              <div key={column.key} className="role-permission-matrix-column">
+                <div className="role-permission-matrix-column-title">
+                  {column.title}
+                </div>
+                <div className="role-permission-matrix-column-body">
+                  {column.items.map((permission) => {
+                    const checkedState =
+                      getRolePermissionCheckedState(permission);
+                    return (
+                      <button
+                        key={permission.key}
+                        type="button"
+                        className={
+                          permission.key === column.activeKey ? 'is-active' : ''
+                        }
+                        onClick={() =>
+                          selectNestedPermission(
+                            column.levelIndex,
+                            permission.key,
+                          )
+                        }
+                      >
+                        <Checkbox
+                          checked={checkedState.checked}
+                          indeterminate={checkedState.indeterminate}
+                          onClick={(event) => event.stopPropagation()}
+                          onChange={(event) =>
+                            updateChecked({
+                              moduleKey: activeModule?.key,
+                              pageKey: activePage?.key,
+                              permissionKey: permission.key,
+                              checked: event.target.checked,
+                            })
+                          }
+                        />
+                        <span>{permission.title}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            <div className="role-permission-matrix-column is-actions">
+              <div className="role-permission-matrix-column-title">权限</div>
+              <div className="role-permission-matrix-action-list">
+                {activePermissionItems.map((permission) => (
+                  <Checkbox
+                    key={permission.key}
+                    checked={permission.checked}
+                    onChange={(event) =>
+                      updateChecked({
+                        moduleKey: activeModule?.key,
+                        pageKey: activePage?.key,
+                        permissionKey: permission.key,
+                        checked: event.target.checked,
+                      })
+                    }
+                  >
+                    {permission.title}
+                  </Checkbox>
+                ))}
+                {activePermissionItems.length === 0 ? (
+                  <Empty
+                    description="暂无下级权限"
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  />
+                ) : null}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
+
 const RolePermissionPage: React.FC = () => {
   const { initialState } = useModel('@@initialState');
   const [loading, setLoading] = useState(false);
@@ -353,6 +999,18 @@ const RolePermissionPage: React.FC = () => {
   const currentRoleType = Form.useWatch('roleType', form);
   const initialListLoading = loading && !listInitialized;
   const refreshingList = loading && listInitialized;
+  const rolePermissionScenes = useMemo(
+    () => toRolePermissionScenes(permTreeData, checkedPermIds),
+    [checkedPermIds, permTreeData],
+  );
+  const [activePermissionState, setActivePermissionState] =
+    useState<RolePermissionActiveState>(() => getInitialRolePermissionState());
+
+  useEffect(() => {
+    setActivePermissionState((currentState) =>
+      getStableRolePermissionState(rolePermissionScenes, currentState),
+    );
+  }, [rolePermissionScenes]);
 
   const loadRoles = useCallback(async () => {
     if (!currentOrgCode) {
@@ -792,7 +1450,7 @@ const RolePermissionPage: React.FC = () => {
       <Modal
         title={editingRole?.id ? '编辑角色' : '新增角色'}
         open={createOpen}
-        width={760}
+        width={1100}
         confirmLoading={createLoading}
         destroyOnClose
         onCancel={() => {
@@ -848,23 +1506,18 @@ const RolePermissionPage: React.FC = () => {
           </div>
 
           {Number(currentRoleType) === 2 && (
-            <Form.Item label="权限配置">
-              <div className="role-permission-tree-panel">
+            <Form.Item
+              label="权限配置"
+              className="role-permission-matrix-form-item"
+            >
+              <div className="role-permission-matrix-wrap">
                 <Spin spinning={permTreeLoading}>
-                  <div className="role-permission-tree-scroll">
-                    <Tree
-                      checkable
-                      defaultExpandAll
-                      selectable={false}
-                      treeData={permTreeData}
-                      checkedKeys={checkedPermIds}
-                      onCheck={(checked) => {
-                        setCheckedPermIds(
-                          Array.isArray(checked) ? checked : checked.checked,
-                        );
-                      }}
-                    />
-                  </div>
+                  <RolePermissionMatrix
+                    scenes={rolePermissionScenes}
+                    activeState={activePermissionState}
+                    onActiveStateChange={setActivePermissionState}
+                    onCheckedKeysChange={setCheckedPermIds}
+                  />
                 </Spin>
               </div>
             </Form.Item>

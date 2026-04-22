@@ -1,14 +1,23 @@
 import { apiData } from './http';
+import { type AppRequestOptions, LOGIN_AUTH_SCENE } from './requestMeta';
 
 /**
  * 登录接口
  * @param data 用户名和密码
  * @returns 返回 Promise，包含 token 等信息
  */
-export function login(data: API.LoginParams) {
+export function login(data: API.LoginParams, options?: AppRequestOptions) {
   return apiData<API.LoginResult>('/api/admin/auth/v1/login/doLogin', {
+    ...(options || {}),
     method: 'POST',
     data,
+    skipErrorHandler: true,
+    meta: {
+      authScene: LOGIN_AUTH_SCENE,
+      skipAuthRedirect: true,
+      skipGlobalBizError: true,
+      ...(options?.meta || {}),
+    },
   });
 }
 

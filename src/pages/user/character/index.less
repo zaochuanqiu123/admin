@@ -75,14 +75,14 @@
 .characterBackLoginBtn.ant-btn-link {
   height: auto;
   padding: 0;
-  color: #1677ff;
+  color: var(--pc-color-link);
   font-size: 14px;
   font-weight: 500;
 }
 
 .characterBackLoginBtn.ant-btn-link:hover,
 .characterBackLoginBtn.ant-btn-link:focus {
-  color: #4096ff !important;
+  color: var(--pc-color-link-hover) !important;
 }
 
 .glassMask {
@@ -179,10 +179,10 @@
 }
 
 .storeItemActive {
-  background: #f0f5ff;
+  background: var(--ant-color-primary-bg);
   /* 浅蓝色背景 */
-  border-color: #1677ff;
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
+  border-color: var(--ant-color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ant-color-primary) 12%, transparent);
 }
 
 /* 左侧内容区 */

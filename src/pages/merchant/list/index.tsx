@@ -6,20 +6,29 @@ import {
   Button,
   Dropdown,
   Empty,
+  Form,
   Input,
+  InputNumber,
+  Modal,
+  message,
+  Switch,
   Table,
-  Tag,
 } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getMerchantPage, type MerchantPageRecord } from '@/api/merchant';
+import {
+  buyMerchantStore,
+  getMerchantPage,
+  type MerchantPageRecord,
+} from '@/api/merchant';
+import { modifyOrgState } from '@/api/store';
 import {
   ExpandableFilterCard,
   PageSectionSkeleton,
   PermissionButton,
   PermissionVisible,
 } from '@/components';
-import { getErrorMessage } from '@/utils/apiMessage';
+import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
 import { MERCHANT_PERMS } from '../merchant-perms';
 import MerchantAppModal from './components/MerchantAppModal';
 import MerchantBusinessModal from './components/MerchantBusinessModal';
@@ -37,13 +46,17 @@ type MerchantListLine = {
   secondary?: boolean;
 };
 
+type StoreCountFormValues = {
+  buyNum?: number;
+};
+
 function normalizeText(value?: string) {
   const nextValue = String(value || '').trim();
   return nextValue || undefined;
 }
 
-function getMerchantStateTag(state?: boolean) {
-  return state ? <Tag color="success">启用</Tag> : <Tag>停用</Tag>;
+function getMerchantStateText(state?: boolean) {
+  return state ? '启用' : '停用';
 }
 
 function getSourceTypeText(value?: number) {
@@ -147,6 +160,13 @@ const MerchantListPage: React.FC = () => {
   const [appModalRecord, setAppModalRecord] = useState<MerchantPageRecord>();
   const [businessModalRecord, setBusinessModalRecord] =
     useState<MerchantPageRecord>();
+  const [storeCountModalRecord, setStoreCountModalRecord] =
+    useState<MerchantPageRecord>();
+  const [switchingOrgIds, setSwitchingOrgIds] = useState<
+    Record<string, boolean>
+  >({});
+  const [storeCountSubmitting, setStoreCountSubmitting] = useState(false);
+  const [storeCountForm] = Form.useForm<StoreCountFormValues>();
   const [pagination, setPagination] = useState<TablePaginationConfig>({
     current: 1,
     pageSize: DEFAULT_PAGE_SIZE,
@@ -209,6 +229,86 @@ const MerchantListPage: React.FC = () => {
     }));
   };
 
+  const handleCloseStoreCountModal = useCallback(() => {
+    if (storeCountSubmitting) return;
+    setStoreCountModalRecord(undefined);
+    storeCountForm.resetFields();
+  }, [storeCountForm, storeCountSubmitting]);
+
+  const handleSubmitStoreCount = useCallback(async () => {
+    const merchantOrgId = normalizeText(storeCountModalRecord?.orgId);
+    if (!merchantOrgId) {
+      message.error('当前商户缺少组织信息，无法购买门店数量');
+      return;
+    }
+
+    try {
+      const values = await storeCountForm.validateFields();
+      setStoreCountSubmitting(true);
+      const res = await buyMerchantStore(
+        {
+          merchantOrgId,
+          buyNum: Number(values.buyNum || 0),
+        },
+        {
+          skipErrorHandler: true,
+        },
+      );
+      message.success(getApiMessage(res, '购买门店数量成功'));
+      setStoreCountModalRecord(undefined);
+      storeCountForm.resetFields();
+      await loadMerchantPage();
+    } catch (error) {
+      if ((error as any)?.errorFields) return;
+      console.error('buy merchant store count failed:', error);
+      message.error(getErrorMessage(error, '购买门店数量失败'));
+    } finally {
+      setStoreCountSubmitting(false);
+    }
+  }, [loadMerchantPage, storeCountForm, storeCountModalRecord?.orgId]);
+
+  const handleMerchantStateChange = useCallback(
+    async (checked: boolean, record: MerchantPageRecord) => {
+      const orgId = normalizeText(record.orgId);
+      if (!orgId) {
+        message.warning('当前商户缺少组织信息，无法修改状态');
+        return;
+      }
+
+      setSwitchingOrgIds((prev) => ({
+        ...prev,
+        [orgId]: true,
+      }));
+
+      try {
+        const res = await modifyOrgState(orgId, { skipErrorHandler: true });
+        setRecords((prev) =>
+          prev.map((item) =>
+            normalizeText(item.orgId) === orgId
+              ? {
+                  ...item,
+                  state: checked,
+                }
+              : item,
+          ),
+        );
+        message.success(
+          getApiMessage(res, checked ? '商户已启用' : '商户已停用'),
+        );
+      } catch (error) {
+        console.error('modify merchant state failed:', error);
+        message.error(getErrorMessage(error, '修改商户状态失败'));
+      } finally {
+        setSwitchingOrgIds((prev) => {
+          const next = { ...prev };
+          delete next[orgId];
+          return next;
+        });
+      }
+    },
+    [],
+  );
+
   const columns = useMemo<ColumnsType<MerchantPageRecord>>(
     () => [
       {
@@ -227,8 +327,24 @@ const MerchantListPage: React.FC = () => {
       {
         title: '状态',
         dataIndex: 'state',
-        width: 110,
-        render: (value) => getMerchantStateTag(value),
+        width: 130,
+        render: (value, record) => {
+          const orgId = normalizeText(record.orgId);
+          return (
+            <div className="merchant-list-state-switch">
+              <Switch
+                checked={!!value}
+                size="small"
+                loading={!!(orgId && switchingOrgIds[orgId])}
+                disabled={!orgId}
+                onChange={(checked) => {
+                  void handleMerchantStateChange(checked, record);
+                }}
+              />
+              <span>{getMerchantStateText(!!value)}</span>
+            </div>
+          );
+        },
       },
       {
         title: '来源渠道',
@@ -291,13 +407,21 @@ const MerchantListPage: React.FC = () => {
                     key: 'business',
                     label: '业态管理',
                   },
+                  {
+                    key: 'storeCount',
+                    label: '门店数量',
+                  },
                 ],
                 onClick: ({ key }) => {
                   if (key === 'app') {
                     setAppModalRecord(record);
                     return;
                   }
-                  setBusinessModalRecord(record);
+                  if (key === 'business') {
+                    setBusinessModalRecord(record);
+                    return;
+                  }
+                  setStoreCountModalRecord(record);
                 },
               }}
             >
@@ -325,7 +449,7 @@ const MerchantListPage: React.FC = () => {
         ),
       },
     ],
-    [],
+    [handleMerchantStateChange, switchingOrgIds],
   );
 
   const initialLoading = loading && !listInitialized;
@@ -421,6 +545,49 @@ const MerchantListPage: React.FC = () => {
           setBusinessModalRecord(undefined);
         }}
       />
+
+      <Modal
+        title="购买门店数量"
+        open={!!storeCountModalRecord}
+        confirmLoading={storeCountSubmitting}
+        onOk={() => {
+          void handleSubmitStoreCount();
+        }}
+        onCancel={handleCloseStoreCountModal}
+        destroyOnClose
+      >
+        <Form<StoreCountFormValues>
+          form={storeCountForm}
+          layout="horizontal"
+          colon={false}
+          className="merchant-store-count-form"
+        >
+          <Form.Item
+            label="门店数量"
+            name="buyNum"
+            rules={[
+              {
+                required: true,
+                message: '请输入正确的门店数量',
+              },
+              {
+                type: 'number',
+                min: 1,
+                message: '请输入正确的门店数量',
+              },
+            ]}
+            extra="此处控制商户总可以添加的最大门店数量"
+          >
+            <InputNumber
+              min={1}
+              precision={0}
+              controls={false}
+              placeholder="请输入门店数量"
+              className="merchant-store-count-input"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

@@ -61,6 +61,12 @@
     color: var(--ant-color-text-secondary);
   }
 
+  .merchant-list-state-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   .merchant-list-action-links {
     display: flex;
     align-items: center;
@@ -142,6 +148,28 @@ body.theme-black-mode .merchant-list-page {
   .merchant-capability-modal-cycle-unit,
   .merchant-capability-modal-cycle-tip,
   .merchant-capability-modal-summary {
+    color: var(--pc-dark-text-secondary) !important;
+  }
+}
+
+.merchant-store-count-form {
+  margin-top: 8px;
+
+  .ant-form-item {
+    margin-bottom: 0;
+  }
+
+  .ant-form-item-extra {
+    color: var(--ant-color-text-tertiary);
+  }
+}
+
+.merchant-store-count-input.ant-input-number {
+  width: 100%;
+}
+
+body.theme-black-mode .merchant-store-count-form {
+  .ant-form-item-extra {
     color: var(--pc-dark-text-secondary) !important;
   }
 }
