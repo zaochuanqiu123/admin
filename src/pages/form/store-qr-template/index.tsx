@@ -1,8 +1,4 @@
-import {
-  DeleteOutlined,
-  PlusOutlined,
-  UploadOutlined,
-} from '@ant-design/icons';
+import { DeleteOutlined, UploadOutlined } from '@ant-design/icons';
 import { Ecc, QrCode } from '@rc-component/qrcode/es/libs/qrcodegen';
 import type { UploadProps } from 'antd';
 import {
@@ -1141,7 +1137,6 @@ const QrTemplateListPage: React.FC = () => {
             perm={QR_TEMPLATE_PERMS.add}
             type="primary"
             shape="round"
-            icon={<PlusOutlined />}
             className="qr-template-add-btn"
             onClick={openCreateDrawer}
           >

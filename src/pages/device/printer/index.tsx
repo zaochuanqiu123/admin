@@ -1,4 +1,3 @@
-import { PlusOutlined } from '@ant-design/icons';
 import { useModel } from '@umijs/max';
 import {
   Alert,
@@ -748,7 +747,6 @@ const PrinterPage: React.FC = () => {
           <PermissionButton
             perm={PRINTER_PERMS.add}
             type="primary"
-            icon={<PlusOutlined />}
             className="printer-primary-action-btn"
             onClick={() => {
               message.info('打印机入库接口待补充，当前先保留权限化入口。');

@@ -46,6 +46,9 @@ export const ROUTE_TAB_REFRESH_EVENT = 'pc-admin-refresh-current-tab';
 
 const EXCLUDED_PREFIXES = ['/user', '/micro-app'];
 const FIXED_TAB_PATH = '/dashboard/index';
+const ROUTE_TAB_TITLE_OVERRIDES = new Map([
+  ['/dashboard/settings', '个人中心'],
+]);
 
 function normalizePath(pathname: string): string {
   const pathOnly =
@@ -204,6 +207,8 @@ function fallbackTitleFromPath(pathname: string): string {
 
 function resolveTabTitle(pathname: string): string {
   const normalized = normalizePath(pathname);
+  const overrideTitle = ROUTE_TAB_TITLE_OVERRIDES.get(normalized);
+  if (overrideTitle) return overrideTitle;
   const matches = FLAT_ROUTES.filter(
     (item) => item.name && isRoutePatternMatch(item.path, normalized),
   ).sort((a, b) => b.score - a.score);
@@ -301,9 +306,10 @@ function sanitizeStoredTabs(raw: unknown): RouteTabItem[] {
     if (!isPersistableTabPath(normalized)) return;
     const tab = createRouteTab(
       normalized,
-      typeof item?.title === 'string' && item.title.trim()
-        ? item.title.trim()
-        : undefined,
+      ROUTE_TAB_TITLE_OVERRIDES.get(normalized) ||
+        (typeof item?.title === 'string' && item.title.trim()
+          ? item.title.trim()
+          : undefined),
       normalizeTargetId(item?.targetId),
     );
     if (seen.has(tab.key)) return;
@@ -929,20 +935,22 @@ const RouteTabsKeepAlive: React.FC<{
             onClick={handleRefreshCurrentTab}
           />
         </Tooltip>
-        <Dropdown
-          menu={{ items: tabActionItems, onClick: handleTabActionMenuClick }}
-          trigger={['click']}
-          placement="bottomRight"
-          overlayClassName="pc-admin-route-tabs-more-menu"
-        >
-          <Button
-            type="text"
-            shape="circle"
-            className="pc-admin-route-tabs-more pc-admin-header-circle-action"
-            icon={<AppstoreOutlined />}
-            aria-label="综合操作"
-          />
-        </Dropdown>
+        <Tooltip title="标签页操作">
+          <Dropdown
+            menu={{ items: tabActionItems, onClick: handleTabActionMenuClick }}
+            trigger={['click']}
+            placement="bottomRight"
+            overlayClassName="pc-admin-route-tabs-more-menu"
+          >
+            <Button
+              type="text"
+              shape="circle"
+              className="pc-admin-route-tabs-more pc-admin-header-circle-action"
+              icon={<AppstoreOutlined />}
+              aria-label="标签页操作"
+            />
+          </Dropdown>
+        </Tooltip>
         {extraOps}
       </div>
     </div>

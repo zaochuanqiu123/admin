@@ -1,4 +1,4 @@
-import { DownOutlined, PlusOutlined, UserOutlined } from '@ant-design/icons';
+import { DownOutlined, UserOutlined } from '@ant-design/icons';
 import { history } from '@umijs/max';
 import {
   Alert,
@@ -409,7 +409,7 @@ const MerchantListPage: React.FC = () => {
                   },
                   {
                     key: 'storeCount',
-                    label: '门店数量',
+                    label: '购买门店',
                   },
                 ],
                 onClick: ({ key }) => {
@@ -488,7 +488,6 @@ const MerchantListPage: React.FC = () => {
           <PermissionButton
             perm={MERCHANT_PERMS.add}
             type="primary"
-            icon={<PlusOutlined />}
             className="merchant-list-primary-action-btn"
             onClick={() => {
               history.push('/merchant/list/create');

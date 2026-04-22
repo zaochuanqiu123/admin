@@ -290,6 +290,10 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
   const [openKeys, setOpenKeys] = React.useState<string[]>([]);
   const [hoverOpenKeys, setHoverOpenKeys] = React.useState<string[]>([]);
   const closeTimerRef = React.useRef<number | null>(null);
+  const hoverPanelRef = React.useRef<HTMLDivElement | null>(null);
+  const topItemRefs = React.useRef<Record<string, HTMLButtonElement | null>>(
+    {},
+  );
 
   React.useEffect(() => {
     if (topNodes.length === 0) {
@@ -527,11 +531,24 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
     [openHoverPanel],
   );
 
+  const getTopItemRect = React.useCallback(
+    (topKey: string) =>
+      topItemRefs.current[topKey]?.getBoundingClientRect() ?? null,
+    [],
+  );
+
+  const getHoverPanelRect = React.useCallback(
+    () => hoverPanelRef.current?.getBoundingClientRect() ?? null,
+    [],
+  );
+
   const { clearHoverIntent, queueHoverIntent } = useSplitMenuHoverIntent({
     hoverOpen: hoverPanelOpen,
     activeHoverKey: displayTopKey,
     onIntentOpen: openHoverPanelByIntent,
     clearCloseTimer,
+    getTopItemRect,
+    getHoverPanelRect,
   });
 
   const handleHoverItemClick: MenuProps['onClick'] = React.useCallback(
@@ -636,14 +653,29 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
             return (
               <button
                 key={node.key}
+                ref={(element) => {
+                  topItemRefs.current[node.key] = element;
+                }}
                 type="button"
                 className={
                   'dashboard-home-split-menu-icon-btn' +
                   (active ? ' dashboard-home-split-menu-icon-btn-active' : '')
                 }
                 aria-label={node.name}
-                onMouseEnter={() => queueHoverIntent(node.key)}
-                onMouseMove={() => queueHoverIntent(node.key, true)}
+                onMouseEnter={(event) =>
+                  queueHoverIntent(node.key, false, {
+                    clientX: event.clientX,
+                    clientY: event.clientY,
+                    timeStamp: event.timeStamp,
+                  })
+                }
+                onMouseMove={(event) =>
+                  queueHoverIntent(node.key, true, {
+                    clientX: event.clientX,
+                    clientY: event.clientY,
+                    timeStamp: event.timeStamp,
+                  })
+                }
                 onFocus={(event) => {
                   if (!isFocusVisible(event.currentTarget)) return;
                   clearHoverIntent();
@@ -668,6 +700,7 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
         </div>
 
         <div
+          ref={hoverPanelRef}
           className={
             'dashboard-home-split-menu-hover-panel' +
             (hoverPanelOpen && (hoverMenuMeta.items?.length ?? 0) > 0

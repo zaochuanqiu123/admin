@@ -65,7 +65,7 @@ const routes = [
 
       {
         path: '/dashboard/settings',
-        name: 'settings',
+        name: '个人中心',
         component: './dashboard/settings',
         hideInMenu: true,
       },

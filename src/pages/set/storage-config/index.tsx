@@ -1,4 +1,3 @@
-import { PlusOutlined } from '@ant-design/icons';
 import {
   Alert,
   Button,
@@ -681,7 +680,6 @@ const AliyunStorageTab: React.FC = () => {
         <div className="cloud-storage-toolbar">
           <Button
             type="primary"
-            icon={<PlusOutlined />}
             className="cloud-storage-primary-action-btn"
             onClick={() => {
               setEditingRecord(undefined);

@@ -1,4 +1,3 @@
-import { PlusOutlined } from '@ant-design/icons';
 import {
   Alert,
   Button,
@@ -675,7 +674,6 @@ const SpeakerListPage: React.FC = () => {
             <PermissionButton
               perm={SPEAKER_PERMS.add}
               type="primary"
-              icon={<PlusOutlined />}
               className="speaker-primary-action-btn"
               onClick={() => {
                 setImportModalOpen(true);

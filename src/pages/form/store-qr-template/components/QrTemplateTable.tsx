@@ -1,4 +1,3 @@
-import { PlusOutlined } from '@ant-design/icons';
 import { Alert, Empty, Popconfirm, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useMemo } from 'react';
@@ -149,7 +148,6 @@ const QrTemplateTable: React.FC<QrTemplateTableProps> = ({
           perm={QR_TEMPLATE_PERMS.add}
           type="primary"
           shape="round"
-          icon={<PlusOutlined />}
           className="qr-template-add-btn"
           onClick={onCreate}
         >

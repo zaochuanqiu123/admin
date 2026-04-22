@@ -2,30 +2,28 @@ import { UploadOutlined } from '@ant-design/icons';
 import {
   ProForm,
   ProFormDependency,
-  ProFormFieldSet,
   ProFormSelect,
   ProFormText,
   ProFormTextArea,
 } from '@ant-design/pro-components';
 import { useModel } from '@umijs/max';
-import { Button, Input, message, Upload } from 'antd';
+import { Button, message, Upload } from 'antd';
 import React from 'react';
 import type { CurrentUser } from '../data';
 import { queryCity, queryProvince } from '../service';
 import useStyles from './index.style';
 
-const validatorPhone = (
-  _rule: any,
-  value: string[],
-  callback: (message?: string) => void,
-) => {
-  if (!value[0]) {
-    callback('Please input your area code!');
+const normalizePhoneNumber = (value?: string) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const normalized = raw.replace(/\s+/g, '');
+  if (normalized.includes('-')) {
+    const [first = '', ...rest] = normalized.split('-');
+    const phonePart = rest.join('');
+    if (phonePart) return phonePart;
+    return first.replace(/^\+?86/, '');
   }
-  if (!value[1]) {
-    callback('Please input your phone number!');
-  }
-  callback();
+  return normalized.replace(/^\+?86-?/, '');
 };
 
 const BaseView: React.FC = () => {
@@ -82,7 +80,7 @@ const BaseView: React.FC = () => {
               }}
               initialValues={{
                 ...currentUser,
-                phone: currentUser?.phone?.split('-'),
+                phone: normalizePhoneNumber(currentUser?.phone),
               }}
               hideRequiredMark
             >
@@ -208,7 +206,8 @@ const BaseView: React.FC = () => {
                   },
                 ]}
               />
-              <ProFormFieldSet
+              <ProFormText
+                width="md"
                 name="phone"
                 label="联系电话"
                 rules={[
@@ -216,14 +215,12 @@ const BaseView: React.FC = () => {
                     required: true,
                     message: '请输入您的联系电话!',
                   },
-                  {
-                    validator: validatorPhone,
-                  },
                 ]}
-              >
-                <Input className={styles.area_code} />
-                <Input className={styles.phone_number} />
-              </ProFormFieldSet>
+                fieldProps={{
+                  addonBefore: '+86',
+                  placeholder: '请输入联系电话',
+                }}
+              />
             </ProForm>
           </div>
           <div className={styles.right}>

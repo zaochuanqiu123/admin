@@ -1939,7 +1939,6 @@ const StoreStaffListPage: React.FC = () => {
         </div>
         <Button
           type="primary"
-          icon={<PlusOutlined />}
           className="store-staff-create-btn"
           onClick={() => history.push('/permission/store-staff/create')}
         >

@@ -1,4 +1,3 @@
-import { PlusOutlined } from '@ant-design/icons';
 import { useModel } from '@umijs/max';
 import {
   Alert,
@@ -902,7 +901,6 @@ const StoreQrCodeListPage: React.FC = () => {
             <PermissionButton
               perm={QR_CODE_PERMS.batchAdd}
               type="primary"
-              icon={<PlusOutlined />}
               className="qr-code-primary-action-btn"
               onClick={() => {
                 setCreateModalOpen(true);

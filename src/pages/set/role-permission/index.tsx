@@ -1,4 +1,4 @@
-import { InfoCircleFilled, PlusOutlined } from '@ant-design/icons';
+import { InfoCircleFilled } from '@ant-design/icons';
 import { useModel } from '@umijs/max';
 import {
   Alert,
@@ -1407,7 +1407,6 @@ const RolePermissionPage: React.FC = () => {
 
           <Button
             type="primary"
-            icon={<PlusOutlined />}
             className="role-permission-create-btn"
             onClick={handleOpenCreate}
           >
