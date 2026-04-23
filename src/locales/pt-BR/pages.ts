@@ -24,7 +24,6 @@ export default {
   'pages.login.forgotPassword': 'Perdeu a Senha ?',
   'pages.login.submit': 'Enviar',
   'pages.login.loginWith': 'Login com :',
-  'pages.login.registerAccount': 'Registra Conta',
   'pages.welcome.link': 'Bem-vindo',
   'pages.welcome.alertMessage':
     'Componentes pesados mais rápidos e mais fortes foram lançados.',

@@ -5,8 +5,6 @@ export default {
   'menu.admin': 'অ্যাডমিন',
   'menu.admin.sub-page': 'উপ-পৃষ্ঠা',
   'menu.login': 'প্রবেশ',
-  'menu.register': 'নিবন্ধন',
-  'menu.register-result': 'নিবন্ধনে ফলাফল',
   'menu.dashboard': 'ড্যাশবোর্ড',
   'menu.dashboard.analysis': 'বিশ্লেষণ',
   'menu.dashboard.monitor': 'নিরীক্ষণ',

@@ -425,11 +425,7 @@ export async function getInitialState(): Promise<{
   };
 
   const { location } = history;
-  if (
-    ![loginPath, '/user/register', '/user/register-result'].includes(
-      location.pathname,
-    )
-  ) {
+  if (location.pathname !== loginPath) {
     const hasToken = !!getToken();
     if (!hasToken) {
       return {

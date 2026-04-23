@@ -464,7 +464,8 @@ body .ant-layout-sider .ant-layout-sider-children>div {
 
 .dashboard-home-split-menu-hover-panel .dashboard-home-split-menu-hover-panel-ant.ant-menu,
 .dashboard-home-split-menu-hover-panel .dashboard-home-split-menu-hover-panel-ant .ant-menu-sub.ant-menu-inline {
-  background: var(--pc-sider-panel-bg) !important;
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 .dashboard-home-split-menu-hover-panel-list {
@@ -823,7 +824,8 @@ body .ant-layout-sider .ant-layout-sider-children>div {
 
 .other-menus-split-menu-submenu-panel .other-menus-split-menu-submenu-ant.ant-menu,
 .other-menus-split-menu-submenu-panel .other-menus-split-menu-submenu-ant .ant-menu-sub.ant-menu-inline {
-  background: var(--pc-sider-panel-bg) !important;
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 .other-menus-split-menu-submenu-panel-open {
@@ -1595,6 +1597,82 @@ body.theme-black-mode .business-switch-pill {
 .ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item-active,
 .ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item-selected,
 .ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-submenu-title:hover {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* 仅右侧展开子菜单使用面板背景，一级菜单列仍保持白色 */
+.dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open,
+.other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open {
+  background: var(--pc-sider-panel-bg) !important;
+  background-color: var(--pc-sider-panel-bg) !important;
+}
+
+body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant.ant-menu,
+body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu,
+body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-sub,
+body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-submenu,
+body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-submenu-title,
+body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-item,
+body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant.ant-menu,
+body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu,
+body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-sub,
+body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-submenu,
+body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-submenu-title,
+body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-item {
+  /* [force] 展开面板内普通态统一透出同一层面板底色，避免不同 Menu 层级出现色块。 */
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant.ant-menu,
+body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant.ant-menu {
+  padding-left: var(--pc-sider-submenu-panel-content-inset) !important;
+}
+
+body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-sub.ant-menu-inline .ant-menu-item,
+body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item {
+  position: relative;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-sub.ant-menu-inline .ant-menu-item:hover::before,
+body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-sub.ant-menu-inline .ant-menu-item-active::before,
+body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-sub.ant-menu-inline .ant-menu-item-selected::before,
+body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item:hover::before,
+body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item-active::before,
+body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item-selected::before {
+  /* [force] 只画背景层，不改原有文字 padding、字号、字重和颜色继承。 */
+  content: '';
+  position: absolute;
+  inset: 0 var(--pc-sider-submenu-item-x-gap) 0 0;
+  z-index: 0;
+  border-radius: var(--pc-sider-submenu-item-radius);
+  background: var(--ant-color-primary-bg);
+  pointer-events: none;
+}
+
+body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-sub.ant-menu-inline .ant-menu-item .ant-menu-title-content,
+body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item .ant-menu-title-content {
+  position: relative;
+  z-index: 1;
+}
+
+body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant > .ant-menu-item:hover,
+body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant > .ant-menu-item-active,
+body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant > .ant-menu-item-selected,
+body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant > .ant-menu-submenu > .ant-menu-submenu-title:hover,
+body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant > .ant-menu-submenu-open > .ant-menu-submenu-title,
+body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant > .ant-menu-submenu-active > .ant-menu-submenu-title,
+body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant > .ant-menu-submenu-selected > .ant-menu-submenu-title,
+body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-item:hover,
+body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-item-active,
+body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-item-selected,
+body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-submenu > .ant-menu-submenu-title:hover,
+body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-submenu-open > .ant-menu-submenu-title,
+body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-submenu-active > .ant-menu-submenu-title,
+body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-submenu-selected > .ant-menu-submenu-title {
   background: transparent !important;
   background-color: transparent !important;
 }

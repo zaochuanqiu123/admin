@@ -21,7 +21,6 @@ type HoverIntentPoint = {
 };
 
 const INITIAL_OPEN_DELAY = 56;
-const SWITCH_OPEN_DELAY = 16;
 const MENU_SWITCH_DWELL_DELAY = 120;
 const SAFE_CORRIDOR_PADDING = 12;
 const SAFE_CORRIDOR_MIN_DELTA_X = 2;
@@ -181,9 +180,7 @@ export function useSplitMenuHoverIntent({
         hoverOpen && activeHoverKey && activeHoverKey !== topKey;
       const intentDelay = switchingTopMenu
         ? MENU_SWITCH_DWELL_DELAY
-        : hoverOpen
-          ? SWITCH_OPEN_DELAY
-          : INITIAL_OPEN_DELAY;
+        : INITIAL_OPEN_DELAY;
 
       if (
         intentTimerRef.current !== null &&

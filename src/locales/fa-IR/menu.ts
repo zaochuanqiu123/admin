@@ -5,8 +5,6 @@ export default {
   'menu.admin': 'مدیر',
   'menu.admin.sub-page': 'زیر صفحه',
   'menu.login': 'ورود',
-  'menu.register': 'ثبت نام',
-  'menu.register-result': 'ثبت نام نتیجه',
   'menu.dashboard': 'داشبورد',
   'menu.dashboard.analysis': 'تحلیل و بررسی',
   'menu.dashboard.monitor': 'نظارت',
