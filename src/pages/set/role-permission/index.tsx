@@ -93,6 +93,7 @@ const ROLE_TREE_GROUP_KEY_PREFIX = '__roleTreeGroup__';
 
 type RolePermissionMeta = {
   key: string;
+  permissionId: string;
   permCode: string;
   terminalCode?: string;
   terminalName?: string;
@@ -136,6 +137,12 @@ function getRoleTreePermissionKey(node: any, index: number): string {
   return String(rawKey);
 }
 
+function getRoleTreePermissionId(node: any): string {
+  const rawId = node?.id ?? node?.permId ?? node?.menuId ?? node?.targetId;
+  if (rawId === undefined || rawId === null || rawId === '') return '';
+  return String(rawId);
+}
+
 function getRoleTreePermCode(node: any): string {
   const rawCode =
     node?.permCode ??
@@ -163,10 +170,11 @@ function getRoleGroupKey(
 function toRolePermissionNodes(
   nodes: any[],
   metaMap: Map<string, RolePermissionMeta>,
-  context: Omit<RolePermissionMeta, 'key' | 'permCode'>,
+  context: Omit<RolePermissionMeta, 'key' | 'permissionId' | 'permCode'>,
 ): RoleTreeNode[] {
   return (nodes || []).map((node, index) => {
     const key = getRoleTreePermissionKey(node, index);
+    const permissionId = getRoleTreePermissionId(node);
     const permCode = getRoleTreePermCode(node);
     const children = toRolePermissionNodes(
       getRoleTreeChildren(node),
@@ -174,10 +182,11 @@ function toRolePermissionNodes(
       context,
     );
 
-    if (permCode) {
+    if (permissionId || permCode) {
       metaMap.set(key, {
         ...context,
         key,
+        permissionId,
         permCode,
       });
     }
@@ -266,52 +275,29 @@ function buildRoleTerminalList(
     {
       terminalName?: string;
       terminalCode?: string;
-      businessMap: Map<
-        string,
-        {
-          businessCode?: string;
-          businessName?: string;
-          businessVersionId?: string;
-          perms: Set<string>;
-        }
-      >;
+      perms: Set<string>;
     }
   >();
 
   checkedKeys.forEach((key) => {
     const meta = permissionMetaMap.get(String(key));
-    if (!meta?.permCode) return;
+    if (!meta?.permissionId) return;
 
     const terminalKey = meta.terminalCode || meta.terminalName || 'terminal';
-    const businessKey = meta.businessCode || meta.businessName || 'business';
     const terminalItem = terminalMap.get(terminalKey) || {
       terminalName: meta.terminalName,
       terminalCode: meta.terminalCode,
-      businessMap: new Map(),
-    };
-    const businessItem = terminalItem.businessMap.get(businessKey) || {
-      businessCode: meta.businessCode,
-      businessName: meta.businessName,
-      businessVersionId: meta.businessVersionId,
       perms: new Set<string>(),
     };
 
-    businessItem.perms.add(meta.permCode);
-    terminalItem.businessMap.set(businessKey, businessItem);
+    terminalItem.perms.add(meta.permissionId);
     terminalMap.set(terminalKey, terminalItem);
   });
 
   return Array.from(terminalMap.values()).map((terminal) => ({
     terminalName: terminal.terminalName,
     terminalCode: terminal.terminalCode,
-    terminalBusinessList: Array.from(terminal.businessMap.values()).map(
-      (business) => ({
-        businessCode: business.businessCode,
-        businessName: business.businessName,
-        businessVersionId: business.businessVersionId,
-        perms: Array.from(business.perms),
-      }),
-    ),
+    perms: Array.from(terminal.perms),
   }));
 }
 
@@ -320,34 +306,24 @@ function extractCheckedPermissionKeys(
   metaMap: Map<string, RolePermissionMeta>,
 ) {
   const detailData = detail?.data ?? detail;
-  if (Array.isArray(detailData?.permIds)) {
-    const permIdSet = new Set(
-      detailData.permIds.map((item: any) => String(item)),
-    );
-    return Array.from(metaMap.values())
-      .filter((meta) => permIdSet.has(meta.key) || permIdSet.has(meta.permCode))
-      .map((meta) => meta.key);
-  }
-
   const perms = new Set<string>();
-  const roleTerminalList = Array.isArray(detailData?.roleTerminalList)
-    ? detailData.roleTerminalList
-    : [];
-  roleTerminalList.forEach((terminal: any) => {
-    const businessList = Array.isArray(terminal?.terminalBusinessList)
-      ? terminal.terminalBusinessList
-      : [];
-    businessList.forEach((business: any) => {
-      if (Array.isArray(business?.perms)) {
-        business.perms.forEach((perm: any) => {
+  const rolePermMap = detailData?.rolePermMap;
+  if (rolePermMap && typeof rolePermMap === 'object') {
+    const permissionGroups =
+      rolePermMap instanceof Map
+        ? Array.from(rolePermMap.values())
+        : Object.values(rolePermMap);
+    permissionGroups.forEach((permissionList: any) => {
+      if (Array.isArray(permissionList)) {
+        permissionList.forEach((perm: any) => {
           perms.add(String(perm));
         });
       }
     });
-  });
+  }
 
   return Array.from(metaMap.values())
-    .filter((meta) => perms.has(meta.permCode))
+    .filter((meta) => meta.permissionId && perms.has(meta.permissionId))
     .map((meta) => meta.key);
 }
 
@@ -786,6 +762,7 @@ const RolePermissionMatrix: React.FC<RolePermissionMatrixProps> = ({
                   onClick={activateBusiness}
                 >
                   <Checkbox
+                    aria-label={business.title}
                     checked={businessCheckedState.checked}
                     indeterminate={businessCheckedState.indeterminate}
                     onClick={(event) => event.stopPropagation()}
@@ -796,9 +773,10 @@ const RolePermissionMatrix: React.FC<RolePermissionMatrixProps> = ({
                         checked: event.target.checked,
                       });
                     }}
-                  >
+                  />
+                  <span className="role-permission-matrix-tag-text">
                     {business.title}
-                  </Checkbox>
+                  </span>
                 </Tag>
               );
             })}
@@ -935,20 +913,24 @@ const RolePermissionMatrix: React.FC<RolePermissionMatrixProps> = ({
               <div className="role-permission-matrix-column-title">权限</div>
               <div className="role-permission-matrix-action-list">
                 {activePermissionItems.map((permission) => (
-                  <Checkbox
+                  <div
                     key={permission.key}
-                    checked={permission.checked}
-                    onChange={(event) =>
-                      updateChecked({
-                        moduleKey: activeModule?.key,
-                        pageKey: activePage?.key,
-                        permissionKey: permission.key,
-                        checked: event.target.checked,
-                      })
-                    }
+                    className="role-permission-action-item"
                   >
-                    {permission.title}
-                  </Checkbox>
+                    <Checkbox
+                      aria-label={permission.title}
+                      checked={permission.checked}
+                      onChange={(event) =>
+                        updateChecked({
+                          moduleKey: activeModule?.key,
+                          pageKey: activePage?.key,
+                          permissionKey: permission.key,
+                          checked: event.target.checked,
+                        })
+                      }
+                    />
+                    <span>{permission.title}</span>
+                  </div>
                 ))}
                 {activePermissionItems.length === 0 ? (
                   <Empty

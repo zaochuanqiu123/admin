@@ -42,6 +42,14 @@ import {
   type OrgUserPageRecord,
   updateOrgUserState,
 } from '@/api/orgUser';
+import type { SearchUserResult } from '@/api/user';
+import {
+  ROUTE_TAB_CLOSE_EVENT,
+  ROUTE_TAB_REFRESH_EVENT,
+} from '@/components/Layout/RouteTabsKeepAlive';
+import UserPhoneMatchFields, {
+  type UserPhoneMatchStatus,
+} from '@/components/UserPhoneMatchFields';
 import {
   createRemoteUploadFileList,
   imageUploadRequest,
@@ -66,6 +74,7 @@ type StaffPermissionCheckedState = {
 };
 type StaffPermissionActiveState = {
   sceneKey: string;
+  businessKey: string;
   moduleKey: string;
   pageKey: string;
 };
@@ -100,7 +109,7 @@ type StaffRecord = {
   enabled: boolean;
   avatarColor: string;
   roleMap?: Record<string, string>;
-  overridePermIds?: Record<string, string[]>;
+  overridePermIds?: string[];
   permissionScenes?: StaffPermissionScene[];
   permissionTree: StaffPermissionModule[];
 };
@@ -108,14 +117,23 @@ type StaffRoleRecord = {
   id: string;
   roleName?: string;
   roleDesc?: string;
+  roleType?: number | string;
   state?: number;
   [key: string]: any;
+};
+const STAFF_ROLE_TYPE_LABEL_MAP: Record<string, string> = {
+  '1': '管理员',
+  '2': '普通角色',
+  '3': '收银员',
+  '4': '导购员',
 };
 const STAFF_FORM_SECTIONS = [
   { key: 'basic', label: '基本信息' },
   { key: 'permission', label: '功能权限信息' },
 ] as const;
 type StaffFormSectionKey = (typeof STAFF_FORM_SECTIONS)[number]['key'];
+const STAFF_LIST_PATH = '/permission/store-staff';
+const STAFF_CREATE_PATH = `${STAFF_LIST_PATH}/create`;
 const EMPTY_PERMISSION_TREE: StaffPermissionModule[] = [];
 const STAFF_LIST_ROW_HEIGHT = 80;
 const STAFF_LIST_MIN_PAGE_SIZE = 5;
@@ -133,6 +151,12 @@ function getStaffDisplayName(record: Partial<OrgUserPageRecord>) {
   return (
     record.name || record.nickName || record.account || record.phone || '-'
   );
+}
+
+function getStaffListDisplayName(
+  staff: Pick<StaffRecord, 'nickName' | 'account' | 'phone'>,
+) {
+  return staff.nickName || staff.account || staff.phone || '-';
 }
 
 function normalizeRoleMap(roleMap?: Record<string, string>): StaffRoleRecord[] {
@@ -159,6 +183,33 @@ function getStaffRoles(staff?: Pick<StaffRecord, 'roleMap' | 'roleName'>) {
   if (roleMapRoles.length > 0) return roleMapRoles;
   const roleName = normalizeText(staff?.roleName);
   return roleName ? [{ id: roleName, roleName }] : [];
+}
+
+function getStaffRoleTypeLabel(roleType: unknown) {
+  return STAFF_ROLE_TYPE_LABEL_MAP[getStaffRoleTypeKey(roleType)] || '';
+}
+
+function getStaffRoleTypeKey(roleType: unknown) {
+  const key = String(roleType ?? '').trim();
+  return STAFF_ROLE_TYPE_LABEL_MAP[key] ? key : '';
+}
+
+function renderPickerRoleName(role: StaffRoleRecord) {
+  const roleName = role.roleName || role.id || '-';
+  const roleTypeKey = getStaffRoleTypeKey(role.roleType);
+  const roleTypeLabel = getStaffRoleTypeLabel(role.roleType);
+  return (
+    <span className="staff-picker-role-name-wrap">
+      <span className="staff-picker-role-name-text">{roleName}</span>
+      {roleTypeLabel ? (
+        <span
+          className={`staff-picker-role-type-badge staff-picker-role-type-${roleTypeKey}`}
+        >
+          {roleTypeLabel}
+        </span>
+      ) : null}
+    </span>
+  );
 }
 
 function renderStaffRoleTags(
@@ -222,13 +273,7 @@ function getPermissionBusinessKey(node: any, index: number) {
 }
 
 function getPermissionId(node: any) {
-  const rawKey =
-    node?.permCode ??
-    node?.permissionCode ??
-    node?.code ??
-    node?.id ??
-    node?.permId ??
-    node?.menuId;
+  const rawKey = node?.id ?? node?.permId ?? node?.menuId ?? node?.targetId;
   if (rawKey === undefined || rawKey === null || rawKey === '') return '';
   return String(rawKey);
 }
@@ -376,33 +421,33 @@ function updatePermissionNodeChecked(
   });
 }
 
-function applyCheckedSetToPermissionNode(
+function applyUncheckedSetToPermissionNode(
   node: StaffPermissionNode,
-  checkedSet: Set<string>,
-  inheritedChecked = false,
+  uncheckedSet: Set<string>,
+  inheritedUnchecked = false,
 ): StaffPermissionNode {
-  const nodeChecked =
-    inheritedChecked ||
+  const nodeUnchecked =
+    inheritedUnchecked ||
     (node.permissionId
-      ? checkedSet.has(node.permissionId) || checkedSet.has(node.key)
-      : checkedSet.has(node.key));
+      ? uncheckedSet.has(node.permissionId) || uncheckedSet.has(node.key)
+      : uncheckedSet.has(node.key));
   if (node.children.length === 0) {
     return {
       ...node,
-      checked: nodeChecked,
+      checked: nodeUnchecked ? false : node.checked,
     };
   }
   const children = node.children.map((child) =>
-    applyCheckedSetToPermissionNode(child, checkedSet, nodeChecked),
+    applyUncheckedSetToPermissionNode(child, uncheckedSet, nodeUnchecked),
   );
   return syncPermissionNodeChecked({
     ...node,
-    checked: nodeChecked,
+    checked: nodeUnchecked ? false : node.checked,
     children,
   });
 }
 
-function collectCheckedPermissionNodeIds(nodes: StaffPermissionNode[]) {
+function collectUncheckedPermissionNodeIds(nodes: StaffPermissionNode[]) {
   const result: string[] = [];
   const walk = (items: StaffPermissionNode[], depth: number) => {
     items.forEach((item) => {
@@ -410,8 +455,12 @@ function collectCheckedPermissionNodeIds(nodes: StaffPermissionNode[]) {
         walk(item.children, depth + 1);
         return;
       }
-      if (item.checked && (item.isButtonPermission || depth >= 3)) {
-        result.push(item.permissionId || item.key);
+      if (
+        !item.checked &&
+        item.permissionId &&
+        (item.isButtonPermission || depth >= 3)
+      ) {
+        result.push(item.permissionId);
       }
     });
   };
@@ -421,33 +470,26 @@ function collectCheckedPermissionNodeIds(nodes: StaffPermissionNode[]) {
 
 function applyOverridePermIds(
   scenes: StaffPermissionScene[],
-  overridePermIds?: Record<string, string[]>,
+  overridePermIds?: string[],
 ) {
-  if (!overridePermIds || Object.keys(overridePermIds).length === 0) {
+  if (!overridePermIds || overridePermIds.length === 0) {
     return scenes;
   }
+  const uncheckedSet = new Set(overridePermIds.map((item) => String(item)));
   return scenes.map((scene) => ({
     ...scene,
-    businesses: scene.businesses.map((business) => {
-      if (!Object.hasOwn(overridePermIds, business.key)) {
-        return business;
-      }
-      const checkedSet = new Set(
-        (overridePermIds[business.key] || []).map((item) => String(item)),
-      );
-      return {
-        ...business,
-        modules: business.modules.map((moduleItem) =>
-          applyCheckedSetToPermissionNode(moduleItem, checkedSet),
-        ),
-      };
-    }),
+    businesses: scene.businesses.map((business) => ({
+      ...business,
+      modules: business.modules.map((moduleItem) =>
+        applyUncheckedSetToPermissionNode(moduleItem, uncheckedSet),
+      ),
+    })),
   }));
 }
 
 function toCheckedStaffPermissionScenes(
   rolePermTree: any[],
-  overridePermIds?: Record<string, string[]>,
+  overridePermIds?: string[],
 ) {
   const scenes = toStaffPermissionScenes(
     rolePermTree,
@@ -459,12 +501,15 @@ function toCheckedStaffPermissionScenes(
 function getActivePermissionTree(
   permissionScenes: StaffPermissionScene[] | undefined,
   activePermissionScene: string,
+  activeBusinessKey: string,
   fallbackTree: StaffPermissionModule[],
 ) {
   const activeScene =
     permissionScenes?.find((item) => item.key === activePermissionScene) ||
     permissionScenes?.[0];
-  const activeBusiness = activeScene?.businesses[0];
+  const activeBusiness =
+    activeScene?.businesses.find((item) => item.key === activeBusinessKey) ||
+    activeScene?.businesses[0];
   return {
     scene: activeScene,
     business: activeBusiness,
@@ -480,10 +525,12 @@ function getInitialPermissionState(
   fallbackTree: StaffPermissionModule[] = EMPTY_PERMISSION_TREE,
 ): StaffPermissionActiveState {
   const firstScene = permissionScenes?.[0];
-  const firstTree = firstScene?.businesses[0]?.modules || fallbackTree;
+  const firstBusiness = firstScene?.businesses[0];
+  const firstTree = firstBusiness?.modules || fallbackTree;
   const { moduleKey, pageKey } = getInitialPermissionKeys(firstTree);
   return {
     sceneKey: firstScene?.key || '',
+    businessKey: firstBusiness?.key || '',
     moduleKey,
     pageKey,
   };
@@ -504,9 +551,18 @@ function getStablePermissionState(
       !permissionScenes?.length)
       ? currentState.sceneKey
       : initialState.sceneKey;
+  const activeScene =
+    permissionScenes?.find((scene) => scene.key === sceneKey) ||
+    permissionScenes?.[0];
+  const activeBusiness =
+    activeScene?.businesses.find(
+      (business) => business.key === currentState?.businessKey,
+    ) || activeScene?.businesses[0];
+  const businessKey = activeBusiness?.key || '';
   const activeTree = getActivePermissionTree(
     permissionScenes,
     sceneKey,
+    businessKey,
     fallbackTree,
   ).tree;
   const activeModule =
@@ -520,6 +576,7 @@ function getStablePermissionState(
 
   return {
     sceneKey,
+    businessKey,
     moduleKey: activeModule?.key || '',
     pageKey: activePage?.key || '',
   };
@@ -597,7 +654,7 @@ function mergeOrgUserDetail(
     account: rawDetail.account || staff.account,
     enabled: detail.state ?? staff.enabled,
     roleMap,
-    overridePermIds: detail.overridePermIds || {},
+    overridePermIds: detail.overridePermIds || [],
     permissionScenes,
     avatar: detail.avatar || detail.avatarUrl || staff.avatar,
     roleName,
@@ -647,6 +704,26 @@ function getPageCheckedState(page?: StaffPermissionPage) {
 
 function getModuleCheckedState(moduleItem?: StaffPermissionModule) {
   return getPermissionNodeCheckedState(moduleItem);
+}
+
+function getPermissionNodesCheckedState(
+  nodes: StaffPermissionNode[],
+): StaffPermissionCheckedState {
+  if (nodes.length === 0) {
+    return {
+      checked: false,
+      indeterminate: false,
+    };
+  }
+  const childStates = nodes.map(getPermissionNodeCheckedState);
+  const checked = childStates.every((item) => item.checked);
+  const hasCheckedChild = childStates.some(
+    (item) => item.checked || item.indeterminate,
+  );
+  return {
+    checked,
+    indeterminate: hasCheckedChild && !checked,
+  };
 }
 
 function updatePermissionScenesChecked(
@@ -701,14 +778,13 @@ function updatePermissionScenesChecked(
 }
 
 function buildOverridePermIds(permissionScenes?: StaffPermissionScene[]) {
-  const result: Record<string, string[]> = {};
+  const result: string[] = [];
   (permissionScenes || []).forEach((scene) => {
     scene.businesses.forEach((business) => {
-      const checkedIds = collectCheckedPermissionNodeIds(business.modules);
-      result[business.key] = Array.from(new Set(checkedIds));
+      result.push(...collectUncheckedPermissionNodeIds(business.modules));
     });
   });
-  return result;
+  return Array.from(new Set(result));
 }
 
 function getStaffFormInitialValues(staff?: StaffRecord) {
@@ -718,6 +794,7 @@ function getStaffFormInitialValues(staff?: StaffRecord) {
     phone: staff?.phone,
     avatarFileList: createRemoteUploadFileList(staff?.avatar, 'staff-avatar'),
     password: undefined,
+    confirmPassword: undefined,
   };
 }
 
@@ -794,10 +871,17 @@ type StaffPermissionMatrixProps = {
   permissionTree: StaffPermissionModule[];
   permissionScenes?: StaffPermissionScene[];
   activePermissionScene: string;
+  activeBusinessKey: string;
   activeModuleKey: string;
   activePageKey: string;
   onPermissionSceneChange: (
     value: string,
+    businessKey?: string,
+    moduleKey?: string,
+    pageKey?: string,
+  ) => void;
+  onBusinessChange: (
+    businessKey: string,
     moduleKey?: string,
     pageKey?: string,
   ) => void;
@@ -810,9 +894,11 @@ const StaffPermissionMatrix: React.FC<StaffPermissionMatrixProps> = ({
   permissionTree,
   permissionScenes,
   activePermissionScene,
+  activeBusinessKey,
   activeModuleKey,
   activePageKey,
   onPermissionSceneChange,
+  onBusinessChange,
   onModuleChange,
   onPageChange,
   editable = false,
@@ -824,17 +910,23 @@ const StaffPermissionMatrix: React.FC<StaffPermissionMatrixProps> = ({
   const activePermission = getActivePermissionTree(
     permissionScenes,
     activePermissionScene,
+    activeBusinessKey,
     permissionTree,
   );
   const sceneOptions =
     permissionScenes && permissionScenes.length > 0
-      ? permissionScenes.map((scene) => ({
-          key: scene.key,
-          name: scene.name,
-          tree: scene.businesses[0]?.modules || [],
-        }))
+      ? permissionScenes.map((scene) => {
+          const firstBusiness = scene.businesses[0];
+          return {
+            key: scene.key,
+            name: scene.name,
+            businessKey: firstBusiness?.key || '',
+            tree: firstBusiness?.modules || [],
+          };
+        })
       : [];
   const displayPermissionTree = activePermission.tree;
+  const activeBusinesses = activePermission.scene?.businesses || [];
   const activeModule =
     displayPermissionTree.find((item) => item.key === activeModuleKey) ||
     displayPermissionTree[0];
@@ -842,7 +934,7 @@ const StaffPermissionMatrix: React.FC<StaffPermissionMatrixProps> = ({
     activeModule?.children.find((item) => item.key === activePageKey) ||
     activeModule?.children[0];
   const activeSceneKey = activePermission.scene?.key;
-  const activeBusinessKey = activePermission.business?.key;
+  const currentBusinessKey = activePermission.business?.key;
   const nestedColumns: {
     key: string;
     title: string;
@@ -905,7 +997,12 @@ const StaffPermissionMatrix: React.FC<StaffPermissionMatrixProps> = ({
   };
   useEffect(() => {
     setActiveNestedKeys({});
-  }, [activePermissionScene, activeModuleKey, activePageKey]);
+  }, [
+    activePermissionScene,
+    activeBusinessKey,
+    activeModuleKey,
+    activePageKey,
+  ]);
   const updateChecked = (options: {
     moduleKey?: string;
     pageKey?: string;
@@ -916,7 +1013,7 @@ const StaffPermissionMatrix: React.FC<StaffPermissionMatrixProps> = ({
     onPermissionScenesChange(
       updatePermissionScenesChecked(permissionScenes, {
         sceneKey: activeSceneKey,
-        businessKey: activeBusinessKey,
+        businessKey: currentBusinessKey,
         ...options,
       }),
     );
@@ -940,6 +1037,7 @@ const StaffPermissionMatrix: React.FC<StaffPermissionMatrixProps> = ({
               const firstModule = scene.tree[0];
               onPermissionSceneChange(
                 scene.key,
+                scene.businessKey,
                 firstModule?.key,
                 firstModule?.children[0]?.key,
               );
@@ -951,11 +1049,52 @@ const StaffPermissionMatrix: React.FC<StaffPermissionMatrixProps> = ({
       </div>
       <div className="staff-permission-panel">
         <div className="staff-permission-tags">
-          <Tag className="staff-permission-business-tag is-active">
-            <Checkbox checked disabled>
-              {activePermission.business?.name || '门店视角'}
-            </Checkbox>
-          </Tag>
+          {activeBusinesses.map((business) => {
+            const checkedState = getPermissionNodesCheckedState(
+              business.modules,
+            );
+            const firstModule = business.modules[0];
+            const selectBusiness = () => {
+              onBusinessChange(
+                business.key,
+                firstModule?.key,
+                firstModule?.children[0]?.key,
+              );
+            };
+            return (
+              <Tag
+                key={business.key}
+                className={[
+                  'staff-permission-business-tag',
+                  business.key === currentBusinessKey ? 'is-active' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                onClick={selectBusiness}
+              >
+                <Checkbox
+                  aria-label={business.name}
+                  checked={checkedState.checked}
+                  indeterminate={checkedState.indeterminate}
+                  disabled={!editable}
+                  onClick={(event) => event.stopPropagation()}
+                  onChange={(event) => {
+                    selectBusiness();
+                    onPermissionScenesChange?.(
+                      updatePermissionScenesChecked(permissionScenes, {
+                        sceneKey: activeSceneKey,
+                        businessKey: business.key,
+                        checked: event.target.checked,
+                      }),
+                    );
+                  }}
+                />
+                <span className="staff-permission-business-name">
+                  {business.name}
+                </span>
+              </Tag>
+            );
+          })}
         </div>
         <div className="staff-permission-matrix">
           <div className="staff-permission-column">
@@ -1074,21 +1213,25 @@ const StaffPermissionMatrix: React.FC<StaffPermissionMatrixProps> = ({
             <div className="staff-permission-column-title">权限</div>
             <div className="staff-permission-action-list">
               {activePermissionItems.map((permission) => (
-                <Checkbox
+                <div
                   key={permission.key}
-                  checked={permission.checked}
-                  disabled={!editable}
-                  onChange={(event) =>
-                    updateChecked({
-                      moduleKey: activeModule?.key,
-                      pageKey: activePage?.key,
-                      permissionKey: permission.key,
-                      checked: event.target.checked,
-                    })
-                  }
+                  className="staff-permission-action-item"
                 >
-                  {permission.name}
-                </Checkbox>
+                  <Checkbox
+                    aria-label={permission.name}
+                    checked={permission.checked}
+                    disabled={!editable}
+                    onChange={(event) =>
+                      updateChecked({
+                        moduleKey: activeModule?.key,
+                        pageKey: activePage?.key,
+                        permissionKey: permission.key,
+                        checked: event.target.checked,
+                      })
+                    }
+                  />
+                  <span>{permission.name}</span>
+                </div>
               ))}
               {activePermissionItems.length === 0 ? (
                 <Empty
@@ -1192,7 +1335,8 @@ const RolePickerModal: React.FC<RolePickerModalProps> = ({
     {
       title: '角色名称',
       dataIndex: 'roleName',
-      render: (value: string) => value || '-',
+      render: (_value: string, record: StaffRoleRecord) =>
+        renderPickerRoleName(record),
     },
     {
       title: '角色描述',
@@ -1304,6 +1448,9 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
   const [submitLoading, setSubmitLoading] = useState(false);
   const [rolePickerOpen, setRolePickerOpen] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<StaffRoleRecord[]>([]);
+  const [userMatchStatus, setUserMatchStatus] =
+    useState<UserPhoneMatchStatus>('idle');
+  const [matchedUser, setMatchedUser] = useState<SearchUserResult>();
   const [permissionLoading, setPermissionLoading] = useState(false);
   const [permissionScenes, setPermissionScenes] =
     useState<StaffPermissionScene[]>();
@@ -1315,6 +1462,9 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
   );
   const [activePermissionScene, setActivePermissionScene] = useState(
     initialPermissionState.sceneKey,
+  );
+  const [activeBusinessKey, setActiveBusinessKey] = useState(
+    initialPermissionState.businessKey,
   );
   const [activeModuleKey, setActiveModuleKey] = useState(
     initialPermissionState.moduleKey,
@@ -1336,6 +1486,48 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
     [selectedRoles],
   );
 
+  const resetCreateFormState = useCallback(() => {
+    const nextState = getInitialPermissionState(
+      undefined,
+      EMPTY_PERMISSION_TREE,
+    );
+    setStaff(undefined);
+    form.resetFields();
+    form.setFieldsValue(getStaffFormInitialValues(undefined));
+    setRolePickerOpen(false);
+    setSelectedRoles([]);
+    setUserMatchStatus('idle');
+    setMatchedUser(undefined);
+    setPermissionScenes(undefined);
+    setPermissionExpanded(true);
+    setActivePermissionScene(nextState.sceneKey);
+    setActiveBusinessKey(nextState.businessKey);
+    setActiveModuleKey(nextState.moduleKey);
+    setActivePageKey(nextState.pageKey);
+    activePermissionStateRef.current = nextState;
+    setActiveFormSection(STAFF_FORM_SECTIONS[0].key);
+  }, [form]);
+
+  const navigateBackToStaffList = useCallback(
+    (options?: { refreshList?: boolean; closeCreateTab?: boolean }) => {
+      history.push(STAFF_LIST_PATH);
+      if (!options?.refreshList && !options?.closeCreateTab) return;
+      window.setTimeout(() => {
+        if (options?.closeCreateTab) {
+          window.dispatchEvent(
+            new CustomEvent(ROUTE_TAB_CLOSE_EVENT, {
+              detail: { path: STAFF_CREATE_PATH },
+            }),
+          );
+        }
+        if (options?.refreshList) {
+          window.dispatchEvent(new Event(ROUTE_TAB_REFRESH_EVENT));
+        }
+      }, 120);
+    },
+    [],
+  );
+
   useEffect(() => {
     form.setFieldsValue(getStaffFormInitialValues(staff));
   }, [form, staff]);
@@ -1343,10 +1535,16 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
   useEffect(() => {
     activePermissionStateRef.current = {
       sceneKey: activePermissionScene,
+      businessKey: activeBusinessKey,
       moduleKey: activeModuleKey,
       pageKey: activePageKey,
     };
-  }, [activePermissionScene, activeModuleKey, activePageKey]);
+  }, [
+    activePermissionScene,
+    activeBusinessKey,
+    activeModuleKey,
+    activePageKey,
+  ]);
 
   useEffect(() => {
     const nextState = getStablePermissionState(
@@ -1355,6 +1553,7 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
       activePermissionStateRef.current,
     );
     setActivePermissionScene(nextState.sceneKey);
+    setActiveBusinessKey(nextState.businessKey);
     setActiveModuleKey(nextState.moduleKey);
     setActivePageKey(nextState.pageKey);
   }, [permissionScenes, permissionTree]);
@@ -1434,6 +1633,11 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
 
   const handleSubmit = async () => {
     try {
+      if (!isEdit && userMatchStatus === 'idle') {
+        await form.validateFields(['phone']);
+        message.warning('请先匹配员工手机号');
+        return;
+      }
       const values = await form.validateFields();
       const nickName = normalizeText(values.nickName);
       const overridePermIds = buildOverridePermIds(permissionScenes);
@@ -1454,16 +1658,20 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
           { skipErrorHandler: true },
         );
         message.success(getApiMessage(res, '修改员工成功'));
-        history.push('/permission/store-staff');
+        navigateBackToStaffList({ refreshList: true });
         return;
       }
       const avatar = await resolveUploadAttachmentId(
         values.avatarFileList as UploadFile[] | undefined,
         staff?.avatar || '',
       );
-      const name = normalizeText(values.name);
+      const name =
+        userMatchStatus === 'matched'
+          ? normalizeText(matchedUser?.name)
+          : normalizeText(values.name);
       const phone = normalizeText(values.phone);
-      const password = normalizeText(values.password);
+      const password =
+        userMatchStatus === 'new' ? normalizeText(values.password) : '';
       const data: AddOrgUserParams = {
         phone,
         nickName,
@@ -1476,7 +1684,8 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
       setSubmitLoading(true);
       const res = await addOrgUser(data, { skipErrorHandler: true });
       message.success(getApiMessage(res, '新增员工账号成功'));
-      history.push('/permission/store-staff');
+      resetCreateFormState();
+      navigateBackToStaffList({ refreshList: true, closeCreateTab: true });
     } catch (error: any) {
       if (error?.errorFields) return;
       console.error('save org user failed:', error);
@@ -1527,9 +1736,7 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
           {isEdit ? '修改员工账号' : '新增员工账号'}
         </div>
         <Space>
-          <Button onClick={() => history.push('/permission/store-staff')}>
-            取消
-          </Button>
+          <Button onClick={() => navigateBackToStaffList()}>取消</Button>
           <Button type="primary" loading={submitLoading} onClick={handleSubmit}>
             保存
           </Button>
@@ -1568,37 +1775,48 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
         >
           <section id="staff-form-basic" className="staff-create-card">
             <div className="staff-create-section-title">基本信息</div>
-            <Form.Item
-              label="姓名"
-              name="name"
-              rules={
-                isEdit ? [] : [{ required: true, message: '请输入员工姓名' }]
-              }
-            >
-              <Input disabled={isEdit} placeholder="请输入" maxLength={30} />
-            </Form.Item>
-            <Form.Item
-              label="昵称"
-              name="nickName"
-              rules={[{ required: true, message: '请输入昵称' }]}
-            >
-              <Input placeholder="请输入" maxLength={30} />
-            </Form.Item>
-            <Form.Item
-              label="手机号"
-              name="phone"
-              rules={
-                isEdit ? [] : [{ required: true, message: '请输入手机号' }]
-              }
-            >
-              <Input disabled={isEdit} placeholder="请输入" maxLength={20} />
-            </Form.Item>
-            <Form.Item label="登录密码" name="password">
-              <Input.Password
-                disabled={isEdit}
-                placeholder="请输入8-20位，大小写字母、数字、英文字符"
+            {isEdit ? (
+              <>
+                <Form.Item label="姓名" name="name">
+                  <Input disabled placeholder="请输入" maxLength={30} />
+                </Form.Item>
+                <Form.Item
+                  label="昵称"
+                  name="nickName"
+                  rules={[{ required: true, message: '请输入昵称' }]}
+                >
+                  <Input placeholder="请输入" maxLength={30} />
+                </Form.Item>
+                <Form.Item label="手机号" name="phone">
+                  <Input disabled placeholder="请输入" maxLength={20} />
+                </Form.Item>
+                <Form.Item label="登录密码" name="password">
+                  <Input.Password
+                    disabled
+                    placeholder="请输入8-20位，大小写字母、数字、英文字符"
+                  />
+                </Form.Item>
+              </>
+            ) : (
+              <UserPhoneMatchFields
+                form={form}
+                status={userMatchStatus}
+                matchedUser={matchedUser}
+                onStatusChange={setUserMatchStatus}
+                onMatchedUserChange={setMatchedUser}
+                phoneName="phone"
+                nameName="name"
+                nickNameName="nickName"
+                passwordName="password"
+                confirmPasswordName="confirmPassword"
+                phoneLabel="手机号"
+                phonePlaceholder="请输入手机号"
+                matchedMessage="已匹配到现有用户，将绑定为员工账号。"
+                newMessage="未匹配到现有用户，请补充员工信息并创建新账号。"
+                nameRequiredMessage="请输入员工姓名"
+                nickNameRequiredMessage="请输入昵称"
               />
-            </Form.Item>
+            )}
             <Form.Item
               label="头像"
               name="avatarFileList"
@@ -1668,12 +1886,24 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
                     permissionTree={permissionTree}
                     permissionScenes={permissionScenes}
                     activePermissionScene={activePermissionScene}
+                    activeBusinessKey={activeBusinessKey}
                     activeModuleKey={activeModuleKey}
                     activePageKey={activePageKey}
-                    onPermissionSceneChange={(value, moduleKey, pageKey) => {
+                    onPermissionSceneChange={(
+                      value,
+                      businessKey,
+                      moduleKey,
+                      pageKey,
+                    ) => {
                       setActivePermissionScene(value);
-                      if (moduleKey) setActiveModuleKey(moduleKey);
-                      if (pageKey) setActivePageKey(pageKey);
+                      setActiveBusinessKey(businessKey || '');
+                      setActiveModuleKey(moduleKey || '');
+                      setActivePageKey(pageKey || '');
+                    }}
+                    onBusinessChange={(businessKey, moduleKey, pageKey) => {
+                      setActiveBusinessKey(businessKey);
+                      setActiveModuleKey(moduleKey || '');
+                      setActivePageKey(pageKey || '');
                     }}
                     onModuleChange={(moduleKey, pageKey) => {
                       setActiveModuleKey(moduleKey);
@@ -1722,6 +1952,9 @@ const StoreStaffListPage: React.FC = () => {
   const [activePermissionScene, setActivePermissionScene] = useState(
     initialPermissionState.sceneKey,
   );
+  const [activeBusinessKey, setActiveBusinessKey] = useState(
+    initialPermissionState.businessKey,
+  );
   const [activeModuleKey, setActiveModuleKey] = useState(
     initialPermissionState.moduleKey,
   );
@@ -1742,6 +1975,7 @@ const StoreStaffListPage: React.FC = () => {
       selectedStaff?.permissionTree || EMPTY_PERMISSION_TREE,
     );
     setActivePermissionScene(nextState.sceneKey);
+    setActiveBusinessKey(nextState.businessKey);
     setActiveModuleKey(nextState.moduleKey);
     setActivePageKey(nextState.pageKey);
   }, [selectedStaff]);
@@ -1940,7 +2174,7 @@ const StoreStaffListPage: React.FC = () => {
         <Button
           type="primary"
           className="store-staff-create-btn"
-          onClick={() => history.push('/permission/store-staff/create')}
+          onClick={() => history.push(STAFF_CREATE_PATH)}
         >
           新增员工
         </Button>
@@ -1960,6 +2194,7 @@ const StoreStaffListPage: React.FC = () => {
             {!staffLoading &&
               pagedStaffs.map((staff) => {
                 const active = staff.id === selectedStaff?.id;
+                const staffListDisplayName = getStaffListDisplayName(staff);
                 const staffMetas = [staff.roleName].filter(isMeaningfulValue);
                 return (
                   <div
@@ -1981,7 +2216,9 @@ const StoreStaffListPage: React.FC = () => {
                     </span>
                     <span className="staff-list-main">
                       <span className="staff-list-name-row">
-                        <span className="staff-list-name">{staff.name}</span>
+                        <span className="staff-list-name">
+                          {staffListDisplayName}
+                        </span>
                         {active ? (
                           <Switch
                             size="small"
@@ -2097,12 +2334,24 @@ const StoreStaffListPage: React.FC = () => {
                       }
                       permissionScenes={selectedStaff.permissionScenes}
                       activePermissionScene={activePermissionScene}
+                      activeBusinessKey={activeBusinessKey}
                       activeModuleKey={activeModuleKey}
                       activePageKey={activePageKey}
-                      onPermissionSceneChange={(value, moduleKey, pageKey) => {
+                      onPermissionSceneChange={(
+                        value,
+                        businessKey,
+                        moduleKey,
+                        pageKey,
+                      ) => {
                         setActivePermissionScene(value);
-                        if (moduleKey) setActiveModuleKey(moduleKey);
-                        if (pageKey) setActivePageKey(pageKey);
+                        setActiveBusinessKey(businessKey || '');
+                        setActiveModuleKey(moduleKey || '');
+                        setActivePageKey(pageKey || '');
+                      }}
+                      onBusinessChange={(businessKey, moduleKey, pageKey) => {
+                        setActiveBusinessKey(businessKey);
+                        setActiveModuleKey(moduleKey || '');
+                        setActivePageKey(pageKey || '');
                       }}
                       onModuleChange={(moduleKey, pageKey) => {
                         setActiveModuleKey(moduleKey);

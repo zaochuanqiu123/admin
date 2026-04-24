@@ -3,12 +3,8 @@ import { message } from 'antd';
 import { getPermContext, getUserLoginContextResponse } from '@/api/context';
 import {
   clearSelectedOrgCode,
-  getBusinessList,
-  getCurrentBusinessCode,
   getLoginOrgList,
   getSelectedOrgCode,
-  setBusinessList,
-  setCurrentBusinessCode,
   setSelectedOrgCode,
 } from '@/api/storage';
 import { getUserInfo as fetchUserInfoFromApi } from '@/api/user';
@@ -18,7 +14,6 @@ import {
   extractButtonPermissionMap,
   extractPermContextNodes,
   mapPermContextToMenuData,
-  TEMP_BUSINESS_CODE,
 } from '@/utils/menu';
 import {
   clearStoreScopedStorage,
@@ -199,8 +194,6 @@ export async function switchIdentityContext(
 
   // 备份当前状态，失败时恢复
   const prevOrgCode = getSelectedOrgCode();
-  const prevBusinessList = getBusinessList<any[]>();
-  const prevBusinessCode = getCurrentBusinessCode();
   let prevInitialState: Record<string, any> | undefined;
   setInitialState((state) => {
     prevInitialState = state ? { ...state } : undefined;
@@ -216,40 +209,12 @@ export async function switchIdentityContext(
       skipErrorHandler: true,
     });
     const loginContext = unwrapApiData<any>(loginContextResponse);
-    const businessList = Array.isArray(loginContext?.businessList)
-      ? loginContext.businessList
-      : [];
-
-    if (businessList.length === 0) {
-      const backendMessage =
-        loginContextResponse?.msg ||
-        loginContextResponse?.message ||
-        loginContext?.msg ||
-        loginContext?.message ||
-        '当前身份暂无可用业态';
-      // 恢复旧状态
-      if (prevOrgCode) {
-        setSelectedOrgCode(prevOrgCode);
-      } else {
-        clearSelectedOrgCode();
-      }
-      if (prevInitialState) {
-        setInitialState(() => prevInitialState as Record<string, any>);
-      }
-      message.warning(String(backendMessage));
-      return false;
-    }
-
-    const defaultBusiness = businessList[0];
-    const businessCode = defaultBusiness?.businessCode || TEMP_BUSINESS_CODE;
 
     // 接口成功后再清理旧数据并写入新数据
     clearStoreScopedStorage();
     setSelectedOrgCode(orgCode);
-    setBusinessList(businessList);
-    setCurrentBusinessCode(businessCode);
 
-    const permResponse = await getPermContext(businessCode, {
+    const permResponse = await getPermContext({
       skipErrorHandler: true,
     });
     const permNodes = extractPermContextNodes(permResponse);
@@ -260,8 +225,6 @@ export async function switchIdentityContext(
       ...(state || {}),
       currentOrgCode: orgCode,
       loginContext,
-      businessList,
-      currentBusinessCode: businessCode,
       permContextMenu: permContextMenu.length > 0 ? permContextMenu : undefined,
       buttonPermissions:
         buttonPermissions.length > 0 ? buttonPermissions : undefined,
@@ -312,12 +275,6 @@ export async function switchIdentityContext(
       setSelectedOrgCode(prevOrgCode);
     } else {
       clearSelectedOrgCode();
-    }
-    if (prevBusinessList) {
-      setBusinessList(prevBusinessList);
-    }
-    if (prevBusinessCode) {
-      setCurrentBusinessCode(prevBusinessCode);
     }
     if (prevInitialState) {
       setInitialState(() => prevInitialState as Record<string, any>);

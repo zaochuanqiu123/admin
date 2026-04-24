@@ -12,6 +12,38 @@ export type CommonAction = {
   sourceSystem?: number;
 };
 
+type CommonActionIdentity = Pick<CommonAction, 'id' | 'title' | 'path'>;
+
+function normalizeCommonActionPath(path?: string) {
+  const rawPath = typeof path === 'string' ? path.trim() : '';
+  if (!rawPath) return '';
+  const pathname = rawPath.split(/[?#]/)[0] || '';
+  return pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+}
+
+export function isHomepageCommonAction(
+  action?: Partial<CommonActionIdentity> | null,
+) {
+  if (!action) return false;
+  const path = normalizeCommonActionPath(action.path);
+  const title = typeof action.title === 'string' ? action.title.trim() : '';
+  const id = typeof action.id === 'string' ? action.id.trim() : '';
+  return (
+    path === '/dashboard' ||
+    path === '/dashboard/index' ||
+    title === '首页' ||
+    title === '首页' ||
+    id === 'dashboard-index'
+  );
+}
+
+export function filterHomepageCommonActions<T extends CommonActionIdentity>(
+  actions: T[],
+) {
+  const filtered = actions.filter((action) => !isHomepageCommonAction(action));
+  return filtered.length === actions.length ? actions : filtered;
+}
+
 export type CommonSubGroup = {
   id: string;
   title: string;
@@ -29,7 +61,11 @@ export type CommonGroup = {
  * 默认常用操作列表
  */
 export const DEFAULT_COMMON_ACTIONS: CommonAction[] = [
-  { id: 'dashboard-index', title: '系统首页', path: '/dashboard/index' },
+  { id: 'role-list', title: '角色列表', path: '/permission/role-list' },
+  { id: 'store-staff', title: '员工管理', path: '/permission/store-staff' },
+  { id: 'qr-code', title: '二维码管理', path: '/platform/qr-code' },
+  { id: 'qr-template', title: '二维码模板', path: '/platform/qr-template' },
+  { id: 'speaker-list', title: '音箱管理', path: '/device/speaker-list' },
 ];
 
 /**

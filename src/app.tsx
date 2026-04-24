@@ -1,4 +1,4 @@
-import { DownOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons';
+import { MoonOutlined, SunOutlined } from '@ant-design/icons';
 
 import type {
   Settings as LayoutSettings,
@@ -8,7 +8,7 @@ import { SettingDrawer } from '@ant-design/pro-components';
 
 import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
 import { history } from '@umijs/max';
-import { Button, Dropdown, Modal, message, Tooltip } from 'antd';
+import { Button, Modal, message, Tooltip } from 'antd';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { NoticeBell } from '@/components';
 import HeaderIdentityDropdown from '@/components/HeaderIdentityDropdown';
@@ -25,12 +25,9 @@ import {
   clearRouteTabs,
   clearSelectedOrgCode,
   clearToken,
-  emitRouteTabsResetEvent,
-  getCurrentBusinessCode,
   getLoginUserInfo,
   getSelectedOrgCode,
   getToken,
-  setCurrentBusinessCode,
 } from '@/api/storage';
 import { getUserInfo as fetchUserInfoFromApi } from '@/api/user';
 import logoDark from '@/assets/logo-dark.png';
@@ -41,6 +38,7 @@ import WorkplaceCommonMenu from '@/components/Workplace/WorkplaceCommonMenu';
 import {
   type CommonAction,
   DEFAULT_COMMON_ACTIONS,
+  filterHomepageCommonActions,
 } from '@/config/menu.config';
 import {
   clearPostLoginRedirect,
@@ -51,15 +49,17 @@ import {
   readCommonActionsFromStorage,
   writeCommonActionsToStorage,
 } from '@/utils/commonActions.storage';
+import {
+  getCurrentIdentityItem,
+  getIdentityItemsFromStorage,
+} from '@/utils/identity';
 import { buildIframeRouteWithParams } from '@/utils/iframe';
 import {
   extractButtonPermissionMap,
   extractPermContextNodes,
   findFirstLeafMenuTarget,
   findPathByTargetId,
-  getValidBusinessCode,
   mapPermContextToMenuData,
-  TEMP_BUSINESS_CODE,
 } from '@/utils/menu';
 import {
   clearStoreScopedStorage,
@@ -76,98 +76,28 @@ const HEADER_USER_AVATAR_SRC =
   'https://api.dicebear.com/7.x/miniavs/svg?seed=antd-yangkun';
 let logoutInFlight: Promise<void> | null = null;
 
-function normalizeCommonActionId(value: string) {
-  return value.replace(/[^a-zA-Z0-9:_/-]/g, '_');
-}
-
-function getMenuItemTargetId(item: MenuDataItem) {
-  const rawTargetId = (item as any)?.targetId;
-  if (rawTargetId === undefined || rawTargetId === null) return undefined;
-  const targetId = String(rawTargetId).trim();
-  return targetId || undefined;
-}
-
-function getMenuItemSourceSystem(item: MenuDataItem) {
-  const sourceSystem = Number((item as any)?.sourceSystem);
-  return Number.isFinite(sourceSystem) ? sourceSystem : undefined;
-}
-
-function getCommonActionTitle(item: MenuDataItem, fallback: string) {
-  const rawTitle = item?.name ?? item?.locale;
-  const title =
-    typeof rawTitle === 'string' || typeof rawTitle === 'number'
-      ? String(rawTitle).trim()
-      : '';
-  return title || fallback;
-}
-
-function buildCommonActionFromMenuItem(
-  item: MenuDataItem,
-  fallback: string,
-): CommonAction | undefined {
-  const path = typeof item?.path === 'string' ? item.path.trim() : '';
-  if (!path) return undefined;
-  const title = getCommonActionTitle(item, fallback);
-  const targetId = getMenuItemTargetId(item);
-  const sourceSystem = getMenuItemSourceSystem(item);
-  const rawId = item?.key ?? targetId ?? path ?? title ?? fallback;
-  return {
-    id: normalizeCommonActionId(
-      [path, targetId, rawId, title, fallback]
-        .filter(
-          (value) => value !== undefined && value !== null && value !== '',
-        )
-        .map((value) => String(value))
-        .join('__') || fallback,
-    ),
-    title,
-    path,
-    targetId,
-    sourceSystem,
-  };
-}
-
-function buildDefaultCommonActionsFromMenu(
-  menuData: MenuDataItem[] | undefined,
-) {
-  const collected: CommonAction[] = [];
-  const seen = new Set<string>();
-  const walk = (items: MenuDataItem[] | undefined, prefix: string) => {
-    if (!Array.isArray(items)) return;
-    items.forEach((item, index) => {
-      const children = Array.isArray(item?.children)
-        ? (item.children as MenuDataItem[])
-        : [];
-      if (children.length > 0) {
-        walk(children, `${prefix}-${index}`);
-        return;
-      }
-      const action = buildCommonActionFromMenuItem(item, `${prefix}-${index}`);
-      if (!action) return;
-      const key = [
-        action.title,
-        action.sourceSystem ?? '',
-        action.targetId ?? '',
-        action.path,
-      ].join('::');
-      if (seen.has(key)) return;
-      seen.add(key);
-      collected.push(action);
-    });
-  };
-  walk(menuData, 'current-menu');
-  const localActions = collected.filter(
-    (item) => item.path !== '/app' && item.sourceSystem !== 1,
-  );
-  const iframeActions = collected.filter(
-    (item) => item.path === '/app' || item.sourceSystem === 1,
-  );
-  const result = [...localActions, ...iframeActions].slice(0, 7);
-  return result.length > 0 ? result : DEFAULT_COMMON_ACTIONS;
-}
-
 const apiBase = typeof __API_BASE__ !== 'undefined' ? __API_BASE__ : undefined;
 const NAV_THEME_STORAGE_KEY = 'pc_admin_nav_theme';
+
+function getHeaderPlatformLabel(currentOrgCode?: string) {
+  const identity = getCurrentIdentityItem(
+    currentOrgCode,
+    getIdentityItemsFromStorage(),
+  );
+  const identityText = [
+    identity?.levelName,
+    identity?.groupLabel,
+    identity?.name,
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const upperText = identityText.toUpperCase();
+  const isMerchant =
+    identityText.includes('商户') ||
+    identityText.includes('公司') ||
+    upperText.includes('MER');
+  return isMerchant ? '商户平台' : '门店平台';
+}
 
 if (isDev && typeof window !== 'undefined') {
   (window as any).__DEV_BYPASS_AUTH__ = devBypassAuth;
@@ -248,6 +178,10 @@ function stripIframeQueryParams(path: string): string {
   return nextQuery ? `${pathname}?${nextQuery}` : pathname;
 }
 
+function isExternalUrl(path: string): boolean {
+  return /^(https?:)?\/\//i.test(String(path || '').trim());
+}
+
 function getTargetIdFromSearch(search: string | undefined): string | undefined {
   const rawSearch = String(search || '');
   if (!rawSearch) return undefined;
@@ -320,14 +254,12 @@ export async function getInitialState(): Promise<{
   currentOrgCode?: string;
   permContextMenu?: MenuDataItem[];
   buttonPermissions?: API.ButtonPermissionMap;
-  businessList?: any[];
-  currentBusinessCode?: string;
   commonActions?: any[];
   setCommonActions?: (actions: any[]) => void;
 }> {
-  const fetchPermState = async (businessCode?: string) => {
+  const fetchPermState = async () => {
     try {
-      const res = await getPermContext(businessCode);
+      const res = await getPermContext();
       const nodes = extractPermContextNodes(res);
       const menu = mapPermContextToMenuData(nodes);
       const buttonPermissions = extractButtonPermissionMap(res);
@@ -348,8 +280,7 @@ export async function getInitialState(): Promise<{
 
   if (devBypassAuth) {
     const currentUser = getDevUser();
-    const { permContextMenu, buttonPermissions } =
-      await fetchPermState(TEMP_BUSINESS_CODE);
+    const { permContextMenu, buttonPermissions } = await fetchPermState();
     return {
       fetchUserInfo: async () => currentUser,
       currentUser,
@@ -480,42 +411,8 @@ export async function getInitialState(): Promise<{
       };
     }
 
-    // 登录上下文是权限/业态的来源，不能用旧本地缓存兜底。
-    const businessList = Array.isArray(loginContext?.businessList)
-      ? loginContext.businessList
-      : [];
-    if (businessList.length === 0) {
-      clearStoreScopedStorage();
-      const redirect = `${location.pathname}${location.search || ''}`;
-      if (location.pathname !== '/user/character') {
-        setPostLoginRedirect(redirect);
-        history.replace({
-          pathname: '/user/character',
-          search: new URLSearchParams({ redirect }).toString(),
-        });
-      }
-      message.warning('当前身份暂无可用业态，请重新选择身份');
-      return {
-        fetchUserInfo,
-        settings: resolvedSettings,
-      };
-    }
-
-    let currentBusinessCode = getCurrentBusinessCode() || undefined;
-
-    // 验证并获取有效的业态代码
-    currentBusinessCode = getValidBusinessCode(
-      currentBusinessCode,
-      businessList,
-    );
-
-    if (currentBusinessCode !== getCurrentBusinessCode()) {
-      setCurrentBusinessCode(currentBusinessCode);
-    }
-
     // 2. 权限上下文
-    const { permContextMenu, buttonPermissions } =
-      await fetchPermState(currentBusinessCode);
+    const { permContextMenu, buttonPermissions } = await fetchPermState();
 
     // 3. 最后获取用户基本信息
     const currentUser = await fetchUserInfo();
@@ -525,8 +422,6 @@ export async function getInitialState(): Promise<{
       currentUser,
       loginContext,
       currentOrgCode: selectedOrgCode,
-      businessList,
-      currentBusinessCode,
       permContextMenu,
       buttonPermissions,
       settings: resolvedSettings,
@@ -552,27 +447,27 @@ export const layout: RunTimeLayoutConfig = ({
   // 常用数据管理
   const storageKey = `workplace_common_actions_${
     initialState?.currentUser?.name ?? 'guest'
-  }_${initialState?.currentOrgCode ?? 'no-org'}_${initialState?.currentBusinessCode ?? 'no-business'}`;
+  }_${initialState?.currentOrgCode ?? 'no-org'}`;
 
   const loadCommonActions = () => {
-    const menuDefaultActions = buildDefaultCommonActionsFromMenu(
-      initialState?.permContextMenu,
-    );
-    if (typeof window === 'undefined') return menuDefaultActions;
+    const defaultActions = filterHomepageCommonActions(DEFAULT_COMMON_ACTIONS);
+    if (typeof window === 'undefined') return defaultActions;
     const stored = readCommonActionsFromStorage(storageKey);
-    return stored || menuDefaultActions;
+    return stored || defaultActions;
   };
 
   const saveCommonActions = (actions: any[]) => {
     if (typeof window === 'undefined') return;
-    writeCommonActionsToStorage(storageKey, actions);
+    const safeActions = filterHomepageCommonActions(actions as CommonAction[]);
+    writeCommonActionsToStorage(storageKey, safeActions);
     setInitialState((s: any) => ({
       ...s,
-      commonActions: actions,
+      commonActions: safeActions,
     }));
   };
-  const resolvedCommonActions =
-    initialState?.commonActions || loadCommonActions();
+  const resolvedCommonActions = filterHomepageCommonActions(
+    (initialState?.commonActions || loadCommonActions()) as CommonAction[],
+  );
 
   const buildTopMenus = (
     menuData: MenuDataItem[] | undefined,
@@ -610,6 +505,11 @@ export const layout: RunTimeLayoutConfig = ({
   ) => {
     const targetPath = String(path || '').trim();
     if (!targetPath) return;
+
+    if (isExternalUrl(targetPath)) {
+      window.location.assign(targetPath);
+      return;
+    }
 
     if (sourceSystem === 1 || (sourceSystem === undefined && targetId)) {
       const nextUrl = buildIframeRouteWithParams(targetPath, targetId);
@@ -690,136 +590,25 @@ export const layout: RunTimeLayoutConfig = ({
     },
     collapsedButtonRender: false,
     headerTitleRender: (_logo, _title, _) => {
-      // 获取业态列表和当前选中的业态
-      const businessList = initialState?.businessList || [];
-      const currentBusinessCode = initialState?.currentBusinessCode;
-
-      // 找到当前选中的业态
-      const currentBusiness =
-        businessList.find((b: any) => b.businessCode === currentBusinessCode) ||
-        businessList[0];
-
-      // 切换业态的处理函数
-      const handleBusinessChange = async (businessCode: string) => {
-        // 如果选择的是当前业态，不做任何操作
-        if (businessCode === currentBusinessCode) {
-          return;
-        }
-
-        try {
-          // 使用新的 businessCode 调用 getPermContext
-          const permRes = await getPermContext(businessCode);
-          const permNodes = extractPermContextNodes(permRes);
-          const permContextMenu = mapPermContextToMenuData(permNodes);
-          const buttonPermissions = extractButtonPermissionMap(permRes);
-
-          // 保存到 localStorage
-          setCurrentBusinessCode(businessCode);
-
-          // 更新 initialState
-          setInitialState((s: any) => {
-            const next = {
-              ...s,
-              currentBusinessCode: businessCode,
-              permContextMenu:
-                permContextMenu.length > 0 ? permContextMenu : undefined,
-              buttonPermissions:
-                buttonPermissions.length > 0 ? buttonPermissions : undefined,
-            };
-            if (typeof window !== 'undefined') {
-              (window as any).g_initialState = next;
-            }
-            return next;
-          });
-
-          // 清理旧业态的 tabs 和 KeepAlive 缓存
-          clearRouteTabs();
-          emitRouteTabsResetEvent();
-
-          // 检查当前页面是否还有权限
-          const currentTargetId = getTargetIdFromSearch(
-            history.location.search,
-          );
-
-          if (
-            currentTargetId &&
-            !hasLegacyIframeAccess(
-              permContextMenu.length > 0 ? permContextMenu : undefined,
-              history.location.search,
-            )
-          ) {
-            // 如果当前页面在新业态下没有权限，跳转到系统首页
-            history.replace(buildIframeRouteWithParams('/dashboard/index'));
-            message.success('切换业态成功，已跳转到系统首页');
-          } else {
-            message.success('切换业态成功');
-          }
-        } catch (error) {
-          console.error('getPermContext failed:', error);
-          message.error('切换业态失败，请稍后重试');
-        }
-      };
-
-      // 构建下拉菜单项
-      const menuItems = businessList.map((business: any) => ({
-        key: business.businessCode,
-        label: business.businessName,
-      }));
-
-      // 判断是否显示业态选择（loginContext 或当前选中的 business 项中 isshow / isShow 为 false 时不显示）
-      const loginContext = initialState?.loginContext;
-      const showBusinessPill =
-        loginContext?.isshow !== false &&
-        loginContext?.isShow !== false &&
-        currentBusiness?.isshow !== false &&
-        currentBusiness?.isShow !== false;
+      const platformLabel = getHeaderPlatformLabel(
+        initialState?.currentOrgCode,
+      );
 
       return (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            width: 218,
-            height: 60,
-            boxSizing: 'border-box',
-          }}
-        >
+        <div className="header-platform-brand">
           <img
             src={logoDark}
             alt="logo"
-            style={{ height: 48, display: 'block' }}
+            className="header-platform-logo"
+            style={{
+              display: 'block',
+              flex: 'none',
+              width: 'auto',
+              height: 48,
+              maxWidth: 'none',
+            }}
           />
-          {businessList.length > 0 && showBusinessPill && (
-            <Dropdown
-              menu={{
-                items: menuItems,
-                selectedKeys: [currentBusinessCode || ''],
-                onClick: ({ key }) => handleBusinessChange(key),
-              }}
-              trigger={['click']}
-              placement="bottomLeft"
-              overlayClassName="business-switch-menu"
-              overlayStyle={{
-                minWidth: 200,
-              }}
-            >
-              <Button
-                type="text"
-                size="small"
-                className="business-switch-pill"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-              >
-                <span className="business-switch-pill__label">
-                  {currentBusiness?.businessName || '请选择业态'}
-                </span>
-                <DownOutlined className="business-switch-pill__icon" />
-              </Button>
-            </Dropdown>
-          )}
+          <span className="header-platform-label">{platformLabel}</span>
         </div>
       );
     },
@@ -849,9 +638,7 @@ export const layout: RunTimeLayoutConfig = ({
       const isInDashboard = isDashboardRoute(pathname);
       const topMenus = buildTopMenus(menuProps?.menuData);
       const useSplitMenu = topMenus.length > 0;
-      const menuScopeKey = `${initialState?.currentOrgCode || 'no-org'}::${
-        initialState?.currentBusinessCode || 'no-business'
-      }`;
+      const menuScopeKey = initialState?.currentOrgCode || 'no-org';
 
       if (!isInDashboard) {
         if (useSplitMenu) {
@@ -880,7 +667,7 @@ export const layout: RunTimeLayoutConfig = ({
 
       const storageKey = `workplace_common_actions_${
         initialState?.currentUser?.name ?? 'guest'
-      }_${initialState?.currentOrgCode ?? 'no-org'}_${initialState?.currentBusinessCode ?? 'no-business'}`;
+      }_${initialState?.currentOrgCode ?? 'no-org'}`;
 
       const commonActions = resolvedCommonActions;
       const setCommonActions = saveCommonActions;
@@ -996,6 +783,7 @@ export const layout: RunTimeLayoutConfig = ({
             currentUser={initialState?.currentUser}
             loginContext={(initialState as any)?.loginContext}
             onLogout={handleLogout}
+            fetchUserInfo={initialState?.fetchUserInfo}
             setInitialState={setInitialState as any}
           />
         );

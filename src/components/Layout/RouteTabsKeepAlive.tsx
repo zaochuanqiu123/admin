@@ -43,6 +43,7 @@ type CacheEntry = {
 };
 
 export const ROUTE_TAB_REFRESH_EVENT = 'pc-admin-refresh-current-tab';
+export const ROUTE_TAB_CLOSE_EVENT = 'pc-admin-close-route-tab';
 
 const EXCLUDED_PREFIXES = ['/user', '/micro-app'];
 const FIXED_TAB_PATH = '/dashboard/index';
@@ -781,6 +782,27 @@ const RouteTabsKeepAlive: React.FC<{
       );
     };
   }, [handleRefreshCurrentTab]);
+
+  React.useEffect(() => {
+    const handleExternalClose = (event: Event) => {
+      const detail = (
+        event as CustomEvent<{
+          targetKey?: string;
+          path?: string;
+          targetId?: string;
+        }>
+      ).detail;
+      const targetKey =
+        detail?.targetKey ||
+        (detail?.path ? buildTabKey(detail.path, detail.targetId) : '');
+      if (!targetKey) return;
+      handleCloseTab(targetKey);
+    };
+    window.addEventListener(ROUTE_TAB_CLOSE_EVENT, handleExternalClose);
+    return () => {
+      window.removeEventListener(ROUTE_TAB_CLOSE_EVENT, handleExternalClose);
+    };
+  }, [handleCloseTab]);
 
   React.useEffect(() => {
     const el = scrollRef.current;

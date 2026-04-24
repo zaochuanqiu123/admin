@@ -1236,6 +1236,40 @@ body .ant-layout-sider .ant-layout-sider-children>div {
   font-weight: 700 !important;
 }
 
+.header-platform-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 0 0 218px;
+  width: 218px;
+  min-width: 218px;
+  height: 60px;
+  box-sizing: border-box;
+}
+
+.header-platform-logo {
+  display: block;
+  flex: none;
+  width: auto;
+  height: 48px;
+  max-width: none;
+}
+
+.header-platform-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0;
+  color: var(--ant-color-text);
+  font-size: 19px;
+  line-height: 28px;
+  text-align: center;
+  white-space: nowrap;
+}
+
 .business-switch-pill.ant-btn {
   display: inline-flex;
   align-items: center;
@@ -1243,8 +1277,8 @@ body .ant-layout-sider .ant-layout-sider-children>div {
   max-width: 160px;
   height: 28px;
   padding: 0 12px !important;
-  border-radius: 999px !important;
   border: 1px solid var(--pc-color-border-base) !important;
+  border-radius: 999px !important;
   background: var(--pc-color-bg-container) !important;
   color: var(--ant-color-text) !important;
   box-shadow: none;
@@ -1263,18 +1297,18 @@ body .ant-layout-sider .ant-layout-sider-children>div {
 .business-switch-pill__label {
   max-width: 96px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: inherit;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.2;
-  color: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .business-switch-pill__icon {
+  color: inherit;
   font-size: 11px;
   opacity: 0.85;
-  color: inherit;
   transition: transform 0.2s ease;
 }
 

@@ -3,8 +3,6 @@ import { extractButtonPermissionTokens } from '@/utils/button-permission';
 import { resolveTopRoutePath } from '@/utils/route.utils';
 import routes from '../../config/routes';
 
-export const TEMP_BUSINESS_CODE = 'DEFAULT';
-
 function normalizeLookupPath(path: string | undefined): string {
   const raw = String(path || '').trim();
   if (!raw) return '';
@@ -92,6 +90,24 @@ function pickTargetId(node: any): string | undefined {
   if (raw === undefined || raw === null) return undefined;
   const value = String(raw).trim();
   return value || undefined;
+}
+
+function pickOpenStatus(node: any): string | undefined {
+  const raw = node?.openStatus;
+  if (raw === undefined || raw === null) return undefined;
+  const value = String(raw).trim().toUpperCase();
+  return value || undefined;
+}
+
+function pickMarketingRedirectUrl(node: any): string | undefined {
+  const raw = node?.marketingRedirectUrl;
+  if (typeof raw !== 'string') return undefined;
+  const value = raw.trim();
+  return value || undefined;
+}
+
+function shouldUseMarketingRedirect(openStatus: string | undefined): boolean {
+  return openStatus === 'INACTIVE' || openStatus === 'UPGRADE';
 }
 
 function collectPathCandidates(
@@ -236,17 +252,27 @@ export function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
     }
 
     const name = getNodeName(node, index);
-    const sourceSystem = pickSourceSystem(node) ?? inheritedSourceSystem;
+    const openStatus = pickOpenStatus(node);
+    const marketingRedirectUrl = pickMarketingRedirectUrl(node);
+    const useMarketingRedirect =
+      shouldUseMarketingRedirect(openStatus) && !!marketingRedirectUrl;
+    const sourceSystem = useMarketingRedirect
+      ? undefined
+      : (pickSourceSystem(node) ?? inheritedSourceSystem);
     const targetId =
-      pickTargetId(node) ??
-      (sourceSystem === 1 ? inheritedTargetId : undefined);
-    const path = pickPath(node, name) || inheritedPath;
+      useMarketingRedirect || sourceSystem !== 1
+        ? undefined
+        : (pickTargetId(node) ?? inheritedTargetId);
+    const path = useMarketingRedirect
+      ? marketingRedirectUrl
+      : pickPath(node, name) || inheritedPath;
 
-    const childrenSource =
-      (Array.isArray(node?.children) && node.children) ||
-      (Array.isArray(node?.childList) && node.childList) ||
-      (Array.isArray(node?.child) && node.child) ||
-      [];
+    const childrenSource = useMarketingRedirect
+      ? []
+      : (Array.isArray(node?.children) && node.children) ||
+        (Array.isArray(node?.childList) && node.childList) ||
+        (Array.isArray(node?.child) && node.child) ||
+        [];
 
     const children = (childrenSource as any[])
       .map((child, childIndex) =>
@@ -268,10 +294,14 @@ export function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
       children: children.length > 0 ? children : undefined,
       targetId,
       sourceSystem,
+      openStatus,
+      marketingRedirectUrl,
       sort: node?.sort ?? 0,
     } as MenuDataItem & {
       targetId?: string;
       sourceSystem?: number;
+      openStatus?: string;
+      marketingRedirectUrl?: string;
       sort?: number;
     };
   };
@@ -302,31 +332,6 @@ export function extractButtonPermissionMap(res: any): API.ButtonPermissionMap {
     tokenSet.add(token);
   });
   return Array.from(tokenSet);
-}
-
-export function validateBusinessCode(
-  businessCode: string | undefined,
-  businessList: any[] | undefined,
-): boolean {
-  if (!businessCode || !businessList || businessList.length === 0) {
-    return false;
-  }
-  return businessList.some((item: any) => item.businessCode === businessCode);
-}
-
-export function getValidBusinessCode(
-  currentBusinessCode: string | undefined,
-  businessList: any[] | undefined,
-): string {
-  if (!businessList || businessList.length === 0) {
-    return TEMP_BUSINESS_CODE;
-  }
-
-  if (validateBusinessCode(currentBusinessCode, businessList)) {
-    return currentBusinessCode as string;
-  }
-
-  return businessList[0]?.businessCode || TEMP_BUSINESS_CODE;
 }
 
 function normalizePath(path: string | undefined): string {
@@ -510,7 +515,7 @@ function getMenuChildren(node: MenuDataItem | undefined): MenuNodeWithTarget[] {
 
 function getMenuNodePath(node: MenuDataItem | undefined): string | undefined {
   const pathValue = node?.path ? String(node.path).trim() : '';
-  return pathValue.startsWith('/') ? pathValue : undefined;
+  return pathValue || undefined;
 }
 
 function getMenuNodeTargetId(

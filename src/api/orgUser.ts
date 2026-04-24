@@ -47,7 +47,7 @@ export type OrgUserDetailRecord = {
   nickName?: string;
   state?: boolean;
   roleMap?: Record<string, string>;
-  overridePermIds?: Record<string, string[]>;
+  overridePermIds?: string[];
   timestamp?: number;
   [key: string]: any;
 };
@@ -59,14 +59,14 @@ export type AddOrgUserParams = {
   password?: string;
   avatar?: string;
   roleIds?: string[];
-  overridePermIds?: Record<string, string[]>;
+  overridePermIds?: string[];
 };
 
 export type ModifyOrgUserParams = {
   id: string;
   nickName: string;
   roleIds?: string[];
-  overridePermIds?: Record<string, string[]>;
+  overridePermIds?: string[];
 };
 
 export async function getOrgUserPage(

@@ -29,7 +29,8 @@ import {
   COMMON_GROUPS,
   type CommonAction,
   type CommonGroup,
-  DEFAULT_COMMON_ACTIONS,
+  filterHomepageCommonActions,
+  isHomepageCommonAction,
 } from '@/config/menu.config';
 import {
   readGroupOrderFromStorage,
@@ -124,15 +125,14 @@ function collectMenuActions(
 
   if (children.length === 0) {
     if (!path) return [];
-    return [
-      {
-        id: buildActionId(node, path, title, fallbackPrefix),
-        title,
-        path,
-        targetId: getMenuNodeTargetId(node),
-        sourceSystem: getMenuNodeSourceSystem(node),
-      },
-    ];
+    const action = {
+      id: buildActionId(node, path, title, fallbackPrefix),
+      title,
+      path,
+      targetId: getMenuNodeTargetId(node),
+      sourceSystem: getMenuNodeSourceSystem(node),
+    };
+    return isHomepageCommonAction(action) ? [] : [action];
   }
 
   return children.flatMap((child, index) =>
@@ -142,7 +142,7 @@ function collectMenuActions(
 
 function dedupeActions(actions: CommonAction[]) {
   const seen = new Set<string>();
-  return actions.filter((item) => {
+  return filterHomepageCommonActions(actions).filter((item) => {
     const key = [
       item.title,
       item.sourceSystem ?? '',
@@ -305,8 +305,9 @@ const WorkplaceCommonMenu: React.FC<{
   const { initialState } = useModel('@@initialState');
   const { token } = theme.useToken();
   const [open, setOpen] = React.useState(false);
-  const [draftList, setDraftList] =
-    React.useState<CommonAction[]>(commonActions);
+  const [draftList, setDraftList] = React.useState<CommonAction[]>(
+    filterHomepageCommonActions(commonActions),
+  );
   const [activeId, setActiveId] = React.useState<UniqueIdentifier | null>(null);
   const [savedGroupOrder, setSavedGroupOrder] = React.useState<string[]>(
     COMMON_GROUPS.map((g) => g.id),
@@ -345,7 +346,7 @@ const WorkplaceCommonMenu: React.FC<{
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    setDraftList(commonActions);
+    setDraftList(filterHomepageCommonActions(commonActions));
 
     const defaultOrder = commonGroupIds;
     const groupOrder = readGroupOrderFromStorage(storageKey, defaultOrder);
@@ -393,7 +394,9 @@ const WorkplaceCommonMenu: React.FC<{
   }, []);
 
   const openDrawer = React.useCallback(() => {
-    setDraftList(commonActions.map((x) => ({ ...x })));
+    setDraftList(
+      filterHomepageCommonActions(commonActions).map((x) => ({ ...x })),
+    );
     setDraftGroupOrder(savedGroupOrder.map((x) => x));
     setOpen(true);
   }, [commonActions, savedGroupOrder]);
@@ -413,17 +416,23 @@ const WorkplaceCommonMenu: React.FC<{
   }, [openDrawer]);
 
   const restoreDefault = () => {
-    setDraftList(DEFAULT_COMMON_ACTIONS.map((x) => ({ ...x })));
+    setDraftList(
+      filterHomepageCommonActions(commonActions).map((x) => ({ ...x })),
+    );
   };
 
   const cancelEdit = () => {
     setOpen(false);
-    setDraftList(commonActions.map((x) => ({ ...x })));
+    setDraftList(
+      filterHomepageCommonActions(commonActions).map((x) => ({ ...x })),
+    );
     setDraftGroupOrder(savedGroupOrder.map((x) => x));
   };
 
   const confirmEdit = () => {
-    setCommonActions(draftList.map((x) => ({ ...x })));
+    setCommonActions(
+      filterHomepageCommonActions(draftList).map((x) => ({ ...x })),
+    );
     setSavedGroupOrder(draftGroupOrder.map((x) => x));
     writeGroupOrderToStorage(storageKey, draftGroupOrder);
     setOpen(false);
@@ -434,6 +443,7 @@ const WorkplaceCommonMenu: React.FC<{
   };
 
   const addToDraft = (item: CommonAction) => {
+    if (isHomepageCommonAction(item)) return;
     setDraftList((prev) => {
       if (prev.some((x) => x.id === item.id)) return prev;
       if (prev.length >= COMMON_ACTION_MAX) {

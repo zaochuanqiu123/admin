@@ -7,8 +7,6 @@ import { getPermContext, getUserLoginContextResponse } from '@/api/context';
 import {
   clearSelectedOrgCode,
   getLoginOrgList,
-  setBusinessList,
-  setCurrentBusinessCode,
   setSelectedOrgCode,
 } from '@/api/storage';
 import CharacterTv from '@/assets/character.png';
@@ -26,7 +24,6 @@ import {
   extractPermContextNodes,
   findPathByTargetId,
   mapPermContextToMenuData,
-  TEMP_BUSINESS_CODE,
 } from '@/utils/menu';
 import { getAllowedTopPaths } from '@/utils/route.utils';
 import {
@@ -204,35 +201,14 @@ const Character: FC = () => {
       setInitialState((s: any) => resetStoreScopedInitialState(s));
       setSelectedOrgCode(orgCode);
       try {
-        // 先调用登录上下文，再用登录上下文里的业态获取权限上下文。
+        // 先调用登录上下文，再获取无业态参数的权限上下文，接口顺序保持不变。
         const loginContextRes = await getUserLoginContextResponse(orgCode, {
           skipErrorHandler: true,
         });
         const loginContext = unwrapApiData<any>(loginContextRes);
-        const businessList = Array.isArray(loginContext?.businessList)
-          ? loginContext.businessList
-          : [];
-        if (businessList.length === 0) {
-          const backendMessage =
-            loginContextRes?.msg ||
-            loginContextRes?.message ||
-            loginContext?.msg ||
-            loginContext?.message ||
-            '当前门店暂无可用业态';
-          clearSelectedOrgCode();
-          message.warning(String(backendMessage));
-          return;
-        }
-        const defaultBusiness = businessList[0];
-        const businessCode =
-          defaultBusiness?.businessCode || TEMP_BUSINESS_CODE;
 
-        // 保存到 localStorage
-        setBusinessList(businessList);
-        setCurrentBusinessCode(businessCode);
-
-        // 使用 businessCode 调用 getPermContext 获取权限菜单
-        const permRes = await getPermContext(businessCode, {
+        // 权限上下文接口不再传业态。
+        const permRes = await getPermContext({
           skipErrorHandler: true,
         });
         const permNodes = extractPermContextNodes(permRes);
@@ -277,14 +253,12 @@ const Character: FC = () => {
         // 登录后首次选择身份也需要刷新用户信息，不能只等页面刷新后再补。
         const currentUser = await initialState?.fetchUserInfo?.();
 
-        // 更新 initialState，包括用户信息、业态列表、当前业态和权限菜单
+        // 更新 initialState，包括用户信息和权限菜单
         setInitialState((s: any) => ({
           ...(s || {}),
           currentUser: currentUser || (s as any)?.currentUser,
           currentOrgCode: orgCode,
           loginContext,
-          businessList, // 保存业态列表
-          currentBusinessCode: businessCode, // 保存当前选中的业态
           permContextMenu:
             permContextMenu.length > 0 ? permContextMenu : undefined,
           buttonPermissions:

@@ -10,6 +10,13 @@ type NoticeItem = {
   type?: string;
 };
 
+const EMPTY_NOTICE_DATA_SOURCE: Record<string, NoticeItem[]> = {
+  notice: [],
+  todo: [],
+  system: [],
+  marketing: [],
+};
+
 const NoticeBell: React.FC = () => {
   const { token } = theme.useToken();
 
@@ -20,158 +27,6 @@ const NoticeBell: React.FC = () => {
   const cardBg = token.colorBgContainer;
   const primaryText = token.colorText;
   const secondaryText = token.colorTextSecondary;
-
-  const dataSource = useMemo<Record<string, NoticeItem[]>>(
-    () => ({
-      notice: [
-        {
-          id: 'n1',
-          type: '产品动态',
-          title: '服务竞争力指数SCI下线',
-          datetime: '2025-12-18 15:30:00',
-        },
-        {
-          id: 'n2',
-          title: '关于商家虚假发货行为的规则要求公告',
-          datetime: '2025-12-19 09:09:23',
-        },
-        {
-          id: 'n3',
-          type: '政策公告',
-          title: '繁星计划小程序自运营用户增长流量激励政策到期通知',
-          datetime: '2025-12-15 18:00:00',
-        },
-        {
-          id: 'n3',
-          type: '政策公告',
-          title: '繁星计划小程序自运营用户增长流量激励政策到期通知',
-          datetime: '2025-12-15 18:00:00',
-        },
-        {
-          id: 'n3',
-          type: '政策公告',
-          title: '繁星计划小程序自运营用户增长流量激励政策到期通知',
-          datetime: '2025-12-15 18:00:00',
-        },
-        {
-          id: 'n3',
-          type: '政策公告',
-          title: '繁星计划小程序自运营用户增长流量激励政策到期通知',
-          datetime: '2025-12-15 18:00:00',
-        },
-        {
-          id: 'n3',
-          type: '政策公告',
-          title: '繁星计划小程序自运营用户增长流量激励政策到期通知',
-          datetime: '2025-12-15 18:00:00',
-        },
-        {
-          id: 'n3',
-          type: '政策公告',
-          title: '繁星计划小程序自运营用户增长流量激励政策到期通知',
-          datetime: '2025-12-15 18:00:00',
-        },
-        {
-          id: 'n3',
-          type: '政策公告',
-          title: '繁星计划小程序自运营用户增长流量激励政策到期通知',
-          datetime: '2025-12-15 18:00:00',
-        },
-        {
-          id: 'n3',
-          type: '政策公告',
-          title: '繁星计划小程序自运营用户增长流量激励政策到期通知',
-          datetime: '2025-12-15 18:00:00',
-        },
-        {
-          id: 'n3',
-          type: '政策公告',
-          title: '繁星计划小程序自运营用户增长流量激励政策到期通知',
-          datetime: '2025-12-15 18:00:00',
-        },
-        {
-          id: 'n3',
-          type: '政策公告',
-          title: '繁星计划小程序自运营用户增长流量激励政策到期通知',
-          datetime: '2025-12-15 18:00:00',
-        },
-        {
-          id: 'n3',
-          type: '政策公告',
-          title: '繁星计划小程序自运营用户增长流量激励政策到期通知',
-          datetime: '2025-12-15 18:00:00',
-        },
-        {
-          id: 'n3',
-          type: '政策公告',
-          title: '繁星计划小程序自运营用户增长流量激励政策到期通知',
-          datetime: '2025-12-15 18:00:00',
-        },
-        {
-          id: 'n3',
-          type: '政策公告',
-          title: '繁星计划小程序自运营用户增长流量激励政策到期通知',
-          datetime: '2025-12-15 18:00:00',
-        },
-        {
-          id: 'n3',
-          type: '政策公告',
-          title: '繁星计划小程序自运营用户增长流量激励政策到期通知',
-          datetime: '2025-12-15 18:00:00',
-        },
-        {
-          id: 'n3',
-          type: '政策公告',
-          title: '繁星计划小程序自运营用户增长流量激励政策到期通知',
-          datetime: '2025-12-15 18:00:00',
-        },
-        {
-          id: 'n3',
-          type: '政策公告',
-          title: '繁星计划小程序自运营用户增长流量激励政策到期通知',
-          datetime: '2025-12-15 18:00:00',
-        },
-        {
-          id: 'n3',
-          type: '政策公告',
-          title: '繁星计划小程序自运营用户增长流量激励政策到期通知',
-          datetime: '2025-12-15 18:00:00',
-        },
-      ],
-      todo: [
-        {
-          id: 't1',
-          title: '待处理：合同审批',
-          datetime: '2025-12-12 10:00:00',
-        },
-        {
-          id: 't2',
-          title: '待处理：对账单确认',
-          datetime: '2025-12-11 16:45:56',
-        },
-      ],
-      system: [
-        {
-          id: 's1',
-          title: '关于平台规则变更提醒',
-          datetime: '2025-11-20 20:00:00',
-        },
-        {
-          id: 's2',
-          title: '系统维护通知',
-          datetime: '2025-11-15 08:00:00',
-        },
-      ],
-      marketing: [
-        // {
-        //   id: 'm1',
-        //   title: '双十一大促服务费优惠延迟提醒',
-        //   datetime: '2025-10-13 18:30:00',
-        // },
-      ],
-    }),
-    [],
-  );
 
   const tabs: TabsProps['items'] = useMemo(
     () => [
@@ -186,7 +41,7 @@ const NoticeBell: React.FC = () => {
     [],
   );
 
-  const listData = dataSource[activeKey] || [];
+  const listData = EMPTY_NOTICE_DATA_SOURCE[activeKey] || [];
 
   return (
     <>

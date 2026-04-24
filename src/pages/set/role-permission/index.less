@@ -193,6 +193,7 @@
   .ant-tag {
     display: inline-flex;
     align-items: center;
+    gap: 6px;
     min-height: 32px;
     margin: 0 8px 0 0;
     padding: 0 14px;
@@ -215,7 +216,7 @@
     align-items: center;
   }
 
-  .ant-tag.is-active .ant-checkbox + span {
+  .ant-tag.is-active .role-permission-matrix-tag-text {
     color: var(--ant-color-primary);
   }
 }
@@ -289,4 +290,11 @@
   max-height: 388px;
   padding: 14px 16px;
   overflow-y: auto;
+}
+
+.role-permission-action-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ant-color-text);
 }

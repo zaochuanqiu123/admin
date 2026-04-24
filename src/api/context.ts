@@ -22,13 +22,9 @@ export async function getUserLoginContextResponse(
   });
 }
 
-export async function getPermContext(
-  businessCode?: string,
-  options?: { [key: string]: any },
-) {
+export async function getPermContext(options?: { [key: string]: any }) {
   return apiData<any>('/api/admin/system/v1/perm/getPermContext', {
     method: 'GET',
-    params: businessCode ? { businessCode } : undefined,
     ...(options || {}),
   });
 }
@@ -99,12 +95,7 @@ export type SaveRoleParams = {
 export type RoleTerminalParams = {
   terminalName?: string;
   terminalCode?: string;
-  terminalBusinessList?: Array<{
-    businessCode?: string;
-    businessName?: string;
-    businessVersionId?: string;
-    perms?: string[];
-  }>;
+  perms?: string[];
 };
 
 export async function saveRole(

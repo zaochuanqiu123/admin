@@ -39,7 +39,7 @@ const routes = [
   },
   {
     path: '/dashboard',
-    name: '系统首页',
+    name: '首页',
     routes: [
       {
         path: '/dashboard',
@@ -47,7 +47,7 @@ const routes = [
       },
       {
         path: '/dashboard/index',
-        name: '系统首页',
+        name: '首页',
         component: './dashboard/index',
       },
 

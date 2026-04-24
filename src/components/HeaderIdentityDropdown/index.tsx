@@ -9,6 +9,7 @@ import { history } from '@umijs/max';
 import { Avatar, Input, message, Upload } from 'antd';
 import React, { useMemo, useState } from 'react';
 import { uploadAttachment } from '@/api/cloudStorage';
+import { setLoginUserInfo } from '@/api/storage';
 import { saveUserAvatar } from '@/api/user';
 import HeaderDropdown from '@/components/HeaderDropdown';
 import {
@@ -23,11 +24,46 @@ import './index.less';
 const HEADER_USER_AVATAR_SRC =
   'https://api.dicebear.com/7.x/miniavs/svg?seed=antd-yangkun';
 
+const withAvatarCacheKey = (avatar: string) => {
+  if (!avatar || /^(data|blob):/.test(avatar)) return avatar;
+
+  const cacheKey = String(Date.now());
+  try {
+    const origin =
+      typeof window !== 'undefined' ? window.location.origin : undefined;
+    const url = new URL(avatar, origin);
+    url.searchParams.set('_avatar_t', cacheKey);
+    if (/^https?:\/\//.test(avatar) || avatar.startsWith('//')) {
+      return url.toString();
+    }
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch (_error) {
+    const separator = avatar.includes('?') ? '&' : '?';
+    return `${avatar}${separator}_avatar_t=${cacheKey}`;
+  }
+};
+
+const preloadImage = (src: string) =>
+  new Promise<void>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error('头像图片加载失败'));
+    image.src = src;
+  });
+
+const waitForNextPaint = () =>
+  new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve());
+    });
+  });
+
 export type HeaderIdentityDropdownProps = {
   currentOrgCode?: string;
   currentUser?: API.CurrentUser;
   loginContext?: any;
   onLogout: () => Promise<void>;
+  fetchUserInfo?: () => Promise<API.CurrentUser | undefined>;
   setInitialState: (
     updater: (state: Record<string, any> | undefined) => Record<string, any>,
   ) => void;
@@ -38,6 +74,7 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
   currentUser,
   loginContext,
   onLogout,
+  fetchUserInfo,
   setInitialState,
 }) => {
   const [open, setOpen] = useState(false);
@@ -117,15 +154,41 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
       // 保存头像（传 attachmentId）
       await saveUserAvatar(String(attachmentId));
 
-      // 更新本地 initialState 中的头像（优先使用 avatarUrl，可能是 CDN 访问地址）
-      const newAvatarUrl = attachment?.url || attachment?.objectKey || '';
+      const freshUser = await fetchUserInfo?.();
+      if (!freshUser) {
+        message.error('头像已保存，刷新用户信息失败');
+        return false;
+      }
+
+      const latestAvatar = freshUser.avatar || (freshUser as any)?.avatarUrl;
+      if (!latestAvatar) {
+        message.error('头像已保存，但未获取到最新头像');
+        return false;
+      }
+
+      const displayAvatar = withAvatarCacheKey(latestAvatar);
+      try {
+        await preloadImage(displayAvatar);
+      } catch (_error) {
+        message.error('头像已保存，但头像图片加载失败');
+        return false;
+      }
+
+      const nextUser = {
+        ...(currentUser || {}),
+        ...freshUser,
+        avatar: displayAvatar,
+        avatarUrl: displayAvatar,
+      };
+      setLoginUserInfo(nextUser);
       setInitialState((s: any) => ({
         ...s,
         currentUser: {
           ...(s?.currentUser || {}),
-          avatar: newAvatarUrl || s?.currentUser?.avatar,
+          ...nextUser,
         },
       }));
+      await waitForNextPaint();
       message.success('头像已更新');
     } catch (error: any) {
       console.error('avatar upload failed:', error);

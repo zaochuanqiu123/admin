@@ -1,4 +1,7 @@
-import type { CommonAction } from '@/config/menu.config';
+import {
+  type CommonAction,
+  filterHomepageCommonActions,
+} from '@/config/menu.config';
 
 const LEGACY_PLACEHOLDER_ACTION_IDS = new Set([
   'recharge',
@@ -37,13 +40,14 @@ export function readCommonActionsFromStorage(
         sourceSystem:
           typeof x.sourceSystem === 'number' ? x.sourceSystem : undefined,
       }));
+    const filteredList = filterHomepageCommonActions(list);
     if (
-      list.length > 0 &&
-      list.every((item) => LEGACY_PLACEHOLDER_ACTION_IDS.has(item.id))
+      filteredList.length > 0 &&
+      filteredList.every((item) => LEGACY_PLACEHOLDER_ACTION_IDS.has(item.id))
     ) {
       return null;
     }
-    return list.length ? list : null;
+    return filteredList.length ? filteredList : null;
   } catch {
     return null;
   }
@@ -57,7 +61,10 @@ export function writeCommonActionsToStorage(
   list: CommonAction[],
 ) {
   try {
-    localStorage.setItem(storageKey, JSON.stringify(list));
+    localStorage.setItem(
+      storageKey,
+      JSON.stringify(filterHomepageCommonActions(list)),
+    );
   } catch {
     // ignore
   }

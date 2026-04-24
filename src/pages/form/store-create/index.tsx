@@ -31,8 +31,11 @@ import {
   type StoreDetailRecord,
   type StoreNumVO,
 } from '@/api/store';
-import { type SearchUserResult, searchUserByPhone } from '@/api/user';
+import type { SearchUserResult } from '@/api/user';
 import { ROUTE_TAB_REFRESH_EVENT } from '@/components/Layout/RouteTabsKeepAlive';
+import UserPhoneMatchFields, {
+  type UserPhoneMatchStatus,
+} from '@/components/UserPhoneMatchFields';
 import {
   createRemoteUploadFileList,
   imageUploadRequest,
@@ -76,8 +79,6 @@ type BusinessOption = {
   label: string;
   value: string;
 };
-
-type AdminMatchStatus = 'idle' | 'matched' | 'new';
 
 type RegionOption = {
   value: string;
@@ -390,10 +391,6 @@ async function reverseGeocodeWithFallback(
   return null;
 }
 
-function isValidMainlandPhone(phone: string): boolean {
-  return /^1\d{10}$/.test(phone);
-}
-
 function readCoordinateValue(
   ...values: Array<string | number | undefined | null>
 ): string {
@@ -489,9 +486,8 @@ export default function StoreCreatePage() {
   const [businessLoading, setBusinessLoading] = useState(false);
   const [regionOptions, setRegionOptions] = useState<RegionOption[]>([]);
   const [regionLoading, setRegionLoading] = useState(false);
-  const [adminSearching, setAdminSearching] = useState(false);
   const [adminMatchStatus, setAdminMatchStatus] =
-    useState<AdminMatchStatus>('idle');
+    useState<UserPhoneMatchStatus>('idle');
   const [matchedAdmin, setMatchedAdmin] = useState<SearchUserResult>();
   const [detailRecord, setDetailRecord] = useState<StoreDetailRecord>();
   const [detailLoading, setDetailLoading] = useState(false);
@@ -507,7 +503,6 @@ export default function StoreCreatePage() {
   const selectingSuggestionRef = useRef(false);
 
   const storeAddress = Form.useWatch('storeAddress', form) || '';
-  const adminPhone = Form.useWatch('storeManagerPhone', form) || '';
   const longitude = Form.useWatch('longitude', form) || '';
   const latitude = Form.useWatch('latitude', form) || '';
   const pageTitle = isEditMode
@@ -643,56 +638,6 @@ export default function StoreCreatePage() {
     const list = await requestSuggestionOptions(storeAddress);
     if (list.length > 0) {
       applySuggestionItem(list[0]);
-    }
-  };
-
-  const resetAdminMatchState = () => {
-    setAdminMatchStatus('idle');
-    setMatchedAdmin(undefined);
-    form.setFieldsValue({
-      storeManagerName: undefined,
-      storeManagerNickName: undefined,
-      storeManagerPassword: undefined,
-      confirmPassword: undefined,
-    });
-  };
-
-  const handleSearchAdmin = async () => {
-    const phone = String(form.getFieldValue('storeManagerPhone') || '').trim();
-    if (!isValidMainlandPhone(phone)) {
-      message.warning('请输入11位手机号');
-      return;
-    }
-    setAdminSearching(true);
-    try {
-      const res = await searchUserByPhone(phone, { skipErrorHandler: true });
-      if (String(res?.id || '').trim()) {
-        setMatchedAdmin(res);
-        setAdminMatchStatus('matched');
-        form.setFieldsValue({
-          storeManagerName: undefined,
-          storeManagerNickName: undefined,
-          storeManagerPassword: undefined,
-          confirmPassword: undefined,
-        });
-        message.success('已匹配到现有用户');
-      } else {
-        setMatchedAdmin(undefined);
-        setAdminMatchStatus('new');
-        form.setFieldsValue({
-          storeManagerName: undefined,
-          storeManagerNickName: undefined,
-          storeManagerPassword: undefined,
-          confirmPassword: undefined,
-        });
-        message.info('未匹配到用户，请补充管理员信息');
-      }
-    } catch (error) {
-      setMatchedAdmin(undefined);
-      setAdminMatchStatus('idle');
-      message.error(getErrorMessage(error, '查询管理员失败'));
-    } finally {
-      setAdminSearching(false);
     }
   };
 
@@ -1473,133 +1418,24 @@ export default function StoreCreatePage() {
               </>
             ) : null}
             {currentStep === 1 ? (
-              <>
-                <Form.Item label="管理员手机号" required>
-                  <div className="admin-phone-search">
-                    <Form.Item
-                      name="storeManagerPhone"
-                      className="store-inline-form-item"
-                      normalize={(value) =>
-                        String(value || '')
-                          .replace(/[^\d]/g, '')
-                          .slice(0, 11)
-                      }
-                      rules={[
-                        { required: true, message: '请输入管理员手机号' },
-                        {
-                          validator: async (
-                            _rule,
-                            value: string | undefined,
-                          ) => {
-                            if (!value || isValidMainlandPhone(value)) {
-                              return;
-                            }
-                            throw new Error('请输入11位手机号');
-                          },
-                        },
-                      ]}
-                    >
-                      <Input
-                        placeholder="请输入管理员手机号"
-                        maxLength={11}
-                        onChange={resetAdminMatchState}
-                        onPressEnter={() => void handleSearchAdmin()}
-                      />
-                    </Form.Item>
-                    <Button
-                      type="primary"
-                      loading={adminSearching}
-                      onClick={() => void handleSearchAdmin()}
-                    >
-                      匹配
-                    </Button>
-                  </div>
-                </Form.Item>
-                {adminMatchStatus === 'matched' ? (
-                  <>
-                    <Form.Item label=" ">
-                      <div className="admin-result-banner matched">
-                        已匹配到现有用户，将绑定为门店管理员。
-                      </div>
-                    </Form.Item>
-                    <Form.Item label="用户姓名">
-                      <Input
-                        value={String(matchedAdmin?.name || '-')}
-                        disabled
-                      />
-                    </Form.Item>
-                    <Form.Item label="手机号">
-                      <Input
-                        value={String(matchedAdmin?.phone || adminPhone)}
-                        disabled
-                      />
-                    </Form.Item>
-                    <Form.Item
-                      label="昵称"
-                      name="storeManagerNickName"
-                      rules={[{ required: true, message: '请输入管理员昵称' }]}
-                    >
-                      <Input placeholder="请输入管理员昵称" />
-                    </Form.Item>
-                  </>
-                ) : null}
-                {adminMatchStatus === 'new' ? (
-                  <>
-                    <Form.Item label=" ">
-                      <div className="admin-result-banner warning">
-                        未匹配到现有用户，请补充管理员信息并创建新账号。
-                      </div>
-                    </Form.Item>
-                    <Form.Item label="手机号">
-                      <Input value={adminPhone} disabled />
-                    </Form.Item>
-                    <Form.Item
-                      label="姓名"
-                      name="storeManagerName"
-                      rules={[{ required: true, message: '请输入管理员姓名' }]}
-                    >
-                      <Input placeholder="请输入管理员姓名" />
-                    </Form.Item>
-                    <Form.Item
-                      label="昵称"
-                      name="storeManagerNickName"
-                      rules={[{ required: true, message: '请输入管理员昵称' }]}
-                    >
-                      <Input placeholder="请输入管理员昵称" />
-                    </Form.Item>
-                    <Form.Item
-                      label="密码"
-                      name="storeManagerPassword"
-                      rules={[{ required: true, message: '请输入登录密码' }]}
-                    >
-                      <Input.Password placeholder="请输入登录密码" />
-                    </Form.Item>
-                    <Form.Item
-                      label="确认密码"
-                      name="confirmPassword"
-                      dependencies={['storeManagerPassword']}
-                      rules={[
-                        { required: true, message: '请输入确认密码' },
-                        ({ getFieldValue }) => ({
-                          validator(_, value) {
-                            if (
-                              !value ||
-                              getFieldValue('storeManagerPassword') === value
-                            ) {
-                              return Promise.resolve();
-                            }
-                            return Promise.reject(
-                              new Error('两次输入的密码不一致'),
-                            );
-                          },
-                        }),
-                      ]}
-                    >
-                      <Input.Password placeholder="请再次输入登录密码" />
-                    </Form.Item>
-                  </>
-                ) : null}
-              </>
+              <UserPhoneMatchFields
+                form={form}
+                status={adminMatchStatus}
+                matchedUser={matchedAdmin}
+                onStatusChange={setAdminMatchStatus}
+                onMatchedUserChange={setMatchedAdmin}
+                phoneName="storeManagerPhone"
+                nameName="storeManagerName"
+                nickNameName="storeManagerNickName"
+                passwordName="storeManagerPassword"
+                confirmPasswordName="confirmPassword"
+                phoneLabel="管理员手机号"
+                phonePlaceholder="请输入管理员手机号"
+                matchedMessage="已匹配到现有用户，将绑定为门店管理员。"
+                newMessage="未匹配到现有用户，请补充管理员信息并创建新账号。"
+                nameRequiredMessage="请输入管理员姓名"
+                nickNameRequiredMessage="请输入管理员昵称"
+              />
             ) : null}
           </Form>
           <div className="store-create-actions u-flex">
