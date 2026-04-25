@@ -285,13 +285,13 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
               </div>
             </div>
             <div className="header-identity-dropdown__actions">
-              <button
+              {/* <button
                 type="button"
                 className="header-identity-dropdown__action-pill"
                 onClick={handleOpenProfileCenter}
               >
                 个人中心
-              </button>
+              </button> */}
               <button
                 type="button"
                 className="header-identity-dropdown__action-pill"

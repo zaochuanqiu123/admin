@@ -1,3 +1,4 @@
+import { useModel } from '@umijs/max';
 import {
   Alert,
   Button,
@@ -26,6 +27,10 @@ import {
   PermissionVisible,
 } from '@/components';
 import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
+import {
+  getCurrentIdentityItem,
+  getIdentityItemsFromStorage,
+} from '@/utils/identity';
 import { SpeakerImportModal } from './components/SpeakerImportModal';
 import { SpeakerTransferModal } from './components/SpeakerTransferModal';
 import {
@@ -126,6 +131,18 @@ function showPendingActionMessage(label: string) {
 }
 
 const SpeakerListPage: React.FC = () => {
+  const { initialState } = useModel('@@initialState');
+  const identityItems = useMemo(() => getIdentityItemsFromStorage(), []);
+  const currentIdentity = useMemo(
+    () => getCurrentIdentityItem(initialState?.currentOrgCode, identityItems),
+    [initialState?.currentOrgCode, identityItems],
+  );
+  const accountRole = currentIdentity?.levelName || '';
+  const isStore = accountRole.includes('门店');
+  const isMerchant = accountRole.includes('商户');
+  const isAgent = accountRole.includes('代理');
+  const isPlatform = !isMerchant && !isStore && !isAgent;
+
   const [loading, setLoading] = useState(false);
   const [listInitialized, setListInitialized] = useState(false);
   const [listError, setListError] = useState<string>();
@@ -437,76 +454,88 @@ const SpeakerListPage: React.FC = () => {
         onSearch={handleSearch}
         onReset={handleReset}
         fields={[
-          {
-            key: 'agentOrgId',
-            label: '代理组织ID',
-            content: (
-              <OrganizationPickerInput
-                placeholder="请选择代理组织"
-                value={draftFilters.agentOrgId}
-                onChange={(value) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    agentOrgId: value,
-                  }));
-                }}
-              />
-            ),
-          },
-          {
-            key: 'groupOrgId',
-            label: '集团组织ID',
-            content: (
-              <Input
-                allowClear
-                placeholder="请输入集团组织ID"
-                value={draftFilters.groupOrgId}
-                onChange={(event) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    groupOrgId: event.target.value,
-                  }));
-                }}
-                onPressEnter={handleSearch}
-              />
-            ),
-          },
-          {
-            key: 'merchantOrgId',
-            label: '商户组织ID',
-            content: (
-              <Input
-                allowClear
-                placeholder="请输入商户组织ID"
-                value={draftFilters.merchantOrgId}
-                onChange={(event) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    merchantOrgId: event.target.value,
-                  }));
-                }}
-                onPressEnter={handleSearch}
-              />
-            ),
-          },
-          {
-            key: 'storeOrgId',
-            label: '门店组织ID',
-            content: (
-              <Input
-                allowClear
-                placeholder="请输入门店组织ID"
-                value={draftFilters.storeOrgId}
-                onChange={(event) => {
-                  setDraftFilters((prev) => ({
-                    ...prev,
-                    storeOrgId: event.target.value,
-                  }));
-                }}
-                onPressEnter={handleSearch}
-              />
-            ),
-          },
+          ...(isPlatform
+            ? [
+                {
+                  key: 'agentOrgId',
+                  label: '代理组织ID',
+                  content: (
+                    <OrganizationPickerInput
+                      placeholder="请选择代理组织"
+                      value={draftFilters.agentOrgId}
+                      onChange={(value) => {
+                        setDraftFilters((prev) => ({
+                          ...prev,
+                          agentOrgId: value,
+                        }));
+                      }}
+                    />
+                  ),
+                },
+              ]
+            : []),
+          ...(isPlatform || isAgent
+            ? [
+                {
+                  key: 'groupOrgId',
+                  label: '集团组织ID',
+                  content: (
+                    <Input
+                      allowClear
+                      placeholder="请输入集团组织ID"
+                      value={draftFilters.groupOrgId}
+                      onChange={(event) => {
+                        setDraftFilters((prev) => ({
+                          ...prev,
+                          groupOrgId: event.target.value,
+                        }));
+                      }}
+                      onPressEnter={handleSearch}
+                    />
+                  ),
+                },
+                {
+                  key: 'merchantOrgId',
+                  label: '商户组织ID',
+                  content: (
+                    <Input
+                      allowClear
+                      placeholder="请输入商户组织ID"
+                      value={draftFilters.merchantOrgId}
+                      onChange={(event) => {
+                        setDraftFilters((prev) => ({
+                          ...prev,
+                          merchantOrgId: event.target.value,
+                        }));
+                      }}
+                      onPressEnter={handleSearch}
+                    />
+                  ),
+                },
+              ]
+            : []),
+          ...(isPlatform || isAgent || isMerchant
+            ? [
+                {
+                  key: 'storeOrgId',
+                  label: '门店组织ID',
+                  content: (
+                    <Input
+                      allowClear
+                      placeholder="请输入门店组织ID"
+                      value={draftFilters.storeOrgId}
+                      onChange={(event) => {
+                        setDraftFilters((prev) => ({
+                          ...prev,
+                          storeOrgId: event.target.value,
+                        }));
+                      }}
+                      onPressEnter={handleSearch}
+                    />
+                  ),
+                },
+              ]
+            : []),
           {
             key: 'batchSn',
             label: '批次号',

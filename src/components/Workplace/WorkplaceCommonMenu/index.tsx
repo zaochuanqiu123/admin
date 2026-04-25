@@ -73,15 +73,6 @@ function getMenuNodeSourceSystem(node: any) {
   return Number.isFinite(sourceSystem) ? sourceSystem : undefined;
 }
 
-function getMenuNodeSort(node: any) {
-  const sort = Number(node?.sort);
-  return Number.isFinite(sort) ? sort : 0;
-}
-
-function sortMenuNodes(nodes: any[]) {
-  return [...nodes].sort((a, b) => getMenuNodeSort(a) - getMenuNodeSort(b));
-}
-
 function normalizeMergeKey(value: string) {
   return value.replace(/\s+/g, '').toLowerCase();
 }
@@ -119,7 +110,7 @@ function collectMenuActions(
   fallbackPrefix: string,
   inheritedPath?: string,
 ): CommonAction[] {
-  const children = sortMenuNodes(getMenuNodeChildren(node));
+  const children = getMenuNodeChildren(node);
   const path = getMenuNodePath(node, inheritedPath);
   const title = getMenuNodeTitle(node, fallbackPrefix);
 
@@ -159,7 +150,7 @@ function mergeMenuNodesByTitle(nodes: any[], fallbackPrefix: string): any[] {
   const mergedMap = new Map<string, any>();
   const result: any[] = [];
 
-  sortMenuNodes(nodes).forEach((node, index) => {
+  nodes.forEach((node, index) => {
     const title = getMenuNodeTitle(node, `${fallbackPrefix}-${index}`);
     const children = getMenuNodeChildren(node);
     const key = normalizeMergeKey(title) || `${fallbackPrefix}-${index}`;
@@ -250,7 +241,7 @@ function buildCommonGroupsFromMenuData(menuData?: any[]): CommonGroup[] {
         groupTitle,
         `group-${groupIndex}`,
       );
-      const childNodes = sortMenuNodes(getMenuNodeChildren(groupNode));
+      const childNodes = getMenuNodeChildren(groupNode);
       const subGroups =
         childNodes.length > 0
           ? childNodes.map((subNode, subIndex) => {
@@ -840,7 +831,7 @@ const WorkplaceCommonMenu: React.FC<{
                   style={{
                     width: 210,
                     overflowY: 'auto',
-                    padding: '12px 24px 12px 32px',
+                    padding: '0 24px 12px 32px',
                     background: drawerNestedPanelBg,
                     borderRadius: 0,
                   }}

@@ -37,7 +37,6 @@ import RouteTabsKeepAlive from '@/components/Layout/RouteTabsKeepAlive';
 import WorkplaceCommonMenu from '@/components/Workplace/WorkplaceCommonMenu';
 import {
   type CommonAction,
-  DEFAULT_COMMON_ACTIONS,
   filterHomepageCommonActions,
 } from '@/config/menu.config';
 import {
@@ -70,6 +69,7 @@ import {
 const isDev = process.env.NODE_ENV === 'development' || process.env.CI;
 const loginPath = '/user/login';
 const DASHBOARD_HOME_TITLE = '首页';
+const DEFAULT_IDENTITY_COMMON_ACTION_COUNT = 6;
 const devBypassAuth =
   typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
 const HEADER_USER_AVATAR_SRC =
@@ -97,6 +97,165 @@ function getHeaderPlatformLabel(currentOrgCode?: string) {
     identityText.includes('公司') ||
     upperText.includes('MER');
   return isMerchant ? '商户平台' : '门店平台';
+}
+
+function normalizeCommonStorageSegment(value: unknown) {
+  return (
+    String(value ?? '')
+      .trim()
+      .replace(/[^a-zA-Z0-9:_/-]/g, '_') || 'unknown'
+  );
+}
+
+function buildCommonActionStorageKey(
+  initialState: Record<string, any> | undefined,
+) {
+  const currentIdentity = getCurrentIdentityItem(
+    initialState?.currentOrgCode,
+    getIdentityItemsFromStorage(),
+  );
+  const userKey = normalizeCommonStorageSegment(
+    initialState?.currentUser?.name,
+  );
+  const identityKey = normalizeCommonStorageSegment(
+    currentIdentity
+      ? [
+          currentIdentity.groupKey,
+          currentIdentity.levelName,
+          currentIdentity.orgCode,
+          currentIdentity.id,
+        ]
+          .filter(Boolean)
+          .join('_')
+      : initialState?.currentOrgCode || 'no-org',
+  );
+
+  return `workplace_common_actions_${userKey}_${identityKey}`;
+}
+
+function getCommonMenuNodeTitle(node: any, fallback: string) {
+  const rawTitle =
+    node?.name ??
+    node?.title ??
+    node?.label ??
+    node?.menuName ??
+    node?.permName;
+  const title =
+    typeof rawTitle === 'string' || typeof rawTitle === 'number'
+      ? String(rawTitle).trim()
+      : '';
+  return title || fallback;
+}
+
+function getCommonMenuNodePath(node: any, inheritedPath?: string) {
+  const rawPath = typeof node?.path === 'string' ? node.path.trim() : '';
+  return rawPath || inheritedPath || '';
+}
+
+function getCommonMenuNodeTargetId(node: any) {
+  const rawTargetId = node?.targetId;
+  if (rawTargetId === undefined || rawTargetId === null) return undefined;
+  const targetId = String(rawTargetId).trim();
+  return targetId || undefined;
+}
+
+function getCommonMenuNodeSourceSystem(node: any) {
+  const sourceSystem = Number(node?.sourceSystem);
+  return Number.isFinite(sourceSystem) ? sourceSystem : undefined;
+}
+
+function normalizeCommonActionPath(path?: string) {
+  const rawPath = typeof path === 'string' ? path.trim() : '';
+  if (!rawPath) return '';
+  const pathname = rawPath.split(/[?#]/)[0] || '';
+  return pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+}
+
+function buildCommonPermissionKey(action: CommonAction) {
+  return [
+    action.title.trim(),
+    action.sourceSystem ?? '',
+    action.targetId ?? '',
+    normalizeCommonActionPath(action.path),
+  ].join('::');
+}
+
+function buildCommonActionIdFromMenuNode(
+  node: any,
+  path: string,
+  title: string,
+  fallback: string,
+) {
+  return normalizeCommonStorageSegment(
+    [
+      path,
+      getCommonMenuNodeTargetId(node),
+      node?.key,
+      node?.id,
+      node?.menuId,
+      node?.permId,
+      title,
+      fallback,
+    ]
+      .filter((item) => item !== undefined && item !== null && item !== '')
+      .map((item) => String(item))
+      .join('__'),
+  );
+}
+
+function collectDefaultCommonActionsFromMenu(
+  menuData: MenuDataItem[] | undefined,
+  limit?: number,
+): CommonAction[] {
+  const result: CommonAction[] = [];
+  const visit = (nodes: any[] | undefined, inheritedPath?: string) => {
+    if (!Array.isArray(nodes) || (limit && result.length >= limit)) return;
+
+    nodes.forEach((node, index) => {
+      if (!node || node?.hideInMenu || (limit && result.length >= limit)) {
+        return;
+      }
+
+      const title = getCommonMenuNodeTitle(node, `菜单${index + 1}`);
+      const path = getCommonMenuNodePath(node, inheritedPath);
+      const children = Array.isArray(node?.children) ? node.children : [];
+
+      if (children.length > 0) {
+        visit(children, path);
+        return;
+      }
+
+      if (!path) return;
+      result.push({
+        id: buildCommonActionIdFromMenuNode(
+          node,
+          path,
+          title,
+          `common-${index}`,
+        ),
+        title,
+        path,
+        targetId: getCommonMenuNodeTargetId(node),
+        sourceSystem: getCommonMenuNodeSourceSystem(node),
+      });
+    });
+  };
+
+  visit(menuData as any[]);
+  return filterHomepageCommonActions(result);
+}
+
+function filterCommonActionsByPermissionTree(
+  actions: CommonAction[],
+  permissionActions: CommonAction[],
+) {
+  const allowedKeys = new Set(
+    permissionActions.map((action) => buildCommonPermissionKey(action)),
+  );
+  if (allowedKeys.size === 0) return [];
+  return filterHomepageCommonActions(actions).filter((action) =>
+    allowedKeys.has(buildCommonPermissionKey(action)),
+  );
 }
 
 if (isDev && typeof window !== 'undefined') {
@@ -445,20 +604,32 @@ export const layout: RunTimeLayoutConfig = ({
   }
 
   // 常用数据管理
-  const storageKey = `workplace_common_actions_${
-    initialState?.currentUser?.name ?? 'guest'
-  }_${initialState?.currentOrgCode ?? 'no-org'}`;
+  const storageKey = buildCommonActionStorageKey(initialState);
+  const permissionCommonActions = collectDefaultCommonActionsFromMenu(
+    initialState?.permContextMenu,
+  );
 
   const loadCommonActions = () => {
-    const defaultActions = filterHomepageCommonActions(DEFAULT_COMMON_ACTIONS);
+    const defaultActions = permissionCommonActions.slice(
+      0,
+      DEFAULT_IDENTITY_COMMON_ACTION_COUNT,
+    );
     if (typeof window === 'undefined') return defaultActions;
     const stored = readCommonActionsFromStorage(storageKey);
-    return stored || defaultActions;
+    if (!stored) return defaultActions;
+    const safeStored = filterCommonActionsByPermissionTree(
+      stored,
+      permissionCommonActions,
+    );
+    return safeStored.length > 0 ? safeStored : defaultActions;
   };
 
   const saveCommonActions = (actions: any[]) => {
     if (typeof window === 'undefined') return;
-    const safeActions = filterHomepageCommonActions(actions as CommonAction[]);
+    const safeActions = filterCommonActionsByPermissionTree(
+      actions as CommonAction[],
+      permissionCommonActions,
+    );
     writeCommonActionsToStorage(storageKey, safeActions);
     setInitialState((s: any) => ({
       ...s,
@@ -466,7 +637,7 @@ export const layout: RunTimeLayoutConfig = ({
     }));
   };
   const resolvedCommonActions = filterHomepageCommonActions(
-    (initialState?.commonActions || loadCommonActions()) as CommonAction[],
+    loadCommonActions(),
   );
 
   const buildTopMenus = (
@@ -638,7 +809,7 @@ export const layout: RunTimeLayoutConfig = ({
       const isInDashboard = isDashboardRoute(pathname);
       const topMenus = buildTopMenus(menuProps?.menuData);
       const useSplitMenu = topMenus.length > 0;
-      const menuScopeKey = initialState?.currentOrgCode || 'no-org';
+      const menuScopeKey = storageKey;
 
       if (!isInDashboard) {
         if (useSplitMenu) {
@@ -664,10 +835,6 @@ export const layout: RunTimeLayoutConfig = ({
           </div>
         );
       }
-
-      const storageKey = `workplace_common_actions_${
-        initialState?.currentUser?.name ?? 'guest'
-      }_${initialState?.currentOrgCode ?? 'no-org'}`;
 
       const commonActions = resolvedCommonActions;
       const setCommonActions = saveCommonActions;

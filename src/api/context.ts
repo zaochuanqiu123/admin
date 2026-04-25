@@ -23,9 +23,10 @@ export async function getUserLoginContextResponse(
 }
 
 export async function getPermContext(options?: { [key: string]: any }) {
+  const { params: _params, data: _data, ...requestOptions } = options || {};
   return apiData<any>('/api/admin/system/v1/perm/getPermContext', {
     method: 'GET',
-    ...(options || {}),
+    ...requestOptions,
   });
 }
 

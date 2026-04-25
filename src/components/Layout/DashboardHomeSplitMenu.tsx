@@ -434,8 +434,11 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
     return buildMenuMeta(getMenuSourceNodes(activeTopNode), commonActions);
   }, [activeTopNode, buildMenuMeta, commonActions]);
   const hoverMenuMeta = React.useMemo(() => {
-    return buildMenuMeta(getMenuSourceNodes(hoverTopNode));
-  }, [buildMenuMeta, hoverTopNode]);
+    return buildMenuMeta(
+      getMenuSourceNodes(hoverTopNode),
+      hoverTopNode && isDashboardHomeNode(hoverTopNode) ? commonActions : [],
+    );
+  }, [buildMenuMeta, commonActions, hoverTopNode]);
 
   const selectedKeys = React.useMemo(() => {
     return getSelectedKeysFromMeta(pathname, currentTargetId, menuMeta);

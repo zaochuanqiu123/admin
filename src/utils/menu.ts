@@ -72,6 +72,8 @@ const {
   navigableRoutePaths: NAVIGABLE_ROUTE_PATHS,
 } = buildRouteLookupMaps(routes as any[]);
 
+const LEGACY_IFRAME_MENU_NAMES = new Set(['所属行业', '串码查询']);
+
 function pickSourceSystem(node: any): number | undefined {
   const value = Number(node?.sourceSystem);
   return Number.isFinite(value) ? value : undefined;
@@ -166,6 +168,10 @@ function pickPath(node: any, menuName: string): string | undefined {
         return knownRoutePath;
       }
     }
+  }
+
+  if (sourceSystem === 1 && LEGACY_IFRAME_MENU_NAMES.has(menuName)) {
+    return '/app';
   }
 
   // 按菜单名称回退查找
