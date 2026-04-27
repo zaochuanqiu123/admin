@@ -79,6 +79,24 @@ function pickSourceSystem(node: any): number | undefined {
   return Number.isFinite(value) ? value : undefined;
 }
 
+function pickFavoriteMenuId(node: any): string | undefined {
+  const raw =
+    node?.favoriteMenuId ??
+    node?.menuId ??
+    node?.permId ??
+    node?.id ??
+    node?.oldId ??
+    node?.oldID ??
+    node?.oldid ??
+    node?.targetId ??
+    node?.targetID ??
+    node?.target_id ??
+    node?.key;
+  if (raw === undefined || raw === null) return undefined;
+  const value = String(raw).trim();
+  return value || undefined;
+}
+
 function pickTargetId(node: any): string | undefined {
   if (pickSourceSystem(node) !== 1) return undefined;
 
@@ -272,6 +290,7 @@ export function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
     const path = useMarketingRedirect
       ? marketingRedirectUrl
       : pickPath(node, name) || inheritedPath;
+    const favoriteMenuId = pickFavoriteMenuId(node);
 
     const childrenSource = useMarketingRedirect
       ? []
@@ -300,6 +319,7 @@ export function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
       children: children.length > 0 ? children : undefined,
       targetId,
       sourceSystem,
+      favoriteMenuId,
       openStatus,
       marketingRedirectUrl,
       sort: node?.sort ?? 0,

@@ -39,6 +39,8 @@ export function readCommonActionsFromStorage(
         targetId: typeof x.targetId === 'string' ? x.targetId : undefined,
         sourceSystem:
           typeof x.sourceSystem === 'number' ? x.sourceSystem : undefined,
+        favoriteMenuId:
+          typeof x.favoriteMenuId === 'string' ? x.favoriteMenuId : undefined,
       }));
     const filteredList = filterHomepageCommonActions(list);
     if (

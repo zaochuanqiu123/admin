@@ -29,6 +29,10 @@ import {
   getSelectedOrgCode,
   getToken,
 } from '@/api/storage';
+import {
+  getUncheckedSiteStaticConfig,
+  type SystemConfigItem,
+} from '@/api/systemConfig';
 import { getUserInfo as fetchUserInfoFromApi } from '@/api/user';
 import logoDark from '@/assets/logo-dark.png';
 import DashboardHomeSplitMenu from '@/components/Layout/DashboardHomeSplitMenu';
@@ -44,10 +48,7 @@ import {
   redirectToLogin,
   setPostLoginRedirect,
 } from '@/utils/auth-expired';
-import {
-  readCommonActionsFromStorage,
-  writeCommonActionsToStorage,
-} from '@/utils/commonActions.storage';
+import { setDocumentFavicon } from '@/utils/favicon';
 import {
   getCurrentIdentityItem,
   getIdentityItemsFromStorage,
@@ -69,7 +70,6 @@ import {
 const isDev = process.env.NODE_ENV === 'development' || process.env.CI;
 const loginPath = '/user/login';
 const DASHBOARD_HOME_TITLE = '首页';
-const DEFAULT_IDENTITY_COMMON_ACTION_COUNT = 6;
 const devBypassAuth =
   typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
 const HEADER_USER_AVATAR_SRC =
@@ -78,6 +78,88 @@ let logoutInFlight: Promise<void> | null = null;
 
 const apiBase = typeof __API_BASE__ !== 'undefined' ? __API_BASE__ : undefined;
 const NAV_THEME_STORAGE_KEY = 'pc_admin_nav_theme';
+const DEFAULT_SITE_TITLE = '随付达';
+
+function isSiteStaticPreviewUrl(value?: unknown) {
+  const text = String(value || '').trim();
+  if (!text) return false;
+  return (
+    /^(https?:)?\/\//i.test(text) ||
+    /^(data|blob):/i.test(text) ||
+    text.startsWith('/')
+  );
+}
+
+function readSiteStaticText(
+  record: SystemConfigItem | undefined,
+  keys: string[],
+) {
+  if (!record) return '';
+  for (const key of keys) {
+    const value = record?.[key];
+    if (value === undefined || value === null) continue;
+    const text = String(value).trim();
+    if (text) return text;
+  }
+  return '';
+}
+
+function getSiteStaticConfigKey(record: SystemConfigItem | undefined) {
+  return readSiteStaticText(record, ['configKey', 'config_key']);
+}
+
+function getSiteStaticConfigValue(record: SystemConfigItem | undefined) {
+  return readSiteStaticText(record, [
+    'configValue',
+    'config_value',
+    'value',
+    'configValueConvert',
+    'config_value_convert',
+    'valueConvert',
+  ]);
+}
+
+function getSiteStaticConfigUrl(record: SystemConfigItem | undefined) {
+  const convertedValue = readSiteStaticText(record, [
+    'configValueConvert',
+    'config_value_convert',
+    'valueConvert',
+  ]);
+  if (isSiteStaticPreviewUrl(convertedValue)) return convertedValue;
+
+  const rawValue = readSiteStaticText(record, [
+    'configValue',
+    'config_value',
+    'value',
+  ]);
+  return isSiteStaticPreviewUrl(rawValue) ? rawValue : '';
+}
+
+async function loadGlobalSiteStaticResources() {
+  try {
+    const configs = await getUncheckedSiteStaticConfig({
+      skipErrorHandler: true,
+    });
+    const list = Array.isArray(configs) ? configs : [];
+    const faviconRecord = list.find(
+      (record) => getSiteStaticConfigKey(record) === 'site.favicon',
+    );
+    const siteNameRecord = list.find(
+      (record) => getSiteStaticConfigKey(record) === 'site.name',
+    );
+    const faviconUrl = getSiteStaticConfigUrl(faviconRecord);
+    if (faviconUrl) {
+      setDocumentFavicon(faviconUrl);
+    }
+
+    return {
+      siteName: getSiteStaticConfigValue(siteNameRecord),
+    };
+  } catch (error) {
+    console.warn('load global site static resources failed:', error);
+    return {};
+  }
+}
 
 function getHeaderPlatformLabel(currentOrgCode?: string) {
   const identity = getCurrentIdentityItem(
@@ -164,6 +246,21 @@ function getCommonMenuNodeSourceSystem(node: any) {
   return Number.isFinite(sourceSystem) ? sourceSystem : undefined;
 }
 
+function getCommonMenuNodeFavoriteMenuId(node: any) {
+  const rawFavoriteMenuId =
+    node?.favoriteMenuId ??
+    node?.menuId ??
+    node?.permId ??
+    node?.id ??
+    node?.targetId ??
+    node?.key;
+  if (rawFavoriteMenuId === undefined || rawFavoriteMenuId === null) {
+    return undefined;
+  }
+  const favoriteMenuId = String(rawFavoriteMenuId).trim();
+  return favoriteMenuId || undefined;
+}
+
 function normalizeCommonActionPath(path?: string) {
   const rawPath = typeof path === 'string' ? path.trim() : '';
   if (!rawPath) return '';
@@ -190,6 +287,7 @@ function buildCommonActionIdFromMenuNode(
     [
       path,
       getCommonMenuNodeTargetId(node),
+      node?.favoriteMenuId,
       node?.key,
       node?.id,
       node?.menuId,
@@ -237,6 +335,7 @@ function collectDefaultCommonActionsFromMenu(
         path,
         targetId: getCommonMenuNodeTargetId(node),
         sourceSystem: getCommonMenuNodeSourceSystem(node),
+        favoriteMenuId: getCommonMenuNodeFavoriteMenuId(node),
       });
     });
   };
@@ -286,13 +385,14 @@ function persistNavTheme(navTheme: string | undefined) {
   }
 }
 
-function getResolvedLayoutSettings(): Partial<LayoutSettings> {
+function getResolvedLayoutSettings(siteName?: string): Partial<LayoutSettings> {
   const navTheme = readPersistedNavTheme();
-  if (!navTheme) return defaultSettings as Partial<LayoutSettings>;
-  return {
+  const title = String(siteName || '').trim();
+  const settings = {
     ...(defaultSettings as Partial<LayoutSettings>),
-    navTheme,
+    ...(navTheme ? { navTheme } : {}),
   };
+  return title ? { ...settings, title } : settings;
 }
 
 function getDevUser(): API.CurrentUser {
@@ -435,7 +535,10 @@ export async function getInitialState(): Promise<{
       };
     }
   };
-  const resolvedSettings = getResolvedLayoutSettings();
+  const globalSiteStaticResources = await loadGlobalSiteStaticResources();
+  const resolvedSettings = getResolvedLayoutSettings(
+    globalSiteStaticResources.siteName,
+  );
 
   if (devBypassAuth) {
     const currentUser = getDevUser();
@@ -456,11 +559,11 @@ export async function getInitialState(): Promise<{
       if (apiUser && (apiUser.nickName || apiUser.name || apiUser.account)) {
         return {
           userid: apiUser.account,
-          // 展示名字优先使用 nickName（昵称），兜底 name
-          name: apiUser.nickName || apiUser.name,
-          nickName: apiUser.nickName || apiUser.name,
+          name: apiUser.name,
+          nickName: apiUser.nickName,
           account: apiUser.account,
-          avatar: apiUser.avatarUrl || apiUser.avatar,
+          avatar: apiUser.avatar,
+          avatarUrl: apiUser.avatarUrl,
           phone: apiUser.phone,
         } as API.CurrentUser;
       }
@@ -497,11 +600,8 @@ export async function getInitialState(): Promise<{
             authUser?.account ||
             authUser?.loginName ||
             authUser?.userName,
-          avatar:
-            mergedUser?.avatar ||
-            authUser?.avatar ||
-            authUser?.headImg ||
-            authUser?.avatarUrl,
+          avatar: mergedUser?.avatar || authUser?.avatar || authUser?.headImg,
+          avatarUrl: mergedUser?.avatarUrl || authUser?.avatarUrl,
         };
       }
     } catch (_e) {
@@ -609,35 +709,18 @@ export const layout: RunTimeLayoutConfig = ({
     initialState?.permContextMenu,
   );
 
-  const loadCommonActions = () => {
-    const defaultActions = permissionCommonActions.slice(
-      0,
-      DEFAULT_IDENTITY_COMMON_ACTION_COUNT,
-    );
-    if (typeof window === 'undefined') return defaultActions;
-    const stored = readCommonActionsFromStorage(storageKey);
-    if (!stored) return defaultActions;
-    const safeStored = filterCommonActionsByPermissionTree(
-      stored,
-      permissionCommonActions,
-    );
-    return safeStored.length > 0 ? safeStored : defaultActions;
-  };
-
   const saveCommonActions = (actions: any[]) => {
-    if (typeof window === 'undefined') return;
     const safeActions = filterCommonActionsByPermissionTree(
       actions as CommonAction[],
       permissionCommonActions,
     );
-    writeCommonActionsToStorage(storageKey, safeActions);
     setInitialState((s: any) => ({
       ...s,
       commonActions: safeActions,
     }));
   };
   const resolvedCommonActions = filterHomepageCommonActions(
-    loadCommonActions(),
+    (initialState as any)?.commonActions || [],
   );
 
   const buildTopMenus = (
@@ -1043,6 +1126,10 @@ export const layout: RunTimeLayoutConfig = ({
             themeCacheKey={keepAliveThemeKey}
             menuData={initialState?.permContextMenu}
             extraOps={routeTabsExtraOps}
+            siteTitle={
+              String((initialState?.settings as any)?.title || '').trim() ||
+              DEFAULT_SITE_TITLE
+            }
           >
             {children}
           </RouteTabsKeepAlive>

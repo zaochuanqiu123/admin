@@ -12,7 +12,7 @@
 export default {
   // 如果需要自定义本地开发服务器  请取消注释按需调整
   dev: {
-    // 本地开发：通过 /mp-api/ 代理到后端真实服务，避免浏览器跨域问题
+    // Java 接口保留 /mp-api/ 前缀，代理到后端真实服务，避免浏览器跨域问题
     // 例如：POST /mp-api/auth/login/doLogin -> http://192.168.1.118:9001/auth/login/doLogin
     '/mp-api/': {
       target: 'http://192.168.1.238:9001',
@@ -20,6 +20,7 @@ export default {
       // 后端当前不包含 /mp-api 前缀，因此需要去掉前端约定的 /mp-api 前缀
       pathRewrite: { '^/mp-api': '' },
     },
+    // PHP 老系统统一走 /php-api/ 前缀，避免老系统路径抢占主应用路由。
     '/php-api/': {
       target: 'http://192.168.1.201:8081',
       changeOrigin: true,

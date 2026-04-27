@@ -30,6 +30,7 @@ declare namespace API {
     account?: string;
     account?: string;
     avatar?: string;
+    avatarUrl?: string;
     userid?: string;
     email?: string;
     signature?: string;

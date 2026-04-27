@@ -134,3 +134,26 @@ export async function updateOrgUserState(
     ...(options || {}),
   });
 }
+
+export async function getOrgUserFavoriteMenuList(options?: {
+  [key: string]: any;
+}) {
+  return apiData<string[] | null>(
+    '/api/admin/org/v1/orgUser/getFavoriteMenuList',
+    {
+      method: 'GET',
+      ...(options || {}),
+    },
+  );
+}
+
+export async function saveOrgUserFavoriteMenu(
+  data: string[],
+  options?: { [key: string]: any },
+) {
+  return apiRequest<any>('/api/admin/org/v1/orgUser/saveFavoriteMenu', {
+    method: 'POST',
+    data,
+    ...(options || {}),
+  });
+}

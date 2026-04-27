@@ -1,0 +1,147 @@
+@import (reference) '../../../styles/utilities.less';
+
+.site-config-page {
+  display: flex;
+  min-height: calc(100vh - 96px);
+  flex-direction: column;
+  gap: 16px;
+
+  .site-config-header {
+    .mixin-flex-between();
+    gap: 16px;
+    margin-bottom: 24px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--ant-color-border-secondary);
+  }
+
+  .site-config-title-block {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .site-config-title-block h2 {
+    margin: 0;
+    color: var(--ant-color-text-heading, var(--ant-color-text));
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .site-config-title-block span {
+    color: var(--ant-color-text-secondary);
+    font-size: 13px;
+  }
+
+  .site-config-card {
+    flex: 1;
+    min-height: 0;
+    padding: 28px 32px 24px;
+    border: 1px solid var(--ant-color-border-secondary);
+    border-radius: 16px;
+    background: var(--ant-color-bg-container);
+  }
+
+  .site-config-form-list {
+    max-width: 780px;
+  }
+
+  .site-config-form-item {
+    margin-bottom: 22px;
+  }
+
+  .site-config-form-item .ant-form-item-label > label {
+    min-height: 32px;
+    color: var(--ant-color-text);
+    font-size: 14px;
+  }
+
+  .site-config-form-item .ant-form-item-extra {
+    color: var(--ant-color-text-tertiary);
+    line-height: 1.5;
+  }
+
+  .site-config-submit-row {
+    margin-top: 6px;
+    margin-bottom: 0;
+  }
+
+  .site-config-image-field,
+  .site-config-banner-field {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .site-config-upload-list .ant-upload-list-picture-card {
+    gap: 10px;
+  }
+
+  .site-config-upload-list .ant-upload-list-picture-card-container,
+  .site-config-upload-list .ant-upload.ant-upload-select-picture-card {
+    width: 112px;
+    height: 88px;
+  }
+
+  .site-config-upload-trigger {
+    display: flex;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--ant-color-text-secondary);
+  }
+
+  .site-config-uploading {
+    color: var(--ant-color-text-secondary);
+    font-size: 13px;
+  }
+
+  .site-config-color-field {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .site-config-color-picker {
+    position: relative;
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    padding: 3px;
+    border: 1px solid var(--ant-color-border);
+    border-radius: 8px;
+    background: var(--ant-color-bg-container);
+    cursor: pointer;
+  }
+
+  .site-config-color-picker::-webkit-color-swatch-wrapper {
+    padding: 0;
+  }
+
+  .site-config-color-picker::-webkit-color-swatch {
+    border: 0;
+    border-radius: 5px;
+  }
+}
+
+@media (max-width: 1280px) {
+  .site-config-page {
+    .site-config-header {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .site-config-card {
+      padding: 22px 16px 18px;
+    }
+
+    .site-config-form-list {
+      max-width: none;
+    }
+  }
+}

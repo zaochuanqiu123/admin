@@ -277,6 +277,26 @@ const routes = [
     hideInMenu: true,
   },
   {
+    name: '网站配置',
+    path: '/set/site-config',
+    component: './set/site-config/index',
+    backendPathUrls: [
+      '/admin/system/v1/systemConfig/GLOBAL/SITE_STATIC_RESOURCE/getList',
+      '/admin/system/v1/systemConfig/modify/value',
+    ],
+    hideInMenu: true,
+  },
+  {
+    name: '域名配置',
+    path: '/set/domain-config',
+    component: './set/domain-config/index',
+    backendPathUrls: [
+      '/admin/system/v1/systemConfig/GLOBAL/DOMAIN/getList',
+      '/admin/system/v1/systemConfig/modify/value',
+    ],
+    hideInMenu: true,
+  },
+  {
     path: '/',
     redirect: '/dashboard/index',
   },

@@ -25,12 +25,15 @@ import {
   setLoginUserInfo,
   setToken,
 } from '@/api/storage';
+import {
+  getUncheckedSiteStaticConfig,
+  type SystemConfigItem,
+} from '@/api/systemConfig';
 import Banner1 from '@/assets/Banner1.jpg';
 import Banner2 from '@/assets/Banner2.jpg';
 import Banner3 from '@/assets/Banner3.jpg';
 import Banner4 from '@/assets/Banner4.jpg';
 import LogoDark from '@/assets/logo-dark.png';
-import { Footer } from '@/components';
 import {
   clearPostLoginRedirect,
   consumeAuthLogoutMessage,
@@ -40,11 +43,156 @@ import {
   markLoginPendingIdentity,
   setPostLoginRedirect,
 } from '@/utils/auth-expired';
+import { setDocumentFavicon } from '@/utils/favicon';
 import Settings from '../../../../config/defaultSettings';
 import './index.less';
 
 const devBypassAuth =
   typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
+const DEFAULT_SERVICE_PHONE = '400-010-3000';
+const DEFAULT_SITE_NAME = '随付达';
+const DEFAULT_BANNER_IMAGES = [Banner1, Banner2, Banner3, Banner4];
+
+type LoginStaticResourceState = {
+  logoUrl: string;
+  faviconUrl?: string;
+  siteName: string;
+  servicePhone: string;
+  icpText?: string;
+  icpLink?: string;
+  psbText?: string;
+  psbLink?: string;
+  bannerImages: string[];
+  carouselAutoplay: boolean;
+  carouselIntervalMs: number;
+};
+
+type BannerConfig = {
+  items?: Array<Record<string, any>>;
+  autoplay?: boolean;
+  intervalMs?: number;
+};
+
+const defaultLoginStaticResources: LoginStaticResourceState = {
+  logoUrl: LogoDark,
+  siteName: DEFAULT_SITE_NAME,
+  servicePhone: DEFAULT_SERVICE_PHONE,
+  bannerImages: DEFAULT_BANNER_IMAGES,
+  carouselAutoplay: true,
+  carouselIntervalMs: 3000,
+};
+
+const isDisplaySrc = (value?: unknown) => {
+  const text = String(value || '').trim();
+  if (!text) return false;
+  return (
+    /^(https?:)?\/\//.test(text) ||
+    /^(data|blob):/.test(text) ||
+    text.startsWith('/')
+  );
+};
+
+const parseJsonConfig = <T,>(value?: unknown): T | undefined => {
+  if (!value) return undefined;
+  if (typeof value !== 'string') return value as T;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return undefined;
+  }
+};
+
+const toConfigMap = (configs?: SystemConfigItem[]) => {
+  const map: Record<string, SystemConfigItem> = {};
+  (configs || []).forEach((item) => {
+    const key = String(item?.configKey || '').trim();
+    if (key) map[key] = item;
+  });
+  return map;
+};
+
+const readTextConfig = (item?: SystemConfigItem, fallback = '') =>
+  String(item?.configValue || item?.configValueConvert || fallback).trim();
+
+const readFirstTextConfig = (
+  configMap: Record<string, SystemConfigItem>,
+  keys: string[],
+  fallback = '',
+) => {
+  for (const key of keys) {
+    const value = readTextConfig(configMap[key]);
+    if (value) return value;
+  }
+  return fallback;
+};
+
+const readFileUrlConfig = (item?: SystemConfigItem, fallback = '') => {
+  const converted = String(item?.configValueConvert || '').trim();
+  if (isDisplaySrc(converted)) return converted;
+  const raw = String(item?.configValue || '').trim();
+  return isDisplaySrc(raw) ? raw : fallback;
+};
+
+const readFirstFileUrlConfig = (
+  configMap: Record<string, SystemConfigItem>,
+  keys: string[],
+  fallback = '',
+) => {
+  for (const key of keys) {
+    const value = readFileUrlConfig(configMap[key]);
+    if (value) return value;
+  }
+  return fallback;
+};
+
+const readFooterExtraConfig = (item?: SystemConfigItem) => {
+  const value =
+    parseJsonConfig<Record<string, any>>(item?.configValueConvert) ||
+    parseJsonConfig<Record<string, any>>(item?.configValue);
+  return value || {};
+};
+
+const readBannerConfig = (item?: SystemConfigItem) => {
+  const converted =
+    parseJsonConfig<BannerConfig>(item?.configValueConvert) ||
+    parseJsonConfig<BannerConfig>(item?.configValue);
+  const directUrl = readFileUrlConfig(item);
+  if (!converted && directUrl) {
+    return {
+      images: [directUrl],
+      autoplay: true,
+      intervalMs: 3000,
+    };
+  }
+
+  const items = Array.isArray(converted)
+    ? converted
+    : Array.isArray(converted?.items)
+      ? converted.items
+      : [];
+  const images = items
+    .slice()
+    .sort((a, b) => Number(a?.sort || 0) - Number(b?.sort || 0))
+    .map((configItem) =>
+      typeof configItem === 'string'
+        ? configItem.trim()
+        : String(
+            configItem?.url ||
+              configItem?.attachmentUrl ||
+              configItem?.imageUrl ||
+              configItem?.src ||
+              '',
+          ).trim(),
+    )
+    .filter((src) => isDisplaySrc(src));
+
+  return {
+    images,
+    autoplay:
+      typeof converted?.autoplay === 'boolean' ? converted.autoplay : true,
+    intervalMs: Number(converted?.intervalMs || 3000),
+  };
+};
 
 const Lang = () => {
   return (
@@ -114,9 +262,14 @@ const Login: React.FC = () => {
   const carouselRef = useRef<any>(null);
   const [activeSlide, setActiveSlide] = useState<number>(0);
   const [qrRefreshSpinKey, setQrRefreshSpinKey] = useState<number>(0);
+  const [staticResources, setStaticResources] =
+    useState<LoginStaticResourceState>(defaultLoginStaticResources);
 
   useEffect(() => {
     Modal.destroyAll();
+    if (!getRedirectFromSearch()) {
+      clearPostLoginRedirect();
+    }
     const logoutMessage = consumeAuthLogoutMessage();
     const reason = consumeAuthLogoutReason();
     if (logoutMessage) {
@@ -136,6 +289,94 @@ const Login: React.FC = () => {
     if (reason === 'expired') {
       setLogoutReasonText('登录状态已过期，请重新登录。');
     }
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    const loadStaticResources = async () => {
+      try {
+        const configs = await getUncheckedSiteStaticConfig({
+          skipErrorHandler: true,
+        });
+        if (ignore) return;
+
+        const configMap = toConfigMap(configs);
+        const bannerConfig = readBannerConfig(configMap['auth.login.carousel']);
+        const footerExtra = readFooterExtraConfig(configMap['footer.extra']);
+        const nextBannerImages =
+          bannerConfig.images.length > 0
+            ? bannerConfig.images
+            : DEFAULT_BANNER_IMAGES;
+
+        const nextStaticResources = {
+          logoUrl: readFirstFileUrlConfig(
+            configMap,
+            ['auth.login.logo', 'site.logo'],
+            LogoDark,
+          ),
+          faviconUrl: readFileUrlConfig(configMap['site.favicon']),
+          siteName: readTextConfig(configMap['site.name'], DEFAULT_SITE_NAME),
+          servicePhone: readFirstTextConfig(
+            configMap,
+            [
+              'auth.login.contactPhone',
+              'auth.login.service.phone',
+              'auth.login.phone',
+              'site.contact.phone',
+              'site.service.phone',
+              'site.phone',
+              'site.telephone',
+              'footer.contact.phone',
+              'contact.phone',
+            ],
+            String(
+              footerExtra.servicePhone ||
+                footerExtra.contactPhone ||
+                footerExtra.phone ||
+                DEFAULT_SERVICE_PHONE,
+            ),
+          ),
+          icpText: readTextConfig(
+            configMap['footer.icp.text'],
+            footerExtra.icpText,
+          ),
+          icpLink: readTextConfig(
+            configMap['footer.icp.link'],
+            footerExtra.icpLink,
+          ),
+          psbText: readTextConfig(
+            configMap['footer.psb.text'],
+            footerExtra.psbText,
+          ),
+          psbLink: readTextConfig(
+            configMap['footer.psb.link'],
+            footerExtra.psbLink,
+          ),
+          bannerImages: nextBannerImages,
+          carouselAutoplay: bannerConfig.autoplay,
+          carouselIntervalMs: bannerConfig.intervalMs || 3000,
+        };
+
+        setStaticResources(nextStaticResources);
+        setDocumentFavicon(nextStaticResources.faviconUrl);
+        setInitialState((s: any) => ({
+          ...(s || {}),
+          settings: {
+            ...((s as any)?.settings || {}),
+            title: nextStaticResources.siteName,
+          },
+        }));
+      } catch (error) {
+        console.warn('load login static resources failed:', error);
+      }
+    };
+
+    void loadStaticResources();
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   // 移除缩放逻辑，改用响应式布局
@@ -276,28 +517,50 @@ const Login: React.FC = () => {
     }
   };
 
-  const appTitle = typeof Settings.title === 'string' ? Settings.title : '';
+  const appTitle =
+    staticResources.siteName ||
+    (typeof Settings.title === 'string' ? Settings.title : '') ||
+    DEFAULT_SITE_NAME;
   const pageTitle = `${intl.formatMessage({
     id: 'menu.login',
     defaultMessage: '登录页',
   })}${appTitle ? ` - ${appTitle}` : ''}`;
 
-  const bannerImages = useMemo(() => {
-    return [Banner1, Banner2, Banner3, Banner4];
-  }, []);
+  const bannerImages = useMemo(
+    () =>
+      staticResources.bannerImages.length > 0
+        ? staticResources.bannerImages
+        : DEFAULT_BANNER_IMAGES,
+    [staticResources.bannerImages],
+  );
 
   const cardTitle = appTitle ? `欢迎登录${appTitle}` : '欢迎登录随付达';
+  const footerItems = [
+    {
+      key: 'icp',
+      text: staticResources.icpText,
+      link: staticResources.icpLink,
+    },
+    {
+      key: 'psb',
+      text: staticResources.psbText,
+      link: staticResources.psbLink,
+    },
+  ].filter((item) => item.text || item.link);
 
   return (
     <div className="loginPage">
       <Helmet>
         <title>{pageTitle}</title>
+        {staticResources.faviconUrl ? (
+          <link rel="icon" href={staticResources.faviconUrl} />
+        ) : null}
       </Helmet>
       <div className="bgCarousel">
         <Carousel
           ref={carouselRef}
-          autoplay
-          autoplaySpeed={3000}
+          autoplay={staticResources.carouselAutoplay}
+          autoplaySpeed={staticResources.carouselIntervalMs}
           effect="fade"
           dots={false}
           beforeChange={(_, next) => {
@@ -317,11 +580,11 @@ const Login: React.FC = () => {
         <Lang />
         <div className="header u-flex-between">
           <div className="brand u-flex-center">
-            <img src={LogoDark} alt="" className="brandLogo" />
+            <img src={staticResources.logoUrl} alt="" className="brandLogo" />
           </div>
           <div className="service u-flex-center">
             <PhoneOutlined />
-            <span>400-010-3000</span>
+            <span>{staticResources.servicePhone}</span>
           </div>
         </div>
 
@@ -530,7 +793,33 @@ const Login: React.FC = () => {
           })}
         </div>
 
-        <Footer />
+        {footerItems.length > 0 ? (
+          <div className="loginFooter u-flex-center">
+            {footerItems.map((item, index) => {
+              const content = item.text || item.link;
+              if (!content) return null;
+              return (
+                <React.Fragment key={item.key}>
+                  {index > 0 ? (
+                    <span className="loginFooterDivider">|</span>
+                  ) : null}
+                  {item.link ? (
+                    <a
+                      href={item.link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="loginFooterLink"
+                    >
+                      {content}
+                    </a>
+                  ) : (
+                    <span>{content}</span>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
     </div>
   );

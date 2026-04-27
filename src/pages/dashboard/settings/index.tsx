@@ -3,11 +3,10 @@ import { Menu } from 'antd';
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import BaseView from './components/base';
 import BindingView from './components/binding';
-import NotificationView from './components/notification';
-import SecurityView from './components/security';
+import PasswordView from './components/password';
 import useStyles from './style.style';
 
-type SettingsStateKeys = 'base' | 'security' | 'binding' | 'notification';
+type SettingsStateKeys = 'base' | 'binding' | 'password';
 type SettingsState = {
   mode: 'inline' | 'horizontal';
   selectKey: SettingsStateKeys;
@@ -15,10 +14,9 @@ type SettingsState = {
 const Settings: React.FC = () => {
   const { styles } = useStyles();
   const menuMap: Record<string, React.ReactNode> = {
-    base: '基本设置',
-    security: '安全设置',
+    base: '基本信息',
     binding: '账号绑定',
-    notification: '新消息通知',
+    password: '修改密码',
   };
   const [initConfig, setInitConfig] = useState<SettingsState>({
     mode: 'inline',
@@ -64,12 +62,10 @@ const Settings: React.FC = () => {
     switch (selectKey) {
       case 'base':
         return <BaseView />;
-      case 'security':
-        return <SecurityView />;
       case 'binding':
         return <BindingView />;
-      case 'notification':
-        return <NotificationView />;
+      case 'password':
+        return <PasswordView />;
       default:
         return null;
     }

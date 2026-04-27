@@ -339,7 +339,8 @@ const RouteTabsKeepAlive: React.FC<{
   themeCacheKey?: string;
   menuData?: MenuDataItem[];
   extraOps?: React.ReactNode;
-}> = ({ children, themeCacheKey, menuData, extraOps }) => {
+  siteTitle?: string;
+}> = ({ children, themeCacheKey, menuData, extraOps, siteTitle }) => {
   const outlet = useOutlet();
   const activeNode = outlet ?? children;
   const locationContextValue = React.useContext(UNSAFE_LocationContext);
@@ -375,6 +376,14 @@ const RouteTabsKeepAlive: React.FC<{
   React.useEffect(() => {
     cacheKeyRef.current = themeCacheKey || '';
   }, [themeCacheKey]);
+
+  React.useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const titleSuffix = String(siteTitle || '').trim();
+    document.title = titleSuffix
+      ? `${activeTabTitle} - ${titleSuffix}`
+      : activeTabTitle;
+  }, [activeTabTitle, siteTitle]);
 
   // 权限菜单变更时（身份/业态切换），清除所有 KeepAlive 缓存的组件实例
   const menuDataSignatureRef = React.useRef<string>('');

@@ -22,6 +22,10 @@ import {
 import { useModel } from '@umijs/max';
 import { Button, Drawer, Input, message, Space, Typography, theme } from 'antd';
 import React, { useEffect } from 'react';
+import {
+  getOrgUserFavoriteMenuList,
+  saveOrgUserFavoriteMenu,
+} from '@/api/orgUser';
 import aijiqiren from '@/assets/aijiqiren.png';
 import shendusousuo from '@/assets/shendusousuo.png';
 import {
@@ -32,6 +36,7 @@ import {
   filterHomepageCommonActions,
   isHomepageCommonAction,
 } from '@/config/menu.config';
+import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
 import {
   readGroupOrderFromStorage,
   writeGroupOrderToStorage,
@@ -73,6 +78,21 @@ function getMenuNodeSourceSystem(node: any) {
   return Number.isFinite(sourceSystem) ? sourceSystem : undefined;
 }
 
+function getMenuNodeFavoriteMenuId(node: any) {
+  const rawFavoriteMenuId =
+    node?.favoriteMenuId ??
+    node?.menuId ??
+    node?.permId ??
+    node?.id ??
+    node?.targetId ??
+    node?.key;
+  if (rawFavoriteMenuId === undefined || rawFavoriteMenuId === null) {
+    return undefined;
+  }
+  const favoriteMenuId = String(rawFavoriteMenuId).trim();
+  return favoriteMenuId || undefined;
+}
+
 function normalizeMergeKey(value: string) {
   return value.replace(/\s+/g, '').toLowerCase();
 }
@@ -89,6 +109,7 @@ function buildActionId(
 ) {
   const targetId = getMenuNodeTargetId(node);
   const rawId =
+    node?.favoriteMenuId ??
     node?.key ??
     node?.id ??
     node?.menuId ??
@@ -122,6 +143,7 @@ function collectMenuActions(
       path,
       targetId: getMenuNodeTargetId(node),
       sourceSystem: getMenuNodeSourceSystem(node),
+      favoriteMenuId: getMenuNodeFavoriteMenuId(node),
     };
     return isHomepageCommonAction(action) ? [] : [action];
   }
@@ -288,6 +310,64 @@ function buildCommonGroupsFromMenuData(menuData?: any[]): CommonGroup[] {
   return mergeCommonGroups(groups);
 }
 
+function getActionFavoriteMenuId(action: CommonAction) {
+  const favoriteMenuId = String(
+    action.favoriteMenuId || action.id || '',
+  ).trim();
+  return favoriteMenuId || '';
+}
+
+function collectCommonGroupActions(groups: CommonGroup[]) {
+  return groups.flatMap((group) =>
+    group.children.flatMap((subGroup) => subGroup.children),
+  );
+}
+
+function normalizeFavoriteMenuIds(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item: any) => {
+      const raw =
+        typeof item === 'string' || typeof item === 'number'
+          ? item
+          : (item?.favoriteMenuId ??
+            item?.menuId ??
+            item?.permId ??
+            item?.id ??
+            item?.targetId ??
+            item?.key);
+      return String(raw ?? '').trim();
+    })
+    .filter(Boolean);
+}
+
+function pickFavoriteActionsByIds(
+  favoriteMenuIds: string[],
+  availableActions: CommonAction[],
+) {
+  const actionMap = new Map<string, CommonAction>();
+  availableActions.forEach((action) => {
+    const favoriteMenuId = getActionFavoriteMenuId(action);
+    if (favoriteMenuId && !actionMap.has(favoriteMenuId)) {
+      actionMap.set(favoriteMenuId, action);
+    }
+    if (!actionMap.has(action.id)) {
+      actionMap.set(action.id, action);
+    }
+  });
+
+  const seen = new Set<string>();
+  return favoriteMenuIds
+    .map((favoriteMenuId) => actionMap.get(favoriteMenuId))
+    .filter((action): action is CommonAction => Boolean(action))
+    .filter((action) => {
+      const key = getActionFavoriteMenuId(action) || action.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
 const WorkplaceCommonMenu: React.FC<{
   storageKey: string;
   commonActions: CommonAction[];
@@ -313,6 +393,9 @@ const WorkplaceCommonMenu: React.FC<{
     COMMON_GROUPS[0]?.children?.[0]?.id ?? '',
   );
   const [assistantQuestion, setAssistantQuestion] = React.useState('');
+  const [favoriteSaving, setFavoriteSaving] = React.useState(false);
+  const favoriteLoadKeyRef = React.useRef('');
+  const setCommonActionsRef = React.useRef(setCommonActions);
   const isDarkMode = (initialState?.settings as any)?.navTheme === 'realDark';
   const drawerSurfaceBg = isDarkMode ? token.colorBgLayout : '#E7EDFB';
   const drawerPanelBg = isDarkMode ? token.colorBgContainer : '#FFFFFF';
@@ -334,6 +417,21 @@ const WorkplaceCommonMenu: React.FC<{
     () => commonGroups.map((group) => group.id),
     [commonGroups],
   );
+  const availableFavoriteActions = React.useMemo(
+    () => collectCommonGroupActions(commonGroups),
+    [commonGroups],
+  );
+  const favoriteActionSignature = React.useMemo(
+    () =>
+      availableFavoriteActions
+        .map((action) => getActionFavoriteMenuId(action) || action.id)
+        .join('|'),
+    [availableFavoriteActions],
+  );
+
+  useEffect(() => {
+    setCommonActionsRef.current = setCommonActions;
+  }, [setCommonActions]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -344,6 +442,50 @@ const WorkplaceCommonMenu: React.FC<{
     setSavedGroupOrder(groupOrder);
     setDraftGroupOrder(groupOrder);
   }, [storageKey, commonActions, commonGroupIds]);
+
+  useEffect(() => {
+    if (
+      typeof window === 'undefined' ||
+      availableFavoriteActions.length === 0
+    ) {
+      return;
+    }
+
+    const loadKey = `${storageKey}:${favoriteActionSignature}`;
+    if (favoriteLoadKeyRef.current === loadKey) return;
+    favoriteLoadKeyRef.current = loadKey;
+
+    let ignore = false;
+    const loadFavoriteMenu = async () => {
+      try {
+        const res = await getOrgUserFavoriteMenuList({
+          skipErrorHandler: true,
+        });
+        if (ignore) return;
+        const favoriteActions = pickFavoriteActionsByIds(
+          normalizeFavoriteMenuIds(res),
+          availableFavoriteActions,
+        );
+        setCommonActionsRef.current(
+          filterHomepageCommonActions(favoriteActions).map((item) => ({
+            ...item,
+          })),
+        );
+      } catch (error) {
+        console.warn('load favorite menu failed:', error);
+        if (!ignore) {
+          setCommonActionsRef.current([]);
+          message.error(getErrorMessage(error, '查询快捷导航失败'));
+        }
+      }
+    };
+
+    void loadFavoriteMenu();
+
+    return () => {
+      ignore = true;
+    };
+  }, [availableFavoriteActions, favoriteActionSignature, storageKey]);
 
   useEffect(() => {
     if (commonGroups.length === 0) return;
@@ -420,13 +562,29 @@ const WorkplaceCommonMenu: React.FC<{
     setDraftGroupOrder(savedGroupOrder.map((x) => x));
   };
 
-  const confirmEdit = () => {
-    setCommonActions(
-      filterHomepageCommonActions(draftList).map((x) => ({ ...x })),
+  const confirmEdit = async () => {
+    const nextCommonActions = filterHomepageCommonActions(draftList).map(
+      (x) => ({ ...x }),
     );
-    setSavedGroupOrder(draftGroupOrder.map((x) => x));
-    writeGroupOrderToStorage(storageKey, draftGroupOrder);
-    setOpen(false);
+    const favoriteMenuIds = nextCommonActions
+      .map(getActionFavoriteMenuId)
+      .filter(Boolean);
+
+    setFavoriteSaving(true);
+    try {
+      const res = await saveOrgUserFavoriteMenu(favoriteMenuIds, {
+        skipErrorHandler: true,
+      });
+      message.success(getApiMessage(res, '保存成功'));
+      setCommonActions(nextCommonActions);
+      setSavedGroupOrder(draftGroupOrder.map((x) => x));
+      writeGroupOrderToStorage(storageKey, draftGroupOrder);
+      setOpen(false);
+    } catch (error) {
+      message.error(getErrorMessage(error, '保存快捷导航失败'));
+    } finally {
+      setFavoriteSaving(false);
+    }
   };
 
   const removeFromDraft = (id: string) => {
@@ -641,6 +799,7 @@ const WorkplaceCommonMenu: React.FC<{
                 size="small"
                 type="primary"
                 onClick={confirmEdit}
+                loading={favoriteSaving}
                 style={{
                   borderRadius: 16,
                   fontSize: 14,

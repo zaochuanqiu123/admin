@@ -24,6 +24,28 @@ import './index.less';
 const HEADER_USER_AVATAR_SRC =
   'https://api.dicebear.com/7.x/miniavs/svg?seed=antd-yangkun';
 
+const isAvatarDisplaySrc = (avatar?: unknown) => {
+  const value = String(avatar || '').trim();
+  if (!value) return false;
+  return (
+    /^(https?:)?\/\//.test(value) ||
+    /^(data|blob):/.test(value) ||
+    value.startsWith('/')
+  );
+};
+
+const resolveAvatarSrc = (
+  user?: (API.CurrentUser & Record<string, any>) | null,
+) => {
+  const avatarUrl = String(user?.avatarUrl || '').trim();
+  if (avatarUrl) return avatarUrl;
+
+  const avatar = String(user?.avatar || '').trim();
+  if (isAvatarDisplaySrc(avatar)) return avatar;
+
+  return HEADER_USER_AVATAR_SRC;
+};
+
 const withAvatarCacheKey = (avatar: string) => {
   if (!avatar || /^(data|blob):/.test(avatar)) return avatar;
 
@@ -122,10 +144,7 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
     '未选择机构';
   const accountRole =
     currentIdentity?.groupLabel || currentIdentity?.levelName || '未选择身份';
-  const avatarSrc =
-    (currentUser as any)?.avatar ||
-    currentUser?.avatar ||
-    HEADER_USER_AVATAR_SRC;
+  const avatarSrc = resolveAvatarSrc(currentUser as any);
   const triggerLabel = currentOrgName;
 
   /** 处理头像文件上传 */
@@ -160,9 +179,12 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
         return false;
       }
 
-      const latestAvatar = freshUser.avatar || (freshUser as any)?.avatarUrl;
+      const latestAvatar =
+        (freshUser as any)?.avatarUrl ||
+        attachment.url ||
+        (isAvatarDisplaySrc(freshUser.avatar) ? freshUser.avatar : '');
       if (!latestAvatar) {
-        message.error('头像已保存，但未获取到最新头像');
+        message.error('头像已保存，但未获取到最新头像地址');
         return false;
       }
 
@@ -177,7 +199,7 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
       const nextUser = {
         ...(currentUser || {}),
         ...freshUser,
-        avatar: displayAvatar,
+        avatar: freshUser.avatar || String(attachmentId),
         avatarUrl: displayAvatar,
       };
       setLoginUserInfo(nextUser);
@@ -199,8 +221,33 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
     return false; // 阻止 Upload 默认行为
   };
 
+  const refreshProfileUserInfo = async () => {
+    let freshUser: API.CurrentUser | undefined;
+    try {
+      freshUser = await fetchUserInfo?.();
+    } catch (error) {
+      console.error('refresh user info failed:', error);
+      return;
+    }
+    if (!freshUser) return;
+
+    const nextUser = {
+      ...(currentUser || {}),
+      ...freshUser,
+    };
+    setLoginUserInfo(nextUser);
+    setInitialState((s: any) => ({
+      ...s,
+      currentUser: {
+        ...(s?.currentUser || {}),
+        ...nextUser,
+      },
+    }));
+  };
+
   const handleOpenProfileCenter = () => {
     setOpen(false);
+    void refreshProfileUserInfo();
     history.push('/dashboard/settings');
   };
 
@@ -285,13 +332,13 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
               </div>
             </div>
             <div className="header-identity-dropdown__actions">
-              {/* <button
+              <button
                 type="button"
                 className="header-identity-dropdown__action-pill"
                 onClick={handleOpenProfileCenter}
               >
                 个人中心
-              </button> */}
+              </button>
               <button
                 type="button"
                 className="header-identity-dropdown__action-pill"

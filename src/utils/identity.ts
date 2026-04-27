@@ -239,11 +239,11 @@ export async function switchIdentityContext(
       if (apiUser && (apiUser.nickName || apiUser.name || apiUser.account)) {
         const freshUser = {
           userid: apiUser.account,
-          // 展示名字优先使用 nickName（昵称），兜底 name
-          name: apiUser.nickName || apiUser.name,
-          nickName: apiUser.nickName || apiUser.name,
+          name: apiUser.name,
+          nickName: apiUser.nickName,
           account: apiUser.account,
-          avatar: apiUser.avatarUrl || apiUser.avatar,
+          avatar: apiUser.avatar,
+          avatarUrl: apiUser.avatarUrl,
           phone: apiUser.phone,
         };
         setInitialState((state) => ({

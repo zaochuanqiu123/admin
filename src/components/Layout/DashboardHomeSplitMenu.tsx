@@ -626,8 +626,6 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
     };
   }, [clearCloseTimer, clearHoverIntent]);
 
-  const hasCommonActions = commonActions.length > 0;
-
   const openCommonActionsDrawer = React.useCallback(() => {
     window.dispatchEvent(new Event(OPEN_COMMON_ACTIONS_DRAWER_EVENT));
   }, []);
@@ -744,19 +742,17 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
           onClick={handleItemClick}
           className="dashboard-home-split-menu-ant"
         />
-        {hasCommonActions ? (
-          <div className="dashboard-common-actions-footer">
-            <button
-              type="button"
-              className="dashboard-common-actions-drawer-trigger"
-              onClick={openCommonActionsDrawer}
-              aria-label="打开常用数据编辑抽屉"
-            >
-              <PlusOutlined />
-              <span>管理常用</span>
-            </button>
-          </div>
-        ) : null}
+        <div className="dashboard-common-actions-footer">
+          <button
+            type="button"
+            className="dashboard-common-actions-drawer-trigger"
+            onClick={openCommonActionsDrawer}
+            aria-label="打开常用数据编辑抽屉"
+          >
+            <PlusOutlined />
+            <span>管理常用</span>
+          </button>
+        </div>
       </div>
     </div>
   );

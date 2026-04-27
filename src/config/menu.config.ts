@@ -10,6 +10,7 @@ export type CommonAction = {
   path: string;
   targetId?: string;
   sourceSystem?: number;
+  favoriteMenuId?: string;
 };
 
 type CommonActionIdentity = Pick<CommonAction, 'id' | 'title' | 'path'>;
