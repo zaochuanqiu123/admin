@@ -38,10 +38,7 @@ import {
   clearPostLoginRedirect,
   consumeAuthLogoutMessage,
   consumeAuthLogoutReason,
-  getPostLoginRedirect,
-  getRedirectFromSearch,
   markLoginPendingIdentity,
-  setPostLoginRedirect,
 } from '@/utils/auth-expired';
 import { setDocumentFavicon } from '@/utils/favicon';
 import Settings from '../../../../config/defaultSettings';
@@ -49,7 +46,7 @@ import './index.less';
 
 const devBypassAuth =
   typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
-const DEFAULT_SERVICE_PHONE = '400-010-3000';
+const DEFAULT_SERVICE_PHONE = '400-000-8583';
 const DEFAULT_SITE_NAME = '随付达';
 const DEFAULT_BANNER_IMAGES = [Banner1, Banner2, Banner3, Banner4];
 
@@ -267,9 +264,7 @@ const Login: React.FC = () => {
 
   useEffect(() => {
     Modal.destroyAll();
-    if (!getRedirectFromSearch()) {
-      clearPostLoginRedirect();
-    }
+    clearPostLoginRedirect();
     const logoutMessage = consumeAuthLogoutMessage();
     const reason = consumeAuthLogoutReason();
     if (logoutMessage) {
@@ -489,20 +484,8 @@ const Login: React.FC = () => {
 
       setLoginError(null);
       markLoginPendingIdentity();
-
-      const redirect =
-        getRedirectFromSearch() || getPostLoginRedirect() || undefined;
-
-      if (redirect) {
-        setPostLoginRedirect(redirect);
-        history.replace({
-          pathname: '/user/character',
-          search: new URLSearchParams({ redirect }).toString(),
-        });
-      } else {
-        clearPostLoginRedirect();
-        history.replace('/user/character');
-      }
+      clearPostLoginRedirect();
+      history.replace('/user/character');
       return;
     } catch (error) {
       const defaultLoginFailureMessage = intl.formatMessage({

@@ -14,18 +14,12 @@ import {
   clearAuthStorage,
   clearPostLoginRedirect,
   consumeLoginPendingIdentity,
-  getPostLoginRedirect,
-  getRedirectFromSearch,
-  normalizeRedirectPath,
 } from '@/utils/auth-expired';
-import { buildIframeRouteWithParams } from '@/utils/iframe';
 import {
   extractButtonPermissionMap,
   extractPermContextNodes,
-  findPathByTargetId,
   mapPermContextToMenuData,
 } from '@/utils/menu';
-import { getAllowedTopPaths } from '@/utils/route.utils';
 import {
   clearStoreScopedStorage,
   clearWorkplaceCommonActionsCache,
@@ -193,9 +187,7 @@ const Character: FC = () => {
   const handleSelectStore = async (item: StoreItem) => {
     setSelectedStoreId(item.id);
     const orgCode = item.orgCode;
-    let nextPath = '/dashboard/index';
-    const requestedRedirect =
-      getRedirectFromSearch() || getPostLoginRedirect() || undefined;
+    const nextPath = '/dashboard/index';
     if (orgCode) {
       clearStoreScopedStorage();
       setInitialState((s: any) => resetStoreScopedInitialState(s));
@@ -214,41 +206,6 @@ const Character: FC = () => {
         const permNodes = extractPermContextNodes(permRes);
         const permContextMenu = mapPermContextToMenuData(permNodes);
         const buttonPermissions = extractButtonPermissionMap(permRes);
-        const defaultPath = buildIframeRouteWithParams('/dashboard/index');
-        nextPath = defaultPath;
-
-        const redirectPath = normalizeRedirectPath(requestedRedirect);
-        if (redirectPath) {
-          const targetPathname = String(redirectPath)
-            .split('?')[0]
-            .split('#')[0];
-          const moduleRoot = `/${targetPathname.split('/')[1] || ''}`;
-          const isDashboard =
-            targetPathname === '/dashboard' ||
-            targetPathname.startsWith('/dashboard/');
-          const redirectTargetId = new URLSearchParams(
-            String(redirectPath).split('?')[1] || '',
-          ).get('targetId');
-          const hasLegacyIframeAccess =
-            !!redirectTargetId &&
-            !!findPathByTargetId(
-              permContextMenu.length > 0 ? permContextMenu : undefined,
-              redirectTargetId,
-            );
-          const allowedTopPaths = getAllowedTopPaths(
-            permContextMenu.length > 0 ? permContextMenu : undefined,
-          );
-          if (
-            isDashboard ||
-            (redirectTargetId
-              ? hasLegacyIframeAccess
-              : allowedTopPaths.has(moduleRoot))
-          ) {
-            nextPath = redirectPath;
-          } else {
-            message.warning('原页面无权限，已跳转到系统首页');
-          }
-        }
 
         // 登录后首次选择身份也需要刷新用户信息，不能只等页面刷新后再补。
         const currentUser = await initialState?.fetchUserInfo?.();

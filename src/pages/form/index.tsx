@@ -1,20 +1,13 @@
-import {
-  DownOutlined,
-  InfoCircleOutlined,
-  RightOutlined,
-} from '@ant-design/icons';
+import { DownOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { history, useAccess } from '@umijs/max';
 import {
   Button,
-  Checkbox,
   Dropdown,
   Input,
   type MenuProps,
   message,
-  Popconfirm,
   Result,
   Select,
-  Space,
   Switch,
   Table,
   Tag,
@@ -57,19 +50,15 @@ type StoreItem = {
 
 type StoreFilters = {
   name: string;
-  storeCode: string;
-  region: string;
-  branch: string;
-  status: string;
+  storeClass?: number;
+  merchantOrgId: string;
 };
 
 const DEFAULT_PAGE_SIZE = 10;
 const INITIAL_FILTERS: StoreFilters = {
   name: '',
-  storeCode: '',
-  region: '',
-  branch: '',
-  status: '',
+  storeClass: undefined,
+  merchantOrgId: '',
 };
 
 function readText(value: unknown): string {
@@ -135,7 +124,6 @@ const StorePage: React.FC = () => {
     hasButtonPerm?: (value: string | string[]) => boolean;
   };
   const canViewStorePage = !!access?.hasButtonPerm?.(STORE_PERMS.page);
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [qrModalPayload, setQrModalPayload] =
     useState<StoreQrCodeModalPayload | null>(null);
   const [appModalRecord, setAppModalRecord] = useState<StoreItem>();
@@ -160,7 +148,6 @@ const StorePage: React.FC = () => {
     pageSize: DEFAULT_PAGE_SIZE,
   });
   const tableWrapRef = useRef<HTMLDivElement | null>(null);
-  const hasSelectedStores = selectedRowKeys.length > 0;
 
   const handleOpenQrModal = useCallback(
     (scene: 'store' | 'merchant', record: StoreItem) => {
@@ -536,6 +523,10 @@ const StorePage: React.FC = () => {
             current: pagination.current,
             pageSize: pagination.pageSize,
             ...(filters.name ? { name: filters.name } : {}),
+            ...(filters.storeClass ? { storeClass: filters.storeClass } : {}),
+            ...(filters.merchantOrgId
+              ? { merchantOrgId: filters.merchantOrgId }
+              : {}),
           },
           {
             skipErrorHandler: true,
@@ -550,7 +541,6 @@ const StorePage: React.FC = () => {
         setSwitchingMainStoreIds({});
         setSwitchingMiniAppIds({});
         setTotal(Number(res?.total || 0));
-        setSelectedRowKeys([]);
       } catch (error) {
         if (cancelled) return;
         setStores([]);
@@ -571,7 +561,13 @@ const StorePage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [filters.name, pagination.current, pagination.pageSize]);
+  }, [
+    filters.merchantOrgId,
+    filters.name,
+    filters.storeClass,
+    pagination.current,
+    pagination.pageSize,
+  ]);
 
   useEffect(() => {
     const wrapper = tableWrapRef.current;
@@ -600,18 +596,22 @@ const StorePage: React.FC = () => {
     };
   }, [stores.length]);
 
-  const handleFilterChange = (
-    key: keyof StoreFilters,
-    value?: string | null,
+  const handleFilterChange = <K extends keyof StoreFilters>(
+    key: K,
+    value: StoreFilters[K],
   ) => {
     setDraftFilters((prev) => ({
       ...prev,
-      [key]: value || '',
+      [key]: value,
     }));
   };
 
   const handleSearch = () => {
-    setFilters(draftFilters);
+    setFilters({
+      ...draftFilters,
+      name: draftFilters.name.trim(),
+      merchantOrgId: draftFilters.merchantOrgId.trim(),
+    });
     setPagination((prev) => ({
       ...prev,
       current: 1,
@@ -625,7 +625,6 @@ const StorePage: React.FC = () => {
       current: 1,
       pageSize: DEFAULT_PAGE_SIZE,
     });
-    setSelectedRowKeys([]);
   };
 
   if (!canViewStorePage) {
@@ -672,42 +671,6 @@ const StorePage: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="overview-card middle u-flex-col u-justify-between">
-          <div className="overview-title u-flex-center">
-            二维码绑定管理{' '}
-            <span className="new-badge u-inline-flex-middle">NEW</span>
-          </div>
-          <div className="overview-middle-row u-flex u-justify-between">
-            <div className="overview-desc">
-              绑定后点击跳转你的小
-              <br />
-              程序，提升交易转化
-            </div>
-            <Button
-              type="primary"
-              shape="round"
-              className="overview-primary-btn"
-            >
-              管理绑定
-            </Button>
-          </div>
-        </div>
-        <div className="overview-card u-flex-col u-justify-between">
-          <div className="overview-title u-flex-center">已关联店员</div>
-          <div className="overview-main-row u-flex-between">
-            <div className="overview-value">0</div>
-            <Button
-              type="primary"
-              shape="round"
-              className="overview-primary-btn"
-              onClick={() => {
-                history.push('/permission/store-staff');
-              }}
-            >
-              管理店员
-            </Button>
-          </div>
-        </div>
       </div>
 
       <div className="content-card">
@@ -715,7 +678,7 @@ const StorePage: React.FC = () => {
           <div className="field u-flex-center">
             <span className="field-label">门店名称</span>
             <Input
-              placeholder="支持模糊搜索: 如: 海底捞"
+              placeholder="请输入门店名称"
               value={draftFilters.name}
               onChange={(event) => {
                 handleFilterChange('name', event.target.value);
@@ -724,63 +687,29 @@ const StorePage: React.FC = () => {
             />
           </div>
           <div className="field u-flex-center">
-            <span className="field-label">门店编号</span>
-            <Input
-              placeholder="请输入精准编号"
-              value={draftFilters.storeCode}
-              onChange={(event) => {
-                handleFilterChange('storeCode', event.target.value);
-              }}
-            />
-          </div>
-          <div className="field u-flex-center">
-            <span className="field-label">所属地区</span>
-            <Space.Compact block>
-              <Select
-                defaultValue="省"
-                options={[{ label: '省', value: '省' }]}
-                style={{ width: 90 }}
-              />
-              <Select
-                placeholder="所有地区"
-                value={draftFilters.region || undefined}
-                options={[
-                  { label: '所有地区', value: 'all' },
-                  { label: '上海市', value: 'sh' },
-                  { label: '郑州市', value: 'zz' },
-                ]}
-                onChange={(value) => {
-                  handleFilterChange('region', value);
-                }}
-                allowClear
-              />
-            </Space.Compact>
-          </div>
-          <div className="field u-flex-center">
-            <span className="field-label">所属分公司</span>
+            <span className="field-label">门店类型</span>
             <Select
               allowClear
-              value={draftFilters.branch || undefined}
-              options={[{ label: '华东分公司', value: 'east' }]}
-              placeholder="请选择分公司"
-              onChange={(value) => {
-                handleFilterChange('branch', value);
-              }}
-            />
-          </div>
-          <div className="field u-flex-center">
-            <span className="field-label">门店信息状态</span>
-            <Select
-              allowClear
-              value={draftFilters.status || undefined}
+              value={draftFilters.storeClass}
               options={[
-                { label: '待完善', value: 'todo' },
-                { label: '完善', value: 'done' },
+                { label: '直营店', value: 1 },
+                { label: '加盟店', value: 2 },
               ]}
-              placeholder="请选择门店信息状态"
+              placeholder="请选择门店类型"
               onChange={(value) => {
-                handleFilterChange('status', value);
+                handleFilterChange('storeClass', value);
               }}
+            />
+          </div>
+          <div className="field u-flex-center">
+            <span className="field-label">商户ID</span>
+            <Input
+              placeholder="请输入商户ID"
+              value={draftFilters.merchantOrgId}
+              onChange={(event) => {
+                handleFilterChange('merchantOrgId', event.target.value);
+              }}
+              onPressEnter={handleSearch}
             />
           </div>
           <div className="field actions u-flex-center">
@@ -791,76 +720,8 @@ const StorePage: React.FC = () => {
           </div>
         </div>
 
-        <div className="toolbar u-flex-col">
-          <Space>
-            <Button type="primary" shape="round">
-              批量更新门店
-            </Button>
-            <Button shape="round">批量删除门店</Button>
-            <Button shape="round">设置结算方式</Button>
-          </Space>
-          <a className="record-link">
-            查看操作记录 <RightOutlined />
-          </a>
-        </div>
-
-        <div className="batch-bar">
-          <Space size={14}>
-            <Checkbox
-              checked={
-                stores.length > 0 && selectedRowKeys.length === stores.length
-              }
-              indeterminate={
-                selectedRowKeys.length > 0 &&
-                selectedRowKeys.length < stores.length
-              }
-              onChange={(event) => {
-                setSelectedRowKeys(
-                  event.target.checked ? stores.map((item) => item.key) : [],
-                );
-              }}
-            >
-              选择全部
-            </Checkbox>
-            <span className="selected-count">
-              已选{' '}
-              <span className="selected-count-number">
-                {selectedRowKeys.length}
-              </span>{' '}
-              项
-            </span>
-            <Popconfirm
-              title={`你确定要暂停已选择的${selectedRowKeys.length}家门店吗?`}
-              okText="确认"
-              cancelText="取消"
-              disabled={!hasSelectedStores}
-            >
-              <Button disabled={!hasSelectedStores} shape="round">
-                暂停营业
-              </Button>
-            </Popconfirm>
-            <Button disabled={!hasSelectedStores} shape="round">
-              导出门店
-            </Button>
-            <Popconfirm
-              title={`你确定要删除已选择的${selectedRowKeys.length}家门店吗?`}
-              okText="确认"
-              cancelText="取消"
-              disabled={!hasSelectedStores}
-            >
-              <Button disabled={!hasSelectedStores} shape="round">
-                删除门店
-              </Button>
-            </Popconfirm>
-          </Space>
-        </div>
-
         <div ref={tableWrapRef}>
           <Table
-            rowSelection={{
-              selectedRowKeys,
-              onChange: setSelectedRowKeys,
-            }}
             loading={loading}
             rowKey="key"
             columns={columns}

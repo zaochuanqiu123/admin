@@ -1,0 +1,174 @@
+@import (reference) '../../../styles/utilities.less';
+
+.agent-create-container .ant-pro-page-container-warp {
+  padding-inline: 0;
+}
+
+.agent-create-container .ant-pro-grid-content {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+}
+
+.agent-create-container .ant-page-header {
+  padding-inline: 0;
+}
+
+.agent-create-container .ant-page-header-content {
+  margin-top: 0;
+}
+
+.agent-create-container .ant-pro-page-container-warp-page-header {
+  padding-top: 0;
+}
+
+.agent-create-container .ant-page-header-heading {
+  min-height: 0;
+}
+
+.agent-create-container .ant-pro-page-container-children-container {
+  padding-inline: 0;
+  padding-block: 0;
+}
+
+.agent-create-page {
+  width: 100%;
+  min-height: calc(100vh - 112px);
+}
+
+.agent-create-card {
+  width: 100%;
+  margin-bottom: 16px;
+  border-radius: 14px;
+}
+
+.agent-wizard-card .ant-card-body {
+  padding: 22px 24px 18px;
+}
+
+.agent-create-steps {
+  margin-bottom: 20px;
+  padding: 4px 8px 18px;
+  border-bottom: 1px solid var(--ant-color-border-secondary);
+}
+
+.agent-create-step-title {
+  margin: 0 0 20px;
+  color: var(--ant-color-text);
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.agent-create-form {
+  max-width: 760px;
+}
+
+.agent-create-form .ant-form-item {
+  margin-bottom: 16px;
+}
+
+.agent-create-form .ant-form-item-label > label {
+  color: var(--ant-color-text);
+}
+
+.agent-create-form .ant-form-item-control-input-content {
+  max-width: 520px;
+}
+
+.agent-inline-form-item {
+  margin-bottom: 0;
+}
+
+.agent-upload-box {
+  width: 96px;
+  height: 96px;
+  justify-content: center;
+  gap: 6px;
+  border: 1px dashed var(--ant-color-border);
+  border-radius: 8px;
+  color: var(--ant-color-text-secondary);
+}
+
+.agent-upload-box .anticon {
+  font-size: 26px;
+}
+
+.agent-upload .ant-upload.ant-upload-select,
+.agent-upload .ant-upload-list-item-container {
+  width: 96px;
+  height: 96px;
+}
+
+.agent-upload .ant-upload-list-item {
+  padding: 0;
+  border-radius: 8px;
+}
+
+.agent-admin-phone-search {
+  display: grid;
+  grid-template-columns: 1fr 88px;
+  gap: 8px;
+}
+
+.agent-admin-result-banner {
+  width: 520px;
+  min-height: 40px;
+  padding: 10px 14px;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 8px;
+  background: var(--ant-color-fill-quaternary);
+  color: var(--ant-color-text-secondary);
+  line-height: 1.5;
+}
+
+.agent-admin-result-banner.matched {
+  border-color: var(--ant-color-success-border);
+  background: var(--ant-color-success-bg);
+  color: var(--ant-color-success);
+}
+
+.agent-admin-result-banner.warning {
+  border-color: var(--ant-color-warning-border);
+  background: var(--ant-color-warning-bg);
+  color: var(--ant-color-warning);
+}
+
+.agent-create-actions {
+  justify-content: flex-start;
+  gap: 12px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+body.theme-black-mode .agent-create-card {
+  border-color: var(--pc-dark-border);
+  background: var(--pc-dark-bg-surface);
+}
+
+body.theme-black-mode .agent-create-step-title,
+body.theme-black-mode .agent-create-form .ant-form-item-label > label {
+  color: var(--pc-dark-text);
+}
+
+body.theme-black-mode .agent-create-steps,
+body.theme-black-mode .agent-upload-box {
+  border-color: var(--pc-dark-border);
+}
+
+body.theme-black-mode .agent-admin-result-banner {
+  border-color: var(--pc-dark-border);
+  background: var(--ant-color-fill-quaternary);
+  color: var(--pc-dark-text-secondary);
+}
+
+body.theme-black-mode .agent-admin-result-banner.matched {
+  border-color: var(--ant-color-success-border);
+  background: var(--ant-color-success-bg);
+  color: var(--ant-color-success);
+}
+
+body.theme-black-mode .agent-admin-result-banner.warning {
+  border-color: var(--ant-color-warning-border);
+  background: var(--ant-color-warning-bg);
+  color: var(--ant-color-warning);
+}

@@ -24,44 +24,6 @@ const AUTH_EXPIRED_FEEDBACK_DEDUP_MS = 1500;
 
 export type AuthLogoutReason = 'mutual_login' | 'expired' | 'unauthorized';
 
-function getCurrentRelativePath(): string {
-  if (typeof window !== 'undefined') {
-    return `${window.location.pathname}${window.location.search}${window.location.hash}`;
-  }
-  const pathname = history.location?.pathname || '/';
-  const search = history.location?.search || '';
-  return `${pathname}${search}`;
-}
-
-export function normalizeRedirectPath(raw: unknown): string | undefined {
-  if (typeof raw !== 'string') return undefined;
-  const value = raw.trim();
-  if (!value || !value.startsWith('/')) return undefined;
-  if (value.startsWith('//')) return undefined;
-  if (value.startsWith('/user/login')) return undefined;
-  if (value.includes('\\')) return undefined;
-  return value;
-}
-
-export function setPostLoginRedirect(raw: unknown): string | undefined {
-  const redirect = normalizeRedirectPath(raw);
-  if (!redirect) return undefined;
-  try {
-    sessionStorage.setItem(redirectStorageKey, redirect);
-  } catch {
-    // ignore
-  }
-  return redirect;
-}
-
-export function getPostLoginRedirect(): string | undefined {
-  try {
-    return normalizeRedirectPath(sessionStorage.getItem(redirectStorageKey));
-  } catch {
-    return undefined;
-  }
-}
-
 export function clearPostLoginRedirect() {
   try {
     sessionStorage.removeItem(redirectStorageKey);
@@ -136,23 +98,6 @@ export function consumeLoginPendingIdentity(): boolean {
   }
 }
 
-export function consumePostLoginRedirect(): string | undefined {
-  const redirect = getPostLoginRedirect();
-  clearPostLoginRedirect();
-  return redirect;
-}
-
-export function getRedirectFromSearch(search?: string): string | undefined {
-  try {
-    const s =
-      search ?? (typeof window !== 'undefined' ? window.location.search : '');
-    const params = new URLSearchParams(s || '');
-    return normalizeRedirectPath(params.get('redirect'));
-  } catch {
-    return undefined;
-  }
-}
-
 export function clearAuthStorage() {
   clearLoginUserInfo();
   clearLoginOrgList();
@@ -171,22 +116,16 @@ function closeAllModals() {
   }
 }
 
-export function forceLogoutAndRedirect(
-  redirect?: string,
-  reason?: AuthLogoutReason,
-) {
+export function forceLogoutAndRedirect(reason?: AuthLogoutReason) {
   if (devBypassAuth) return;
   setAuthLogoutReason(reason);
   clearAuthStorage();
-  redirectToLogin(redirect || getCurrentRelativePath());
+  redirectToLogin();
 }
 
-export function redirectToLogin(redirect?: string) {
+export function redirectToLogin() {
   closeAllModals();
-  const saved =
-    setPostLoginRedirect(redirect) ||
-    getPostLoginRedirect() ||
-    setPostLoginRedirect(getCurrentRelativePath());
+  clearPostLoginRedirect();
 
   if (history.location.pathname === loginPath) {
     authRedirecting = false;
@@ -198,15 +137,8 @@ export function redirectToLogin(redirect?: string) {
   }
   authRedirecting = true;
 
-  const search = saved
-    ? new URLSearchParams({
-        redirect: saved,
-      }).toString()
-    : '';
-
   history.replace({
     pathname: loginPath,
-    search,
   });
 
   if (typeof window !== 'undefined') {
@@ -245,6 +177,6 @@ export function handleAuthExpiredByCode(
     lastAuthExpiredFeedbackAt = now;
     message.warning(nextMessage);
   }
-  forceLogoutAndRedirect(getCurrentRelativePath(), nextReason);
+  forceLogoutAndRedirect(nextReason);
   return true;
 }

@@ -4,6 +4,8 @@ export type SearchUserResult = {
   id?: string;
   phone?: string;
   name?: string;
+  avatar?: string;
+  avatarUrl?: string | null;
 };
 
 export async function searchUserByPhone(

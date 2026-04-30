@@ -137,6 +137,17 @@ function getConfigKey(record: SystemConfigItem) {
   return readRecordText(record, ['configKey', 'config_key']);
 }
 
+function getConfigType(record: SystemConfigItem) {
+  return (
+    readRecordText(record, ['configType', 'config_type']) ||
+    'SITE_STATIC_RESOURCE'
+  );
+}
+
+function getConfigScope(record: SystemConfigItem) {
+  return readRecordText(record, ['scope']) || 'GLOBAL';
+}
+
 function getConfigDescription(record: SystemConfigItem) {
   return readRecordText(record, ['description', 'desc']);
 }
@@ -174,6 +185,8 @@ function getConfigOrder(record: SystemConfigItem) {
 function createDefaultConfigRecord(configKey: string): SystemConfigItem {
   return {
     configKey,
+    configType: 'SITE_STATIC_RESOURCE',
+    scope: 'GLOBAL',
     valueType: CONFIG_VALUE_TYPES[configKey],
     description: CONFIG_LABELS[configKey],
     explain: CONFIG_HELP[configKey],
@@ -760,33 +773,26 @@ const SiteConfigPage = () => {
     const values = await form.validateFields();
     const formValues = values.values || {};
     const payload: SystemConfigValueSaveItem[] = [];
-    const missingIdLabels: string[] = [];
 
     records.forEach((record, index) => {
       const fieldKey = getFieldKey(record, index);
       if (!dirtyKeys.has(fieldKey)) return;
 
       const id = getRecordId(record);
-      if (!id) {
-        missingIdLabels.push(getConfigLabel(record));
-        return;
-      }
+      const configKey = getConfigKey(record);
 
       payload.push({
-        id,
+        ...(id ? { id } : {}),
+        ...(configKey ? { configKey } : {}),
+        configType: getConfigType(record),
+        scope: getConfigScope(record),
+        valueType: getEffectiveValueType(record),
         configValue: serializeFieldValue(
           getEffectiveValueType(record),
           formValues[fieldKey],
         ),
       });
     });
-
-    if (missingIdLabels.length > 0) {
-      message.warning(
-        `${missingIdLabels.join('、')} 缺少系统配置项ID，请确认后端 getList 是否返回该配置项`,
-      );
-      if (payload.length === 0) return;
-    }
 
     if (payload.length === 0) {
       message.info('暂无需要保存的修改');

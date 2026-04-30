@@ -3,7 +3,6 @@ import {
   DownOutlined,
   LogoutOutlined,
   SearchOutlined,
-  UserOutlined,
 } from '@ant-design/icons';
 import { history } from '@umijs/max';
 import { Avatar, Input, message, Upload } from 'antd';
@@ -11,6 +10,7 @@ import React, { useMemo, useState } from 'react';
 import { uploadAttachment } from '@/api/cloudStorage';
 import { setLoginUserInfo } from '@/api/storage';
 import { saveUserAvatar } from '@/api/user';
+import DefaultAvatar from '@/assets/touxiangdoudi.png';
 import HeaderDropdown from '@/components/HeaderDropdown';
 import {
   getCurrentIdentityItem,
@@ -20,9 +20,6 @@ import {
   switchIdentityContext,
 } from '@/utils/identity';
 import './index.less';
-
-const HEADER_USER_AVATAR_SRC =
-  'https://api.dicebear.com/7.x/miniavs/svg?seed=antd-yangkun';
 
 const isAvatarDisplaySrc = (avatar?: unknown) => {
   const value = String(avatar || '').trim();
@@ -43,7 +40,7 @@ const resolveAvatarSrc = (
   const avatar = String(user?.avatar || '').trim();
   if (isAvatarDisplaySrc(avatar)) return avatar;
 
-  return HEADER_USER_AVATAR_SRC;
+  return DefaultAvatar;
 };
 
 const withAvatarCacheKey = (avatar: string) => {
@@ -311,7 +308,6 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
                 <Avatar
                   size={40}
                   src={avatarSrc}
-                  icon={<UserOutlined />}
                   className="header-identity-dropdown__avatar"
                 />
                 {(avatarHovered || avatarUploading) && (
@@ -419,7 +415,7 @@ const HeaderIdentityDropdown: React.FC<HeaderIdentityDropdownProps> = ({
       )}
     >
       <span className="header-identity-dropdown__trigger">
-        <Avatar size={30} src={avatarSrc} icon={<UserOutlined />} />
+        <Avatar size={30} src={avatarSrc} />
         <span className="header-identity-dropdown__trigger-name">
           {triggerLabel}
         </span>

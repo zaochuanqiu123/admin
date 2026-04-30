@@ -1,8 +1,4 @@
-import {
-  AppstoreOutlined,
-  CloseOutlined,
-  SendOutlined,
-} from '@ant-design/icons';
+import { CloseOutlined, SendOutlined } from '@ant-design/icons';
 import type { UniqueIdentifier } from '@dnd-kit/core';
 import {
   closestCenter,
@@ -30,7 +26,6 @@ import aijiqiren from '@/assets/aijiqiren.png';
 import shendusousuo from '@/assets/shendusousuo.png';
 import {
   COMMON_ACTION_MAX,
-  COMMON_GROUPS,
   type CommonAction,
   type CommonGroup,
   filterHomepageCommonActions,
@@ -41,6 +36,7 @@ import {
   readGroupOrderFromStorage,
   writeGroupOrderToStorage,
 } from '@/utils/commonActions.storage';
+import { renderMenuIcon } from '@/utils/menuIcon';
 import CandidateRow from './CandidateRow';
 import CommonChip from './CommonChip';
 import GroupRow from './GroupRow';
@@ -302,7 +298,7 @@ function buildCommonGroupsFromMenuData(menuData?: any[]): CommonGroup[] {
       return {
         id: groupId,
         title: groupTitle,
-        icon: React.createElement(AppstoreOutlined),
+        icon: renderMenuIcon(groupNode.icon),
         children: subGroups.filter((item) => item.children.length > 0),
       };
     })
@@ -380,18 +376,10 @@ const WorkplaceCommonMenu: React.FC<{
     filterHomepageCommonActions(commonActions),
   );
   const [activeId, setActiveId] = React.useState<UniqueIdentifier | null>(null);
-  const [savedGroupOrder, setSavedGroupOrder] = React.useState<string[]>(
-    COMMON_GROUPS.map((g) => g.id),
-  );
-  const [draftGroupOrder, setDraftGroupOrder] = React.useState<string[]>(
-    COMMON_GROUPS.map((g) => g.id),
-  );
-  const [activeGroupId, setActiveGroupId] = React.useState<string>(
-    COMMON_GROUPS[0]?.id ?? 'goods',
-  );
-  const [activeSubGroupId, setActiveSubGroupId] = React.useState<string>(
-    COMMON_GROUPS[0]?.children?.[0]?.id ?? '',
-  );
+  const [savedGroupOrder, setSavedGroupOrder] = React.useState<string[]>([]);
+  const [draftGroupOrder, setDraftGroupOrder] = React.useState<string[]>([]);
+  const [activeGroupId, setActiveGroupId] = React.useState<string>('');
+  const [activeSubGroupId, setActiveSubGroupId] = React.useState<string>('');
   const [assistantQuestion, setAssistantQuestion] = React.useState('');
   const [favoriteSaving, setFavoriteSaving] = React.useState(false);
   const favoriteLoadKeyRef = React.useRef('');
@@ -408,10 +396,9 @@ const WorkplaceCommonMenu: React.FC<{
   const drawerOverlayIconBg = token.colorFillSecondary;
   const drawerOverlayShadow = token.boxShadowSecondary;
   const commonGroups = React.useMemo(() => {
-    const groups = buildCommonGroupsFromMenuData(
+    return buildCommonGroupsFromMenuData(
       (initialState as any)?.permContextMenu,
     );
-    return groups.length > 0 ? groups : COMMON_GROUPS;
   }, [(initialState as any)?.permContextMenu]);
   const commonGroupIds = React.useMemo(
     () => commonGroups.map((group) => group.id),
@@ -444,16 +431,17 @@ const WorkplaceCommonMenu: React.FC<{
   }, [storageKey, commonActions, commonGroupIds]);
 
   useEffect(() => {
-    if (
-      typeof window === 'undefined' ||
-      availableFavoriteActions.length === 0
-    ) {
+    if (typeof window === 'undefined') {
       return;
     }
 
     const loadKey = `${storageKey}:${favoriteActionSignature}`;
     if (favoriteLoadKeyRef.current === loadKey) return;
     favoriteLoadKeyRef.current = loadKey;
+    if (availableFavoriteActions.length === 0) {
+      setCommonActionsRef.current([]);
+      return;
+    }
 
     let ignore = false;
     const loadFavoriteMenu = async () => {

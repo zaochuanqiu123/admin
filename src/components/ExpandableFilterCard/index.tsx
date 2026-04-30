@@ -16,6 +16,7 @@ type ExpandableFilterCardProps = {
   onReset: () => void;
   className?: string;
   defaultCollapsed?: boolean;
+  extraActions?: ReactNode;
   visibleCount?: number;
   searchText?: string;
   resetText?: string;
@@ -27,6 +28,7 @@ const ExpandableFilterCard: FC<ExpandableFilterCardProps> = ({
   onReset,
   className,
   defaultCollapsed = true,
+  extraActions,
   visibleCount = 3,
   searchText = '查询',
   resetText = '重置',
@@ -60,6 +62,7 @@ const ExpandableFilterCard: FC<ExpandableFilterCardProps> = ({
               {searchText}
             </Button>
             <Button onClick={onReset}>{resetText}</Button>
+            {extraActions}
             {shouldShowCollapse ? (
               <Button
                 type="link"

@@ -18,6 +18,13 @@ export type AgentOrgRecord = {
   contactPhone?: string;
 };
 
+export type OrgRecord = {
+  id?: string;
+  orgCode?: string;
+  orgLevelCode?: string;
+  orgName?: string;
+};
+
 export type AgentOrgPageResult = {
   records?: AgentOrgRecord[];
   total?: number;
@@ -47,4 +54,13 @@ export async function getAgentOrgPageQuery(
       ...(options || {}),
     },
   );
+}
+
+export async function getCurrentMerchantStoreList(options?: {
+  [key: string]: any;
+}) {
+  return apiData<OrgRecord[]>('/api/admin/org/v1/org/merchant/store/list', {
+    method: 'GET',
+    ...(options || {}),
+  });
 }

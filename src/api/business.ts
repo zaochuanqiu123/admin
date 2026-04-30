@@ -4,6 +4,7 @@ export type CurrentOrgBusinessInfo = {
   businessCode?: string;
   businessVersionId?: string;
   businessName?: string;
+  isShow?: boolean;
 };
 
 export type CurrentStoreBusinessInfo = {

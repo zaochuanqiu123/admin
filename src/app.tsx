@@ -35,6 +35,7 @@ import {
 } from '@/api/systemConfig';
 import { getUserInfo as fetchUserInfoFromApi } from '@/api/user';
 import logoDark from '@/assets/logo-dark.png';
+import DefaultAvatar from '@/assets/touxiangdoudi.png';
 import DashboardHomeSplitMenu from '@/components/Layout/DashboardHomeSplitMenu';
 import OtherMenusSplitMenu from '@/components/Layout/OtherMenusSplitMenu';
 import RouteTabsKeepAlive from '@/components/Layout/RouteTabsKeepAlive';
@@ -43,11 +44,7 @@ import {
   type CommonAction,
   filterHomepageCommonActions,
 } from '@/config/menu.config';
-import {
-  clearPostLoginRedirect,
-  redirectToLogin,
-  setPostLoginRedirect,
-} from '@/utils/auth-expired';
+import { clearPostLoginRedirect, redirectToLogin } from '@/utils/auth-expired';
 import { setDocumentFavicon } from '@/utils/favicon';
 import {
   getCurrentIdentityItem,
@@ -72,8 +69,6 @@ const loginPath = '/user/login';
 const DASHBOARD_HOME_TITLE = '首页';
 const devBypassAuth =
   typeof __DEV_BYPASS_AUTH__ !== 'undefined' && __DEV_BYPASS_AUTH__;
-const HEADER_USER_AVATAR_SRC =
-  'https://api.dicebear.com/7.x/miniavs/svg?seed=antd-yangkun';
 let logoutInFlight: Promise<void> | null = null;
 
 const apiBase = typeof __API_BASE__ !== 'undefined' ? __API_BASE__ : undefined;
@@ -161,12 +156,27 @@ async function loadGlobalSiteStaticResources() {
   }
 }
 
-function getHeaderPlatformLabel(currentOrgCode?: string) {
+function getHeaderPlatformRoleText(loginContext?: any) {
+  const roleList = Array.isArray(loginContext?.roleList)
+    ? loginContext.roleList
+    : [];
+  return [
+    ...roleList.map((role: any) => role?.roleName || role?.name),
+    loginContext?.roleName,
+    loginContext?.orgLevelName,
+    loginContext?.levelName,
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+function getHeaderPlatformLabel(currentOrgCode?: string, loginContext?: any) {
   const identity = getCurrentIdentityItem(
     currentOrgCode,
     getIdentityItemsFromStorage(),
   );
   const identityText = [
+    getHeaderPlatformRoleText(loginContext),
     identity?.levelName,
     identity?.groupLabel,
     identity?.name,
@@ -174,11 +184,27 @@ function getHeaderPlatformLabel(currentOrgCode?: string) {
     .filter(Boolean)
     .join(' ');
   const upperText = identityText.toUpperCase();
-  const isMerchant =
+  if (identityText.includes('代理商') || upperText.includes('AGENT')) {
+    return '代理商平台';
+  }
+  if (
     identityText.includes('商户') ||
     identityText.includes('公司') ||
-    upperText.includes('MER');
-  return isMerchant ? '商户平台' : '门店平台';
+    upperText.includes('MER')
+  ) {
+    return '商户平台';
+  }
+  if (identityText.includes('平台') || upperText.includes('PLATFORM')) {
+    return '平台';
+  }
+  if (
+    identityText.includes('门店') ||
+    identityText.includes('店铺') ||
+    upperText.includes('STORE')
+  ) {
+    return '门店平台';
+  }
+  return '门店平台';
 }
 
 function normalizeCommonStorageSegment(value: unknown) {
@@ -229,9 +255,9 @@ function getCommonMenuNodeTitle(node: any, fallback: string) {
   return title || fallback;
 }
 
-function getCommonMenuNodePath(node: any, inheritedPath?: string) {
+function getCommonMenuNodePath(node: any) {
   const rawPath = typeof node?.path === 'string' ? node.path.trim() : '';
-  return rawPath || inheritedPath || '';
+  return rawPath;
 }
 
 function getCommonMenuNodeTargetId(node: any) {
@@ -306,7 +332,7 @@ function collectDefaultCommonActionsFromMenu(
   limit?: number,
 ): CommonAction[] {
   const result: CommonAction[] = [];
-  const visit = (nodes: any[] | undefined, inheritedPath?: string) => {
+  const visit = (nodes: any[] | undefined) => {
     if (!Array.isArray(nodes) || (limit && result.length >= limit)) return;
 
     nodes.forEach((node, index) => {
@@ -315,11 +341,11 @@ function collectDefaultCommonActionsFromMenu(
       }
 
       const title = getCommonMenuNodeTitle(node, `菜单${index + 1}`);
-      const path = getCommonMenuNodePath(node, inheritedPath);
+      const path = getCommonMenuNodePath(node);
       const children = Array.isArray(node?.children) ? node.children : [];
 
       if (children.length > 0) {
-        visit(children, path);
+        visit(children);
         return;
       }
 
@@ -402,9 +428,19 @@ function getDevUser(): API.CurrentUser {
   };
 }
 
-function syncBlackModeClass(navTheme?: string) {
+function syncLayoutThemeVars(settings?: Partial<LayoutSettings>) {
   if (typeof document === 'undefined') return;
+  const navTheme = (settings as any)?.navTheme;
+  const colorPrimary = String((settings as any)?.colorPrimary || '').trim();
   document.body.classList.toggle('theme-black-mode', navTheme === 'realDark');
+  if (colorPrimary) {
+    document.body.style.setProperty(
+      '--pc-settings-color-primary',
+      colorPrimary,
+    );
+  } else {
+    document.body.style.removeProperty('--pc-settings-color-primary');
+  }
 }
 
 function markThemeSwitching() {
@@ -628,11 +664,9 @@ export async function getInitialState(): Promise<{
       // 如果有 token 但没有选择身份，无论是否在 character 页面都提前返回
       // 不调用 getPermContext，等用户选择身份后再调用
       if (location.pathname !== '/user/character') {
-        const redirect = `${location.pathname}${location.search || ''}`;
-        setPostLoginRedirect(redirect);
+        clearPostLoginRedirect();
         history.replace({
           pathname: '/user/character',
-          search: new URLSearchParams({ redirect }).toString(),
         });
       }
       return {
@@ -655,12 +689,10 @@ export async function getInitialState(): Promise<{
       }
 
       clearStoreScopedStorage();
-      const redirect = `${location.pathname}${location.search || ''}`;
       if (location.pathname !== '/user/character') {
-        setPostLoginRedirect(redirect);
+        clearPostLoginRedirect();
         history.replace({
           pathname: '/user/character',
-          search: new URLSearchParams({ redirect }).toString(),
         });
       }
       message.error('登录上下文获取失败，请重新选择身份或稍后重试');
@@ -697,7 +729,7 @@ export const layout: RunTimeLayoutConfig = ({
   initialState,
   setInitialState,
 }) => {
-  syncBlackModeClass((initialState?.settings as any)?.navTheme);
+  syncLayoutThemeVars(initialState?.settings);
 
   if (typeof window !== 'undefined') {
     (window as any).g_initialState = initialState;
@@ -729,11 +761,17 @@ export const layout: RunTimeLayoutConfig = ({
     const dashboardFromRoutes = (menuData || []).find(
       (item) => item?.path === '/dashboard',
     );
+    const dashboardFromPermission = initialState?.permContextMenu?.find(
+      (item) =>
+        item?.path === '/dashboard' || item?.path === '/dashboard/index',
+    );
 
     const dashboardMenu: MenuDataItem = {
       name: DASHBOARD_HOME_TITLE,
       path: '/dashboard',
-      children: dashboardFromRoutes?.children,
+      icon: dashboardFromPermission?.icon,
+      children:
+        dashboardFromPermission?.children ?? dashboardFromRoutes?.children,
     } as any;
 
     if (
@@ -803,8 +841,6 @@ export const layout: RunTimeLayoutConfig = ({
             const fallbackSourceSystem = Number(clickedItem?.sourceSystem);
             const firstLeafTarget = findFirstLeafMenuTarget(
               clickedItem,
-              fallbackPath,
-              fallbackTargetId,
               Number.isFinite(fallbackSourceSystem)
                 ? fallbackSourceSystem
                 : undefined,
@@ -846,6 +882,7 @@ export const layout: RunTimeLayoutConfig = ({
     headerTitleRender: (_logo, _title, _) => {
       const platformLabel = getHeaderPlatformLabel(
         initialState?.currentOrgCode,
+        (initialState as any)?.loginContext,
       );
 
       return (
@@ -968,7 +1005,7 @@ export const layout: RunTimeLayoutConfig = ({
     },
 
     avatarProps: {
-      src: HEADER_USER_AVATAR_SRC,
+      src: DefaultAvatar,
       title: undefined,
       render: () => {
         const handleLogout = async () => {
@@ -1052,8 +1089,7 @@ export const layout: RunTimeLayoutConfig = ({
 
       const hasToken = !!getToken();
       if (!hasToken) {
-        const redirect = `${location.pathname}${location.search || ''}`;
-        redirectToLogin(redirect);
+        redirectToLogin();
         return;
       }
 
@@ -1064,11 +1100,9 @@ export const layout: RunTimeLayoutConfig = ({
         location.pathname !== '/user/character' &&
         location.pathname !== loginPath
       ) {
-        const redirect = `${location.pathname}${location.search || ''}`;
-        setPostLoginRedirect(redirect);
+        clearPostLoginRedirect();
         history.push({
           pathname: '/user/character',
-          search: new URLSearchParams({ redirect }).toString(),
         });
         return;
       }

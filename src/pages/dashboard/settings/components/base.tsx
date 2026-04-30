@@ -6,6 +6,7 @@ import React from 'react';
 import { uploadAttachment } from '@/api/cloudStorage';
 import { setLoginUserInfo } from '@/api/storage';
 import { editUserInfo, getUserInfo, type UserInfoResult } from '@/api/user';
+import DefaultAvatar from '@/assets/touxiangdoudi.png';
 import useStyles from './index.style';
 
 const normalizeDisplayText = (value?: unknown) => String(value || '').trim();
@@ -152,9 +153,7 @@ const BaseView: React.FC = () => {
       </Upload>
     </>
   );
-  const getAvatarURL = () =>
-    avatarPreview ||
-    'https://gw.alipayobjects.com/zos/rmsportal/BiazfanxmamNRoxxVxka.png';
+  const getAvatarURL = () => avatarPreview || DefaultAvatar;
   const handleFinish = async () => {
     const values = form.getFieldsValue(true);
     const submittedInfo = {

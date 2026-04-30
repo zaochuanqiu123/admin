@@ -99,9 +99,20 @@ export const TransferModal: React.FC<TransferModalProps> = ({
   };
 
   const handleSearch = async () => {
+    const params = buildSearchParams();
+    if (
+      !params.batchSn &&
+      !params.startSn &&
+      !params.endSn &&
+      (!params.snList || params.snList.length === 0)
+    ) {
+      message.warning('请先填写搜索条件');
+      return;
+    }
+
     setSearchLoading(true);
     try {
-      const records = await getQrCodeListQuery(buildSearchParams(), {
+      const records = await getQrCodeListQuery(params, {
         skipErrorHandler: true,
       });
       setLeftData(

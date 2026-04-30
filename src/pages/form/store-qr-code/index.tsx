@@ -1012,6 +1012,9 @@ const StoreQrCodeListPage: React.FC = () => {
 
       <BindQrCodeModal
         open={bindModalOpen}
+        storeOrgIdInputMode={
+          isStore ? 'hidden' : isMerchant ? 'merchantSelect' : 'manual'
+        }
         onCancel={() => {
           setBindModalOpen(false);
         }}

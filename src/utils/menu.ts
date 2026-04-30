@@ -12,6 +12,10 @@ function normalizeLookupPath(path: string | undefined): string {
   return noQuery.endsWith('/') ? noQuery.slice(0, -1) : noQuery;
 }
 
+function isStaticRoutePath(path: string): boolean {
+  return path.startsWith('/') && !path.includes(':') && !path.includes('*');
+}
+
 function buildRouteLookupMaps(routeList: any[]) {
   const nameToPathMap: Record<string, string> = {};
   const backendPathToRouteMap: Record<string, string> = {};
@@ -27,17 +31,17 @@ function buildRouteLookupMaps(routeList: any[]) {
       const routePath = normalizeLookupPath(
         String(resolvedPath || fallbackPath || ''),
       );
-
-      if (routeName && routePath.startsWith('/')) {
-        nameToPathMap[routeName] = routePath;
-      }
-
-      if (
+      const isNavigableRoute =
         routePath.startsWith('/') &&
         !Array.isArray(item?.routes) &&
         (typeof item?.component === 'string' ||
-          typeof item?.redirect === 'string')
-      ) {
+          typeof item?.redirect === 'string');
+
+      if (routeName && isNavigableRoute && isStaticRoutePath(routePath)) {
+        nameToPathMap[routeName] = routePath;
+      }
+
+      if (isNavigableRoute) {
         navigableRoutePaths.add(routePath);
       }
 
@@ -71,8 +75,6 @@ const {
   backendPathToRouteMap: BACKEND_PATH_TO_ROUTE_MAP,
   navigableRoutePaths: NAVIGABLE_ROUTE_PATHS,
 } = buildRouteLookupMaps(routes as any[]);
-
-const LEGACY_IFRAME_MENU_NAMES = new Set(['所属行业', '串码查询']);
 
 function pickSourceSystem(node: any): number | undefined {
   const value = Number(node?.sourceSystem);
@@ -157,44 +159,39 @@ function resolveKnownRoutePath(path: string | undefined): string | undefined {
   return NAVIGABLE_ROUTE_PATHS.has(normalizedPath) ? normalizedPath : undefined;
 }
 
-function pickPath(node: any, menuName: string): string | undefined {
-  const sourceSystem = pickSourceSystem(node);
-  const pathCandidates = collectPathCandidates(node, sourceSystem);
-
-  if (sourceSystem !== 1) {
-    // 优先通过 backendPathUrls 映射表查找
-    for (const candidate of pathCandidates) {
-      const mappedLocalPath =
-        BACKEND_PATH_TO_ROUTE_MAP[normalizeLookupPath(candidate)];
-      if (mappedLocalPath) {
-        return mappedLocalPath;
-      }
-    }
-
-    // 然后在已知路由路径中精确匹配
-    for (const candidate of pathCandidates) {
-      const knownRoutePath = resolveKnownRoutePath(candidate);
-      if (knownRoutePath) {
-        return knownRoutePath;
-      }
-    }
-  } else {
-    // sourceSystem=1（iframe），优先精确匹配已知路由
-    for (const candidate of pathCandidates) {
-      const knownRoutePath = resolveKnownRoutePath(candidate);
-      if (knownRoutePath) {
-        return knownRoutePath;
-      }
-    }
-  }
-
-  if (sourceSystem === 1 && LEGACY_IFRAME_MENU_NAMES.has(menuName)) {
+function pickPath(
+  node: any,
+  menuName: string,
+  sourceSystem: number | undefined,
+  targetId: string | undefined,
+): string | undefined {
+  if (sourceSystem === 1 && targetId) {
     return '/app';
   }
 
-  // 按菜单名称回退查找
-  const fallbackRoutePath = ROUTE_NAME_TO_PATH_MAP[menuName];
-  if (fallbackRoutePath?.startsWith('/')) {
+  const pathCandidates = collectPathCandidates(node, sourceSystem);
+
+  // 优先通过 backendPathUrls 映射表查找
+  for (const candidate of pathCandidates) {
+    const mappedLocalPath =
+      BACKEND_PATH_TO_ROUTE_MAP[normalizeLookupPath(candidate)];
+    if (mappedLocalPath) {
+      return mappedLocalPath;
+    }
+  }
+
+  // 然后在已知路由路径中精确匹配
+  for (const candidate of pathCandidates) {
+    const knownRoutePath = resolveKnownRoutePath(candidate);
+    if (knownRoutePath) {
+      return knownRoutePath;
+    }
+  }
+
+  const fallbackRoutePath = resolveKnownRoutePath(
+    ROUTE_NAME_TO_PATH_MAP[menuName],
+  );
+  if (fallbackRoutePath) {
     return fallbackRoutePath;
   }
 
@@ -215,14 +212,7 @@ function pickPath(node: any, menuName: string): string | undefined {
     }
   }
 
-  // sourceSystem=1（iframe 嵌入）的菜单：使用默认 iframe 路由兜底
-  // 所有 iframe 路由（/app、/device 等）都渲染同一个 MicroIframe 组件，
-  // 实际页面内容由 targetId 区分，因此 path 用哪个 iframe 路由都可以
-  if (sourceSystem === 1) {
-    return '/app';
-  }
-
-  // sourceSystem≠1 的菜单：返回 undefined，让 mapPermContextToMenuData 继承父级 path
+  // 找不到本地路由时不返回后端原始 path，避免误跳 404 或继承错误菜单路径。
   return undefined;
 }
 
@@ -236,6 +226,13 @@ function getNodeName(node: any, index: number): string {
     node?.label;
   const value = String(rawName ?? '').trim();
   return value || `menu-${index}`;
+}
+
+function pickIcon(node: any): string | undefined {
+  const rawIcon = node?.icon;
+  if (rawIcon === undefined || rawIcon === null) return undefined;
+  const icon = String(rawIcon).trim();
+  return icon || undefined;
 }
 
 export function extractPermContextNodes(res: any): any[] {
@@ -261,8 +258,6 @@ export function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
   const visit = (
     node: any,
     index: number,
-    inheritedPath?: string,
-    inheritedTargetId?: string,
     inheritedSourceSystem?: number,
   ):
     | (MenuDataItem & {
@@ -286,11 +281,12 @@ export function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
     const targetId =
       useMarketingRedirect || sourceSystem !== 1
         ? undefined
-        : (pickTargetId(node) ?? inheritedTargetId);
+        : pickTargetId(node);
     const path = useMarketingRedirect
       ? marketingRedirectUrl
-      : pickPath(node, name) || inheritedPath;
+      : pickPath(node, name, sourceSystem, targetId);
     const favoriteMenuId = pickFavoriteMenuId(node);
+    const icon = pickIcon(node);
 
     const childrenSource = useMarketingRedirect
       ? []
@@ -300,9 +296,7 @@ export function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
         [];
 
     const children = (childrenSource as any[])
-      .map((child, childIndex) =>
-        visit(child, childIndex, path, targetId, sourceSystem),
-      )
+      .map((child, childIndex) => visit(child, childIndex, sourceSystem))
       .filter(
         (
           item,
@@ -316,6 +310,7 @@ export function mapPermContextToMenuData(nodes: any[]): MenuDataItem[] {
     return {
       name,
       path,
+      icon,
       children: children.length > 0 ? children : undefined,
       targetId,
       sourceSystem,
@@ -441,10 +436,7 @@ export function findTargetIdByPath(
     );
     if (branchRootTargetId) return branchRootTargetId;
 
-    const branchFirstLeafTarget = findFirstLeafMenuTarget(
-      topLevelModuleNode,
-      getMenuNodePath(topLevelModuleNode),
-    );
+    const branchFirstLeafTarget = findFirstLeafMenuTarget(topLevelModuleNode);
     if (branchFirstLeafTarget?.targetId) {
       return branchFirstLeafTarget.targetId;
     }
@@ -563,13 +555,11 @@ function getMenuNodeSourceSystem(
 
 export function findFirstLeafMenuTarget(
   node: MenuDataItem | undefined,
-  inheritedPath?: string,
-  inheritedTargetId?: string,
   inheritedSourceSystem?: number,
 ): MenuTarget | undefined {
   if (!node) return undefined;
-  const currentPath = getMenuNodePath(node) || inheritedPath;
-  const currentTargetId = getMenuNodeTargetId(node) || inheritedTargetId;
+  const currentPath = getMenuNodePath(node);
+  const currentTargetId = getMenuNodeTargetId(node);
   const currentSourceSystem =
     getMenuNodeSourceSystem(node) ?? inheritedSourceSystem;
 
@@ -584,12 +574,7 @@ export function findFirstLeafMenuTarget(
   }
 
   for (const child of children) {
-    const leafTarget = findFirstLeafMenuTarget(
-      child,
-      currentPath,
-      currentTargetId,
-      currentSourceSystem,
-    );
+    const leafTarget = findFirstLeafMenuTarget(child, currentSourceSystem);
     if (leafTarget?.path) return leafTarget;
   }
 

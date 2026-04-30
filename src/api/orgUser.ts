@@ -7,6 +7,7 @@ export type OrgUserPageParams = {
   name?: string;
   phone?: string;
   account?: string;
+  state?: boolean | null;
 };
 
 export type OrgUserPageRecord = {
@@ -44,7 +45,11 @@ export type OrgUserDetailRecord = {
   orgId?: string;
   orgCode?: string;
   userId?: string;
+  account?: string;
+  name?: string;
   nickName?: string;
+  avatarUrl?: string;
+  avatar?: string;
   state?: boolean;
   roleMap?: Record<string, string>;
   overridePermIds?: string[];

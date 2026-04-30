@@ -20,6 +20,10 @@ function normalizeApiUrl(url?: string) {
   return url.replace(/^\/api\//, '/mp-api/');
 }
 
+function isJavaApiUrl(url?: string) {
+  return Boolean(url?.startsWith('/api/') || url?.startsWith('/mp-api/'));
+}
+
 // 错误处理方案： 错误类型
 enum ErrorShowType {
   SILENT = 0,
@@ -110,7 +114,7 @@ export const errorConfig: RequestConfig = {
           if (shouldSkipAuthRedirect(requestMeta)) {
             return;
           }
-          forceLogoutAndRedirect(undefined, 'expired');
+          forceLogoutAndRedirect('expired');
           return;
         }
         message.error(`Response status:${error.response.status}`);
@@ -135,13 +139,12 @@ export const errorConfig: RequestConfig = {
       const url = normalizeApiUrl(config.url);
       const isFormData =
         typeof FormData !== 'undefined' && config.data instanceof FormData;
-      const hasAuthorizationHeader = Boolean(
-        (config.headers as Record<string, any> | undefined)?.Authorization,
-      );
+      const rawHeaders = (config.headers || {}) as Record<string, any>;
+      const hasSfdTokenHeader = Boolean(rawHeaders['SFD-TOKEN']);
       const headers = {
-        ...(config.headers || {}),
-        ...(!hasAuthorizationHeader && token
-          ? { Authorization: `Bearer ${token}` }
+        ...rawHeaders,
+        ...(isJavaApiUrl(config.url) && !hasSfdTokenHeader && token
+          ? { 'SFD-TOKEN': token }
           : {}),
         ...(orgCode ? { 'X-Org-Code': orgCode } : {}),
       };

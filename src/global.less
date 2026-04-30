@@ -119,7 +119,7 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  --pc-color-primary: var(--ant-color-primary, #1890ff);
+  --pc-color-primary: var(--pc-settings-color-primary, var(--ant-color-primary, #1890ff));
   --pc-color-primary-hover: var(--ant-color-primary-hover, var(--pc-color-primary));
   --pc-color-primary-active: var(--ant-color-primary-active, var(--pc-color-primary));
   --pc-color-primary-bg: var(--ant-color-primary-bg, color-mix(in srgb, var(--pc-color-primary) 10%, transparent));
@@ -156,8 +156,9 @@ body {
   --pc-sider-text-secondary: var(--pc-color-text-secondary);
   --pc-sider-text-tertiary: var(--pc-color-text-tertiary);
   --pc-sider-text-active: var(--pc-color-primary);
-  --pc-sider-hover-bg: var(--ant-color-primary-bg, var(--pc-color-primary-bg));
-  --pc-sider-active-bg: var(--ant-color-primary-bg, var(--pc-color-primary-bg));
+  --pc-sider-hover-bg: var(--ant-control-item-bg-hover, var(--pc-color-fill-tertiary));
+  --pc-sider-active-bg: color-mix(in srgb, var(--pc-color-primary) 12%, transparent);
+  --pc-sider-active-hover-bg: color-mix(in srgb, var(--pc-color-primary) 18%, transparent);
   --pc-sider-panel-bg: var(--ant-color-fill-quaternary, rgba(0, 0, 0, 0.02));
   --pc-sider-submenu-panel-content-inset: 10px;
   --pc-sider-submenu-item-x-gap: 10px;

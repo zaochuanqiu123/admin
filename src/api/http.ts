@@ -99,12 +99,10 @@ function requestFormData<TResponse>(
   const formData = toFormData(options.data);
   const token = getToken();
   const orgCode = getSelectedOrgCode();
-  const hasAuthorizationHeader = Boolean(options.headers?.Authorization);
+  const hasSfdTokenHeader = Boolean(options.headers?.['SFD-TOKEN']);
   const headers = {
     ...(options.headers || {}),
-    ...(!hasAuthorizationHeader && token
-      ? { Authorization: `Bearer ${token}` }
-      : {}),
+    ...(!hasSfdTokenHeader && token ? { 'SFD-TOKEN': token } : {}),
     ...(orgCode ? { 'X-Org-Code': orgCode } : {}),
   };
   delete (headers as Record<string, any>)['Content-Type'];

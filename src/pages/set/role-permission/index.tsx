@@ -225,6 +225,8 @@ function toOrgRoleTreeData(nodes: any[]): {
       const businessVersionId = String(
         businessNode?.businessVersionId ?? '',
       ).trim();
+      const businessPermissionId = getRoleTreePermissionId(businessNode);
+      const businessPermCode = getRoleTreePermCode(businessNode);
       const permissionChildren = toRolePermissionNodes(
         getRoleTreeChildren(businessNode),
         permissionMetaMap,
@@ -236,6 +238,18 @@ function toOrgRoleTreeData(nodes: any[]): {
           businessVersionId,
         },
       );
+      if (businessPermissionId || businessPermCode) {
+        permissionMetaMap.set(businessKey, {
+          key: businessKey,
+          permissionId: businessPermissionId,
+          permCode: businessPermCode,
+          terminalName,
+          terminalCode,
+          businessName,
+          businessCode,
+          businessVersionId,
+        });
+      }
 
       return {
         key: businessKey,
@@ -513,7 +527,8 @@ function collectCheckedRolePermissionKeys(scenes: RolePermissionScene[]) {
   const result: string[] = [];
   const walk = (nodes: RolePermissionMatrixNode[]) => {
     nodes.forEach((node) => {
-      if (node.checked) {
+      const checkedState = getRolePermissionCheckedState(node);
+      if (checkedState.checked || checkedState.indeterminate) {
         result.push(node.key);
       }
       if (node.children.length > 0) {
@@ -523,6 +538,10 @@ function collectCheckedRolePermissionKeys(scenes: RolePermissionScene[]) {
   };
   scenes.forEach((scene) => {
     scene.businesses.forEach((business) => {
+      const checkedState = getRolePermissionNodesCheckedState(business.modules);
+      if (checkedState.checked || checkedState.indeterminate) {
+        result.push(business.key);
+      }
       walk(business.modules);
     });
   });

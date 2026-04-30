@@ -61,6 +61,27 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
     }
   }, [baseUrl]);
 
+  const sendBootstrapToIframe = useCallback(() => {
+    const iframeWindow = iframeRef.current?.contentWindow;
+    if (!iframeWindow || !iframeOrigin) return;
+
+    const token = getToken();
+    const bootstrapMessage = {
+      type: initType,
+      payload: {
+        token,
+      },
+    };
+
+    console.log('[MicroIframe] send bootstrap:', {
+      origin: iframeOrigin,
+      type: bootstrapMessage.type,
+      payload: bootstrapMessage.payload,
+    });
+
+    iframeWindow.postMessage(bootstrapMessage, iframeOrigin);
+  }, [iframeOrigin, initType]);
+
   useEffect(() => {
     const query = new URLSearchParams(location.search);
     const targetIdFromQuery = query.get(idParamKey);
@@ -116,21 +137,7 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
       });
 
       if (type === readyMessageType) {
-        const token = getToken();
-        const bootstrapMessage = {
-          type: initType,
-          payload: {
-            token,
-          },
-        };
-
-        console.log('[MicroIframe] send bootstrap:', {
-          origin: iframeOrigin,
-          type: bootstrapMessage.type,
-          payload: bootstrapMessage.payload,
-        });
-
-        iframeWindow.postMessage(bootstrapMessage, iframeOrigin);
+        sendBootstrapToIframe();
         return;
       }
 
@@ -168,14 +175,15 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
     idParamKey,
     iframeOrigin,
     initialState?.permContextMenu,
-    initType,
     navigateMessageType,
     readyMessageType,
+    sendBootstrapToIframe,
   ]);
 
   const handleIframeLoad = useCallback(() => {
+    sendBootstrapToIframe();
     setLoading(false);
-  }, []);
+  }, [sendBootstrapToIframe]);
 
   const content = (
     <div

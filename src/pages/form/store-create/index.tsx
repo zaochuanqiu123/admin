@@ -22,7 +22,7 @@ import {
   type AddressCityNode,
   getAddressProvinceCityArea,
 } from '@/api/address';
-import { getCurrentStoreBusiness } from '@/api/business';
+import { getCurrentOrgBusinessList } from '@/api/business';
 import {
   addStore,
   getStoreDetail,
@@ -697,24 +697,30 @@ export default function StoreCreatePage() {
     const loadBaseOptions = async () => {
       setBusinessLoading(true);
       try {
-        const res = await getCurrentStoreBusiness({ skipErrorHandler: true });
+        const res = await getCurrentOrgBusinessList({ skipErrorHandler: true });
         if (cancelled) return;
-        const businessCode = String(res?.businessCode || '').trim();
-        const businessName = String(res?.businessName || '').trim();
-        const optionLabel = [businessCode, businessName]
-          .filter(Boolean)
-          .join(' ');
-        if (businessCode && optionLabel) {
-          setBusinessOptions([{ label: optionLabel, value: businessCode }]);
-          form.setFieldValue('businessCode', businessCode);
-        } else {
-          setBusinessOptions([]);
+        const options = (Array.isArray(res) ? res : [])
+          .map((item) => {
+            const businessCode = String(item?.businessCode || '').trim();
+            const businessName = String(item?.businessName || '').trim();
+            return {
+              label: [businessCode, businessName].filter(Boolean).join(' '),
+              value: businessCode,
+            };
+          })
+          .filter((item) => item.value && item.label);
+        setBusinessOptions(options);
+        if (!isUpdateMode && options.length === 1) {
+          form.setFieldValue('businessCode', options[0].value);
+        } else if (!isUpdateMode) {
           form.setFieldValue('businessCode', undefined);
         }
       } catch (error) {
         if (cancelled) return;
         setBusinessOptions([]);
-        form.setFieldValue('businessCode', undefined);
+        if (!isUpdateMode) {
+          form.setFieldValue('businessCode', undefined);
+        }
         message.error(getErrorMessage(error, '获取所属业态失败'));
       } finally {
         if (!cancelled) setBusinessLoading(false);

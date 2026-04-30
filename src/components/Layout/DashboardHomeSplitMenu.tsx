@@ -1,17 +1,4 @@
-import {
-  AppstoreOutlined,
-  BellOutlined,
-  CompassOutlined,
-  DatabaseOutlined,
-  FileTextOutlined,
-  HomeOutlined,
-  PlusOutlined,
-  SettingOutlined,
-  ShopOutlined,
-  TagsOutlined,
-  TeamOutlined,
-  ToolOutlined,
-} from '@ant-design/icons';
+import { PlusOutlined } from '@ant-design/icons';
 import type { MenuDataItem } from '@ant-design/pro-components';
 import { Menu, type MenuProps } from 'antd';
 import React from 'react';
@@ -21,6 +8,7 @@ import {
   resumeMenuHoverAutoOpen,
   suppressMenuHoverAutoOpen,
 } from '@/utils/menuHover';
+import { renderMenuIcon } from '@/utils/menuIcon';
 import { useSplitMenuHoverIntent } from './useSplitMenuHoverIntent';
 
 type DashboardHomeSplitMenuProps = {
@@ -35,6 +23,7 @@ type MenuNode = {
   key: string;
   name: string;
   path?: string;
+  icon?: React.ReactNode;
   targetId?: string;
   sourceSystem?: number;
   children?: MenuNode[];
@@ -50,20 +39,6 @@ type MenuMeta = {
 };
 
 const OPEN_COMMON_ACTIONS_DRAWER_EVENT = 'pc-admin-open-common-actions-drawer';
-
-const FIRST_LEVEL_ICONS: React.ReactNode[] = [
-  <HomeOutlined key="home" />,
-  <AppstoreOutlined key="appstore" />,
-  <ShopOutlined key="shop" />,
-  <TagsOutlined key="tags" />,
-  <TeamOutlined key="team" />,
-  <ToolOutlined key="tool" />,
-  <BellOutlined key="bell" />,
-  <DatabaseOutlined key="database" />,
-  <FileTextOutlined key="file" />,
-  <CompassOutlined key="compass" />,
-  <SettingOutlined key="setting" />,
-];
 
 const DISABLED_INLINE_MENU_MOTION: MenuProps['motion'] = {
   motionAppear: false,
@@ -134,6 +109,7 @@ function buildNodes(
       key: nodeKey,
       name: itemName,
       path: itemPath || undefined,
+      icon: (item as any)?.icon,
       targetId:
         targetId === undefined || targetId === null
           ? undefined
@@ -356,20 +332,16 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
       const toMenuItem = (
         node: MenuNode,
         parentKey?: string,
-        inheritedPath?: string,
       ): NonNullable<MenuProps['items']>[number] => {
         parentByKey.set(node.key, parentKey);
-        const resolvedPath = node.path || inheritedPath;
-        if (resolvedPath) {
-          pathByKey.set(node.key, resolvedPath);
+        if (node.path) {
+          pathByKey.set(node.key, node.path);
         }
         targetIdByKey.set(node.key, node.targetId);
         sourceSystemByKey.set(node.key, node.sourceSystem);
         const children =
           node.children && node.children.length > 0
-            ? node.children.map((child) =>
-                toMenuItem(child, node.key, resolvedPath),
-              )
+            ? node.children.map((child) => toMenuItem(child, node.key))
             : undefined;
         if (children && children.length > 0) {
           submenuKeys.push(node.key);
@@ -461,6 +433,7 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
   }, [menuMeta.parentByKey, menuMeta.submenuKeys, selectedKeys]);
 
   React.useEffect(() => {
+    if (!hoverPanelOpen) return;
     if (!hoverTopNode) {
       setHoverOpenKeys([]);
       return;
@@ -484,6 +457,7 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
     hoverMenuMeta.parentByKey,
     hoverMenuMeta.submenuKeys,
     hoverSelectedKeys,
+    hoverPanelOpen,
     hoverTopNode,
   ]);
 
@@ -648,9 +622,9 @@ const DashboardHomeSplitMenu: React.FC<DashboardHomeSplitMenuProps> = ({
         onMouseLeave={scheduleCloseHoverPanel}
       >
         <div className="dashboard-home-split-menu-icons">
-          {topNodes.map((node, index) => {
+          {topNodes.map((node) => {
             const active = node.key === displayTopKey;
-            const icon = FIRST_LEVEL_ICONS[index % FIRST_LEVEL_ICONS.length];
+            const icon = renderMenuIcon(node.icon);
             return (
               <button
                 key={node.key}

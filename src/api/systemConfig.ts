@@ -32,7 +32,11 @@ type CommonApiResponse<T = any> = {
 };
 
 export type SystemConfigValueSaveItem = {
-  id: string;
+  id?: string;
+  configKey?: string;
+  configType?: string;
+  scope?: string;
+  valueType?: string;
   configValue: string;
 };
 

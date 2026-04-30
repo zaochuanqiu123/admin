@@ -138,11 +138,11 @@ body .ant-layout-sider .ant-layout-sider-children>div {
 }
 
 .pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline .ant-menu-item:not(.ant-menu-item-disabled):hover .ant-menu-title-content {
-  color: var(--ant-color-primary) !important;
+  color: var(--pc-color-primary) !important;
 }
 
 .pc-admin-workplace-common .workplace-common-actions.ant-menu-sub.ant-menu-inline .ant-menu-item:not(.ant-menu-item-disabled).ant-menu-item-selected .ant-menu-title-content {
-  color: var(--ant-color-primary) !important;
+  color: var(--pc-color-primary) !important;
 }
 
 .pc-admin-workplace-common .workplace-common-actions .ant-menu-item .ant-menu-title-content {
@@ -363,7 +363,7 @@ body .ant-layout-sider .ant-layout-sider-children>div {
 }
 
 .dashboard-home-split-menu-icon-btn-active {
-  color: var(--ant-color-primary);
+  color: var(--pc-color-primary);
   border-color: transparent;
   background: transparent;
 }
@@ -375,6 +375,13 @@ body .ant-layout-sider .ant-layout-sider-children>div {
   justify-content: center;
   font-size: 16px;
   line-height: 1;
+}
+
+.pc-admin-menu-icon-img {
+  display: block;
+  width: 1em;
+  height: 1em;
+  object-fit: contain;
 }
 
 .dashboard-home-split-menu-icon-label {
@@ -425,8 +432,8 @@ body .ant-layout-sider .ant-layout-sider-children>div {
 
 .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-icon-btn-active,
 .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-icon-btn-active:hover {
-  color: var(--ant-color-primary);
-  background: var(--ant-color-primary-bg);
+  color: var(--pc-color-primary);
+  background: var(--pc-sider-active-bg);
 }
 
 .dashboard-home-split-menu-hover-panel {
@@ -501,8 +508,8 @@ body .ant-layout-sider .ant-layout-sider-children>div {
 
 .dashboard-home-split-menu-hover-panel-item:hover,
 .dashboard-home-split-menu-hover-panel-item-active {
-  color: var(--ant-color-primary);
-  background: var(--ant-color-primary-bg);
+  color: var(--pc-color-primary);
+  background: var(--pc-sider-active-bg);
 }
 
 .dashboard-home-split-menu-tree {
@@ -589,22 +596,19 @@ body .ant-layout-sider .ant-layout-sider-children>div {
   margin-left: 10px !important;
 }
 
-.dashboard-home-split-menu-ant .ant-menu-item-selected,
-.dashboard-home-split-menu-ant .ant-menu-item-active,
-.dashboard-home-split-menu-ant .ant-menu-item:hover,
 .dashboard-home-split-menu-ant .ant-menu-submenu-title:hover {
   background: transparent !important;
   background-color: transparent !important;
 }
 
 .dashboard-home-split-menu-ant .ant-menu-item-selected .ant-menu-title-content {
-  color: var(--ant-color-primary) !important;
+  color: var(--pc-color-primary) !important;
 }
 
 .dashboard-home-split-menu-ant .ant-menu-item:hover .ant-menu-title-content,
 .dashboard-home-split-menu-ant .ant-menu-item-active .ant-menu-title-content,
 .dashboard-home-split-menu-ant .ant-menu-submenu-title:hover .ant-menu-title-content {
-  color: var(--ant-color-primary) !important;
+  color: var(--pc-color-primary) !important;
 }
 
 /* 仅取消二级菜单（右侧树直接子级）的 hover 高亮，三级保持不变 */
@@ -616,7 +620,7 @@ body .ant-layout-sider .ant-layout-sider-children>div {
 
 .dashboard-home-split-menu-ant>.ant-menu-item-selected:hover .ant-menu-title-content,
 .dashboard-home-split-menu-ant>.ant-menu-item-selected.ant-menu-item-active .ant-menu-title-content {
-  color: var(--ant-color-primary) !important;
+  color: var(--pc-color-primary) !important;
 }
 
 .dashboard-home-split-menu-ant .ant-menu-item::after,
@@ -731,7 +735,7 @@ body .ant-layout-sider .ant-layout-sider-children>div {
 }
 
 .other-menus-split-menu-icon-btn-active {
-  color: var(--ant-color-primary);
+  color: var(--pc-color-primary);
   background: transparent;
 }
 
@@ -741,13 +745,22 @@ body .ant-layout-sider .ant-layout-sider-children>div {
 
 .other-menus-split-menu-list-open .other-menus-split-menu-icon-btn:hover:not(.other-menus-split-menu-icon-btn-active) {
   color: var(--pc-sider-text-secondary);
-  background: transparent;
+  background: var(--pc-sider-hover-bg);
 }
 
-.other-menus-split-menu-list-open .other-menus-split-menu-icon-btn-active,
+.other-menus-split-menu-list-open .other-menus-split-menu-icon-btn-preview {
+  color: var(--pc-sider-text-secondary);
+  background: var(--pc-sider-hover-bg);
+}
+
+.other-menus-split-menu-list-open .other-menus-split-menu-icon-btn-active {
+  color: var(--pc-color-primary);
+  background: var(--pc-sider-active-bg);
+}
+
 .other-menus-split-menu-list-open .other-menus-split-menu-icon-btn-active:hover {
-  color: var(--ant-color-primary);
-  background: var(--ant-color-primary-bg);
+  color: var(--pc-color-primary);
+  background: var(--pc-sider-active-hover-bg);
 }
 
 .other-menus-split-menu-item-icon {
@@ -912,22 +925,19 @@ body .ant-layout-sider .ant-layout-sider-children>div {
   font-size: 16px !important;
 }
 
-.other-menus-split-menu-ant .ant-menu-item-selected,
-.other-menus-split-menu-ant .ant-menu-item-active,
-.other-menus-split-menu-ant .ant-menu-item:hover,
 .other-menus-split-menu-ant .ant-menu-submenu-title:hover {
   background: transparent !important;
   background-color: transparent !important;
 }
 
 .other-menus-split-menu-ant .ant-menu-item-selected .ant-menu-title-content {
-  color: var(--ant-color-primary) !important;
+  color: var(--pc-color-primary) !important;
 }
 
 .other-menus-split-menu-ant .ant-menu-item:hover .ant-menu-title-content,
 .other-menus-split-menu-ant .ant-menu-item-active .ant-menu-title-content,
 .other-menus-split-menu-ant .ant-menu-submenu-title:hover .ant-menu-title-content {
-  color: var(--ant-color-primary) !important;
+  color: var(--pc-color-primary) !important;
 }
 
 /* 仅取消二级菜单（右侧树直接子级）的 hover 高亮，三级保持不变 */
@@ -939,12 +949,12 @@ body .ant-layout-sider .ant-layout-sider-children>div {
 
 .other-menus-split-menu-ant>.other-menus-workplace-font.ant-menu-item:hover>.ant-menu-title-content,
 .other-menus-split-menu-ant>.other-menus-workplace-font.ant-menu-item-active>.ant-menu-title-content {
-  color: var(--ant-color-primary) !important;
+  color: var(--pc-color-primary) !important;
 }
 
 .other-menus-split-menu-ant>.ant-menu-item-selected:hover .ant-menu-title-content,
 .other-menus-split-menu-ant>.ant-menu-item-selected.ant-menu-item-active .ant-menu-title-content {
-  color: var(--ant-color-primary) !important;
+  color: var(--pc-color-primary) !important;
 }
 
 .other-menus-split-menu-ant .ant-menu-item::after,
@@ -1109,7 +1119,7 @@ body .ant-layout-sider .ant-layout-sider-children>div {
 .plain-sider-menu-content .ant-menu-item-selected,
 .plain-sider-menu-content .ant-menu-item-selected .ant-menu-title-content,
 .plain-sider-menu-content .ant-menu-item-selected * {
-  color: var(--ant-color-primary) !important;
+  color: var(--pc-color-primary) !important;
 }
 
 /* 非系统首页：父级菜单保持常规态（不加粗、不变强调色） */
@@ -1621,15 +1631,12 @@ body.theme-black-mode .business-switch-pill {
   font-size: 16px !important;
 }
 
-/* 子菜单 hover/选中：不要有任何背景块，只改文字颜色 */
+/* 子菜单 hover/选中背景统一按 token 绘制 */
 .ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item,
 .ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-submenu-title {
   background: transparent !important;
 }
 
-.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item:hover,
-.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item-active,
-.ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-item-selected,
 .ant-layout-sider .ant-menu-sub.ant-menu-inline .ant-menu-submenu-title:hover {
   background: transparent !important;
   background-color: transparent !important;
@@ -1642,71 +1649,95 @@ body.theme-black-mode .business-switch-pill {
   background-color: var(--pc-sider-panel-bg) !important;
 }
 
-body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant.ant-menu,
-body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu,
-body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-sub,
-body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-submenu,
-body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-submenu-title,
-body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-item,
-body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant.ant-menu,
-body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu,
-body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-sub,
-body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-submenu,
-body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-submenu-title,
-body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-item {
+.ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant.ant-menu,
+.ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu,
+.ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-sub,
+.ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-submenu,
+.ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-submenu-title,
+.ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant.ant-menu,
+.ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu,
+.ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-sub,
+.ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-submenu,
+.ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-submenu-title {
   /* [force] 展开面板内普通态统一透出同一层面板底色，避免不同 Menu 层级出现色块。 */
   background: transparent !important;
   background-color: transparent !important;
 }
 
-body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant.ant-menu,
-body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant.ant-menu {
-  padding-left: var(--pc-sider-submenu-panel-content-inset) !important;
+.ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant.ant-menu,
+.ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant.ant-menu {
+  padding-left: 0 !important;
 }
 
-body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-sub.ant-menu-inline .ant-menu-item,
-body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item {
-  position: relative;
+.ant-layout-sider:not(.ant-layout-sider-collapsed) .plain-sider-menu-content .ant-menu.ant-menu-root > .ant-menu-item,
+.ant-layout-sider:not(.ant-layout-sider-collapsed) .plain-sider-menu-content .ant-menu-sub.ant-menu-inline .ant-menu-item,
+.ant-layout-sider:not(.ant-layout-sider-collapsed) .plain-sider-menu-content .ant-menu-submenu-title,
+.ant-layout-sider:not(.ant-layout-sider-collapsed) .dashboard-home-split-menu-ant.ant-menu > .ant-menu-item,
+.ant-layout-sider:not(.ant-layout-sider-collapsed) .dashboard-home-split-menu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item,
+.ant-layout-sider:not(.ant-layout-sider-collapsed) .dashboard-home-split-menu-ant .ant-menu-submenu-title,
+.ant-layout-sider:not(.ant-layout-sider-collapsed) .other-menus-split-menu-ant.ant-menu > .ant-menu-item,
+.ant-layout-sider:not(.ant-layout-sider-collapsed) .other-menus-split-menu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item,
+.ant-layout-sider:not(.ant-layout-sider-collapsed) .other-menus-split-menu-ant .ant-menu-submenu-title {
+  width: calc(100% - (var(--pc-sider-submenu-item-x-gap) + var(--pc-sider-submenu-item-x-gap))) !important;
+  margin: 2px var(--pc-sider-submenu-item-x-gap) !important;
+  box-sizing: border-box !important;
+  border-radius: var(--pc-sider-submenu-item-radius) !important;
+}
+
+.plain-sider-menu-content .ant-menu.ant-menu-root > .ant-menu-item:hover,
+.plain-sider-menu-content .ant-menu.ant-menu-root > .ant-menu-item-active,
+.plain-sider-menu-content .ant-menu-sub.ant-menu-inline .ant-menu-item:hover,
+.plain-sider-menu-content .ant-menu-sub.ant-menu-inline .ant-menu-item-active,
+.dashboard-home-split-menu-ant.ant-menu > .ant-menu-item:hover,
+.dashboard-home-split-menu-ant.ant-menu > .ant-menu-item-active,
+.dashboard-home-split-menu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item:hover,
+.dashboard-home-split-menu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item-active,
+.other-menus-split-menu-ant.ant-menu > .ant-menu-item:hover,
+.other-menus-split-menu-ant.ant-menu > .ant-menu-item-active,
+.other-menus-split-menu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item:hover,
+.other-menus-split-menu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item-active {
+  background: var(--pc-sider-hover-bg) !important;
+  background-color: var(--pc-sider-hover-bg) !important;
+}
+
+.plain-sider-menu-content .ant-menu.ant-menu-root > .ant-menu-item-selected,
+.plain-sider-menu-content .ant-menu-sub.ant-menu-inline .ant-menu-item-selected,
+.dashboard-home-split-menu-ant.ant-menu > .ant-menu-item-selected,
+.dashboard-home-split-menu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item-selected,
+.other-menus-split-menu-ant.ant-menu > .ant-menu-item-selected,
+.other-menus-split-menu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item-selected {
+  background: var(--pc-sider-active-bg) !important;
+  background-color: var(--pc-sider-active-bg) !important;
+}
+
+.plain-sider-menu-content .ant-menu.ant-menu-root > .ant-menu-item-selected:hover,
+.plain-sider-menu-content .ant-menu.ant-menu-root > .ant-menu-item-selected.ant-menu-item-active,
+.plain-sider-menu-content .ant-menu-sub.ant-menu-inline .ant-menu-item-selected:hover,
+.plain-sider-menu-content .ant-menu-sub.ant-menu-inline .ant-menu-item-selected.ant-menu-item-active,
+.dashboard-home-split-menu-ant.ant-menu > .ant-menu-item-selected:hover,
+.dashboard-home-split-menu-ant.ant-menu > .ant-menu-item-selected.ant-menu-item-active,
+.dashboard-home-split-menu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item-selected:hover,
+.dashboard-home-split-menu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item-selected.ant-menu-item-active,
+.other-menus-split-menu-ant.ant-menu > .ant-menu-item-selected:hover,
+.other-menus-split-menu-ant.ant-menu > .ant-menu-item-selected.ant-menu-item-active,
+.other-menus-split-menu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item-selected:hover,
+.other-menus-split-menu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item-selected.ant-menu-item-active {
+  background: var(--pc-sider-active-hover-bg) !important;
+  background-color: var(--pc-sider-active-hover-bg) !important;
+}
+
+.ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant > .ant-menu-submenu > .ant-menu-submenu-title:hover,
+.ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant > .ant-menu-submenu-open > .ant-menu-submenu-title,
+.ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant > .ant-menu-submenu-active > .ant-menu-submenu-title,
+.ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant > .ant-menu-submenu-selected > .ant-menu-submenu-title {
   background: transparent !important;
   background-color: transparent !important;
 }
 
-body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-sub.ant-menu-inline .ant-menu-item:hover::before,
-body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-sub.ant-menu-inline .ant-menu-item-active::before,
-body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-sub.ant-menu-inline .ant-menu-item-selected::before,
-body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item:hover::before,
-body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item-active::before,
-body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item-selected::before {
-  /* [force] 只画背景层，不改原有文字 padding、字号、字重和颜色继承。 */
-  content: '';
-  position: absolute;
-  inset: 0 var(--pc-sider-submenu-item-x-gap) 0 0;
-  z-index: 0;
-  border-radius: var(--pc-sider-submenu-item-radius);
-  background: var(--ant-color-primary-bg);
-  pointer-events: none;
-}
-
-body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant .ant-menu-sub.ant-menu-inline .ant-menu-item .ant-menu-title-content,
-body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant .ant-menu-sub.ant-menu-inline .ant-menu-item .ant-menu-title-content {
-  position: relative;
-  z-index: 1;
-}
-
-body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant > .ant-menu-item:hover,
-body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant > .ant-menu-item-active,
-body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant > .ant-menu-item-selected,
-body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant > .ant-menu-submenu > .ant-menu-submenu-title:hover,
-body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant > .ant-menu-submenu-open > .ant-menu-submenu-title,
-body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant > .ant-menu-submenu-active > .ant-menu-submenu-title,
-body:not(.theme-black-mode) .ant-layout-sider .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-hover-panel-open .dashboard-home-split-menu-hover-panel-ant > .ant-menu-submenu-selected > .ant-menu-submenu-title,
-body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-item:hover,
-body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-item-active,
-body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-item-selected,
-body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-submenu > .ant-menu-submenu-title:hover,
-body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-submenu-open > .ant-menu-submenu-title,
-body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-submenu-active > .ant-menu-submenu-title,
-body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-submenu-selected > .ant-menu-submenu-title {
+.ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-submenu > .ant-menu-submenu-title:hover,
+.ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-submenu-open > .ant-menu-submenu-title,
+.ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-submenu-active > .ant-menu-submenu-title,
+.ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-submenu-selected > .ant-menu-submenu-title {
   background: transparent !important;
   background-color: transparent !important;
 }
@@ -1878,7 +1909,20 @@ body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open
   min-width: max-content;
 }
 
-.pc-admin-route-tabs-arrow.ant-btn,
+.pc-admin-route-tabs-arrow.ant-btn {
+  height: 32px;
+  width: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--ant-color-border-secondary);
+  background: var(--ant-color-fill-quaternary);
+  color: var(--ant-color-text-secondary);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .pc-admin-route-tabs-more.ant-btn {
   height: 32px;
   width: 32px;
@@ -1893,7 +1937,12 @@ body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open
   justify-content: center;
 }
 
-.pc-admin-route-tabs-arrow.ant-btn:hover,
+.pc-admin-route-tabs-arrow.ant-btn:hover {
+  color: var(--ant-color-text);
+  border-color: var(--ant-color-border-secondary);
+  background: var(--ant-color-fill-quaternary);
+}
+
 .pc-admin-route-tabs-more.ant-btn:hover {
   color: var(--ant-color-primary);
   border-color: var(--pc-route-tab-hover-border);
@@ -1902,8 +1951,8 @@ body:not(.theme-black-mode) .ant-layout-sider .other-menus-split-menu-shell-open
 
 .pc-admin-route-tabs-arrow.ant-btn:disabled {
   color: var(--pc-color-text-tertiary);
-  border-color: var(--pc-color-border);
-  background: var(--pc-color-fill-quaternary);
+  border-color: var(--ant-color-border-secondary);
+  background: var(--ant-color-fill-quaternary);
 }
 
 .pc-admin-route-tabs-more.ant-btn {

@@ -1,0 +1,64 @@
+@import (reference) '../../../styles/utilities.less';
+
+.receipt-orders-page {
+  min-height: calc(100vh - 112px);
+
+  .content-card {
+    padding: 22px 24px 18px;
+    border: 1px solid var(--ant-color-border-secondary);
+    border-radius: 14px;
+    background: var(--ant-color-bg-container);
+  }
+
+  .receipt-orders-table-card {
+    margin-top: 16px;
+
+    .ant-table-thead > tr > th {
+      color: var(--ant-color-text-heading, var(--ant-color-text));
+      font-weight: 600;
+    }
+
+    .ant-table-tbody > tr > td {
+      color: var(--ant-color-text);
+      vertical-align: middle;
+    }
+  }
+
+  .receipt-orders-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    line-height: 1.6;
+  }
+
+  .receipt-orders-sub-text {
+    color: var(--ant-color-text-secondary);
+  }
+
+  .receipt-orders-action-links {
+    .mixin-flex-center();
+    gap: 10px;
+
+    a {
+      color: var(--pc-color-link);
+      white-space: nowrap;
+    }
+
+    .is-danger:not(:disabled):not(.ant-btn-disabled) {
+      color: var(--ant-color-error);
+    }
+  }
+
+  .receipt-orders-detail-loading {
+    .mixin-flex-center();
+    min-height: 220px;
+  }
+
+  .receipt-orders-refund-form {
+    padding-top: 8px;
+  }
+
+  .receipt-orders-refund-amount {
+    width: 100%;
+  }
+}

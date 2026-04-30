@@ -17,19 +17,19 @@ const Settings: ProLayoutProps & {
   token: {
     sider: {
       colorMenuBackground: 'var(--ant-color-bg-container)', //menu 的背景颜色
-      colorTextMenuItemHover: 'var(--ant-color-primary)',
-      colorBgMenuItemSelected: 'transparent', //menuItem 的选中背景颜色
-      colorBgMenuItemHover: 'var(--ant-color-bg-text-hover)',
+      colorTextMenuItemHover: 'var(--pc-color-primary)',
+      colorBgMenuItemSelected: 'var(--pc-sider-active-bg)', //menuItem 的选中背景颜色
+      colorBgMenuItemHover: 'var(--pc-sider-hover-bg)',
       colorTextMenuActive: 'var(--ant-color-text)',
-      colorBgMenuItemActive: 'transparent',
-      colorTextMenuSelected: 'var(--ant-color-primary)',
+      colorBgMenuItemActive: 'var(--pc-sider-hover-bg)',
+      colorTextMenuSelected: 'var(--pc-color-primary)',
       colorTextMenuTitle: 'var(--ant-color-text)',
       colorTextMenu: 'var(--ant-color-text)',
     },
     header: {
-      colorTextMenuActive: 'var(--ant-color-primary)',
+      colorTextMenuActive: 'var(--pc-color-primary)',
       heightLayoutHeader: 60,
-      colorTextMenuSelected: 'var(--ant-color-primary)',
+      colorTextMenuSelected: 'var(--pc-color-primary)',
       colorBgMenuItemHover: 'transparent',
     },
   },

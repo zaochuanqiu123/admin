@@ -163,12 +163,17 @@ const routes = [
     name: '角色列表',
     path: '/permission/role-list',
     component: './set/role-permission',
-    backendPathUrls: ['/Admin/AdminRoles/index/Admin/AdminRoles/getRoles'],
+    backendPathUrls: [
+      '/Admin/AdminRoles/index/Admin/AdminRoles/getRoles',
+      '/Admin/AdminRoles/index,/Admin/AdminRoles/getRoles',
+    ],
   },
   {
     name: '员工管理',
     path: '/permission/store-staff',
     component: './set/store-staff',
+    backendPathUrls: ['/Retail/Employee/index'],
+    hideInMenu: true,
   },
   {
     name: '新增员工账号',
@@ -228,7 +233,10 @@ const routes = [
     name: '商户列表',
     path: '/merchant/list',
     component: './merchant/list/index',
-    backendPathUrls: ['/admin/org/v1/merchant/page'],
+    backendPathUrls: [
+      '/Agent/Merchant/index,/Agent/Merchant/getMerchant',
+      '/Agent/Merchant/index/Agent/Merchant/getMerchant',
+    ],
     hideInMenu: true,
   },
   {
@@ -245,6 +253,42 @@ const routes = [
     backendPathUrls: [
       '/admin/org/v1/merchant/modify',
       '/admin/org/v1/merchant/{id}/detail',
+    ],
+    hideInMenu: true,
+  },
+  {
+    name: '代理商列表',
+    path: '/agent/list',
+    component: './agent/list/index',
+    backendPathUrls: ['/admin/org/v1/agent/page'],
+    hideInMenu: true,
+  },
+  {
+    name: '收款订单',
+    path: '/receipt/receipt-orders',
+    component: './receipt/receipt-orders/index',
+    backendPathUrls: [
+      '/Retail/Orders/index',
+      '/admin/receipt/v1/receiptOrders/page',
+      '/admin/receipt/v1/receiptOrders/{id}',
+      '/admin/receipt/v1/receiptOrders/refund',
+    ],
+    hideInMenu: true,
+  },
+  {
+    name: '新增代理商',
+    path: '/agent/list/create',
+    component: './agent/create/index',
+    backendPathUrls: ['/admin/org/v1/agent/add'],
+    hideInMenu: true,
+  },
+  {
+    name: '修改代理商',
+    path: '/agent/list/:id/edit',
+    component: './agent/create/index',
+    backendPathUrls: [
+      '/admin/org/v1/agent/modify',
+      '/admin/org/v1/agent/{id}/detail',
     ],
     hideInMenu: true,
   },

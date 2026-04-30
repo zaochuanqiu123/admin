@@ -42,6 +42,19 @@ type TerminalFilterState = {
   currentIp: string;
 };
 
+const EMPTY_TERMINAL_FILTERS: TerminalFilterState = {
+  sn: '',
+  brandCode: '',
+  model: '',
+  osCode: '',
+  osVersion: '',
+  clientVersion: '',
+  remark: '',
+  state: undefined,
+  type: undefined,
+  currentIp: '',
+};
+
 type UserAgentBrand = {
   brand: string;
   version: string;
@@ -68,6 +81,48 @@ type NavigatorWithUserAgentData = Navigator & {
 function normalizeText(value?: string) {
   const nextValue = String(value || '').trim();
   return nextValue || undefined;
+}
+
+function trimFilterText(value?: string) {
+  return String(value || '').trim();
+}
+
+function normalizeTerminalFilters(
+  filters: TerminalFilterState,
+): TerminalFilterState {
+  return {
+    sn: trimFilterText(filters.sn),
+    brandCode: trimFilterText(filters.brandCode),
+    model: trimFilterText(filters.model),
+    osCode: trimFilterText(filters.osCode),
+    osVersion: trimFilterText(filters.osVersion),
+    clientVersion: trimFilterText(filters.clientVersion),
+    remark: trimFilterText(filters.remark),
+    state: filters.state,
+    type: filters.type,
+    currentIp: trimFilterText(filters.currentIp),
+  };
+}
+
+function isSameTerminalFilters(
+  left: TerminalFilterState,
+  right: TerminalFilterState,
+) {
+  const normalizedLeft = normalizeTerminalFilters(left);
+  const normalizedRight = normalizeTerminalFilters(right);
+
+  return (
+    normalizedLeft.sn === normalizedRight.sn &&
+    normalizedLeft.brandCode === normalizedRight.brandCode &&
+    normalizedLeft.model === normalizedRight.model &&
+    normalizedLeft.osCode === normalizedRight.osCode &&
+    normalizedLeft.osVersion === normalizedRight.osVersion &&
+    normalizedLeft.clientVersion === normalizedRight.clientVersion &&
+    normalizedLeft.remark === normalizedRight.remark &&
+    normalizedLeft.state === normalizedRight.state &&
+    normalizedLeft.type === normalizedRight.type &&
+    normalizedLeft.currentIp === normalizedRight.currentIp
+  );
 }
 
 function pickMeaningfulBrand(brands?: UserAgentBrand[]) {
@@ -404,28 +459,10 @@ const TerminalPage: FC = () => {
   const actionRef = useRef<ActionType>(null);
   const [reporting, setReporting] = useState(false);
   const [draftFilters, setDraftFilters] = useState<TerminalFilterState>({
-    sn: '',
-    brandCode: '',
-    model: '',
-    osCode: '',
-    osVersion: '',
-    clientVersion: '',
-    remark: '',
-    state: undefined,
-    type: undefined,
-    currentIp: '',
+    ...EMPTY_TERMINAL_FILTERS,
   });
   const [filters, setFilters] = useState<TerminalFilterState>({
-    sn: '',
-    brandCode: '',
-    model: '',
-    osCode: '',
-    osVersion: '',
-    clientVersion: '',
-    remark: '',
-    state: undefined,
-    type: undefined,
-    currentIp: '',
+    ...EMPTY_TERMINAL_FILTERS,
   });
 
   const handleReport = useCallback(async () => {
@@ -444,34 +481,31 @@ const TerminalPage: FC = () => {
   }, []);
 
   const handleSearch = useCallback(() => {
-    const nextFilters = {
-      ...draftFilters,
-    };
+    const nextFilters = normalizeTerminalFilters(draftFilters);
+    if (isSameTerminalFilters(filters, nextFilters)) {
+      return;
+    }
+
     actionRef.current?.setPageInfo?.({
       current: 1,
     });
     setFilters(nextFilters);
-  }, [draftFilters]);
+  }, [draftFilters, filters]);
 
   const handleReset = useCallback(() => {
     const nextFilters: TerminalFilterState = {
-      sn: '',
-      brandCode: '',
-      model: '',
-      osCode: '',
-      osVersion: '',
-      clientVersion: '',
-      remark: '',
-      state: undefined,
-      type: undefined,
-      currentIp: '',
+      ...EMPTY_TERMINAL_FILTERS,
     };
     setDraftFilters(nextFilters);
+    if (isSameTerminalFilters(filters, nextFilters)) {
+      return;
+    }
+
     actionRef.current?.setPageInfo?.({
       current: 1,
     });
     setFilters(nextFilters);
-  }, []);
+  }, [filters]);
 
   return (
     <div className="terminal-page">

@@ -15,8 +15,8 @@ import {
   Input,
   Modal,
   message,
-  Pagination,
   Popconfirm,
+  Select,
   Space,
   Spin,
   Switch,
@@ -39,10 +39,12 @@ import {
   getOrgUserPage,
   modifyOrgUser,
   type OrgUserDetailRecord,
+  type OrgUserPageParams,
   type OrgUserPageRecord,
   updateOrgUserState,
 } from '@/api/orgUser';
 import type { SearchUserResult } from '@/api/user';
+import { ExpandableFilterCard } from '@/components';
 import {
   ROUTE_TAB_CLOSE_EVENT,
   ROUTE_TAB_REFRESH_EVENT,
@@ -107,6 +109,7 @@ type StaffRecord = {
   account: string;
   avatar?: string;
   enabled: boolean;
+  detailLoaded?: boolean;
   avatarColor: string;
   roleMap?: Record<string, string>;
   overridePermIds?: string[];
@@ -120,6 +123,13 @@ type StaffRoleRecord = {
   roleType?: number | string;
   state?: number;
   [key: string]: any;
+};
+type StaffListFilters = {
+  nickName: string;
+  name: string;
+  phone: string;
+  account: string;
+  state: boolean | null;
 };
 const STAFF_ROLE_TYPE_LABEL_MAP: Record<string, string> = {
   '1': '管理员',
@@ -135,18 +145,14 @@ type StaffFormSectionKey = (typeof STAFF_FORM_SECTIONS)[number]['key'];
 const STAFF_LIST_PATH = '/permission/store-staff';
 const STAFF_CREATE_PATH = `${STAFF_LIST_PATH}/create`;
 const EMPTY_PERMISSION_TREE: StaffPermissionModule[] = [];
-const STAFF_LIST_ROW_HEIGHT = 80;
-const STAFF_LIST_MIN_PAGE_SIZE = 5;
-const STAFF_LIST_MAX_PAGE_SIZE = 20;
-function getResponsiveStaffPageSize(listHeight: number) {
-  return Math.min(
-    STAFF_LIST_MAX_PAGE_SIZE,
-    Math.max(
-      STAFF_LIST_MIN_PAGE_SIZE,
-      Math.floor(listHeight / STAFF_LIST_ROW_HEIGHT),
-    ),
-  );
-}
+const EMPTY_STAFF_LIST_FILTERS: StaffListFilters = {
+  nickName: '',
+  name: '',
+  phone: '',
+  account: '',
+  state: null,
+};
+const STAFF_LIST_PAGE_SIZE = 10;
 function getStaffDisplayName(record: Partial<OrgUserPageRecord>) {
   return (
     record.name || record.nickName || record.account || record.phone || '-'
@@ -613,6 +619,7 @@ function normalizeOrgUserRecord(record: OrgUserPageRecord): StaffRecord {
     account: record.account || '',
     avatar: rawRecord.avatar || rawRecord.avatarUrl || '',
     enabled: record.state !== false,
+    detailLoaded: false,
     avatarColor: record.state === false ? '#e5e7eb' : '#e9e1d6',
     roleMap,
     permissionTree: EMPTY_PERMISSION_TREE,
@@ -653,10 +660,11 @@ function mergeOrgUserDetail(
     entryDate: rawDetail.createTime || rawDetail.entryDate || staff.entryDate,
     account: rawDetail.account || staff.account,
     enabled: detail.state ?? staff.enabled,
+    detailLoaded: true,
     roleMap,
     overridePermIds: detail.overridePermIds || [],
     permissionScenes,
-    avatar: detail.avatar || detail.avatarUrl || staff.avatar,
+    avatar: normalizeText(detail.avatarUrl) || normalizeText(detail.avatar),
     roleName,
     roleTag: roleName,
   };
@@ -665,32 +673,30 @@ function mergeOrgUserDetail(
 function buildOrgUserPageParams(
   current: number,
   pageSize: number,
-  keyword: string,
-) {
-  const nextKeyword = keyword.trim();
-  const params: {
-    current: number;
-    pageSize: number;
-    nickName?: string;
-    name?: string;
-    phone?: string;
-    account?: string;
-  } = {
+  filters: StaffListFilters,
+): OrgUserPageParams {
+  return {
     current,
     pageSize,
+    nickName: normalizeText(filters.nickName) || undefined,
+    name: normalizeText(filters.name) || undefined,
+    phone: normalizeText(filters.phone) || undefined,
+    account: normalizeText(filters.account) || undefined,
+    state: filters.state,
   };
-  if (!nextKeyword) return params;
-  if (/^1\d{10}$/.test(nextKeyword)) {
-    params.phone = nextKeyword;
-    return params;
-  }
-  if (/^[a-zA-Z0-9_.-]+$/.test(nextKeyword)) {
-    params.account = nextKeyword;
-    return params;
-  }
-  params.name = nextKeyword;
-  params.nickName = nextKeyword;
-  return params;
+}
+
+function isSameStaffListFilters(
+  left: StaffListFilters,
+  right: StaffListFilters,
+) {
+  return (
+    normalizeText(left.nickName) === normalizeText(right.nickName) &&
+    normalizeText(left.name) === normalizeText(right.name) &&
+    normalizeText(left.phone) === normalizeText(right.phone) &&
+    normalizeText(left.account) === normalizeText(right.account) &&
+    left.state === right.state
+  );
 }
 function getInitialPermissionKeys(permissionTree?: StaffPermissionModule[]) {
   const moduleKey = permissionTree?.[0]?.key || '';
@@ -809,6 +815,8 @@ function isMeaningfulValue(value: unknown) {
 
 function getStaffDetailItems(staff: StaffRecord) {
   return [
+    { label: '姓名', value: staff.name },
+    { label: '账号', value: staff.account },
     { label: '员工ID', value: staff.userId },
     { label: '手机号', value: staff.phone },
     { label: '入职时间', value: staff.entryDate },
@@ -1478,6 +1486,11 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
   const [activeFormSection, setActiveFormSection] =
     useState<StaffFormSectionKey>(STAFF_FORM_SECTIONS[0].key);
   const isEdit = mode === 'edit';
+  const matchedAvatarUrl = normalizeText(
+    matchedUser?.avatarUrl || matchedUser?.avatar,
+  );
+  const shouldShowMatchedAvatar = !isEdit && userMatchStatus === 'matched';
+  const shouldShowAvatarUpload = isEdit || userMatchStatus === 'new';
   const activeFormSectionIndex = STAFF_FORM_SECTIONS.findIndex(
     (item) => item.key === activeFormSection,
   );
@@ -1531,6 +1544,11 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
   useEffect(() => {
     form.setFieldsValue(getStaffFormInitialValues(staff));
   }, [form, staff]);
+
+  useEffect(() => {
+    if (isEdit || userMatchStatus === 'new') return;
+    form.setFieldValue('avatarFileList', undefined);
+  }, [form, isEdit, userMatchStatus]);
 
   useEffect(() => {
     activePermissionStateRef.current = {
@@ -1661,10 +1679,13 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
         navigateBackToStaffList({ refreshList: true });
         return;
       }
-      const avatar = await resolveUploadAttachmentId(
-        values.avatarFileList as UploadFile[] | undefined,
-        staff?.avatar || '',
-      );
+      const avatar =
+        userMatchStatus === 'new'
+          ? await resolveUploadAttachmentId(
+              values.avatarFileList as UploadFile[] | undefined,
+              staff?.avatar || '',
+            )
+          : '';
       const name =
         userMatchStatus === 'matched'
           ? normalizeText(matchedUser?.name)
@@ -1817,26 +1838,43 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
                 nickNameRequiredMessage="请输入昵称"
               />
             )}
-            <Form.Item
-              label="头像"
-              name="avatarFileList"
-              valuePropName="fileList"
-              getValueFromEvent={normalizeUploadFileList}
-            >
-              <Upload
-                accept="image/*"
-                customRequest={imageUploadRequest}
-                maxCount={1}
-                listType="picture-card"
-                className="staff-avatar-upload"
-                disabled={isEdit}
+            {shouldShowMatchedAvatar ? (
+              <Form.Item label="头像">
+                <Avatar
+                  size={72}
+                  src={matchedAvatarUrl || undefined}
+                  icon={<UserOutlined />}
+                  className={[
+                    'staff-avatar',
+                    matchedAvatarUrl ? '' : 'staff-avatar-default',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                />
+              </Form.Item>
+            ) : null}
+            {shouldShowAvatarUpload ? (
+              <Form.Item
+                label="头像"
+                name="avatarFileList"
+                valuePropName="fileList"
+                getValueFromEvent={normalizeUploadFileList}
               >
-                <div className="staff-avatar-upload-box">
-                  <PlusOutlined />
-                  <span>上传头像</span>
-                </div>
-              </Upload>
-            </Form.Item>
+                <Upload
+                  accept="image/*"
+                  customRequest={imageUploadRequest}
+                  maxCount={1}
+                  listType="picture-card"
+                  className="staff-avatar-upload"
+                  disabled={isEdit}
+                >
+                  <div className="staff-avatar-upload-box">
+                    <PlusOutlined />
+                    <span>上传头像</span>
+                  </div>
+                </Upload>
+              </Form.Item>
+            ) : null}
           </section>
           <section id="staff-form-permission" className="staff-create-card">
             <div className="staff-create-section-title">功能权限信息</div>
@@ -1934,19 +1972,22 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
   );
 };
 const StoreStaffListPage: React.FC = () => {
-  const staffListRef = useRef<HTMLDivElement | null>(null);
   const [staffs, setStaffs] = useState<StaffRecord[]>([]);
   const [selectedStaffId, setSelectedStaffId] = useState('');
-  const [staffKeyword, setStaffKeyword] = useState('');
-  const [queryKeyword, setQueryKeyword] = useState('');
-  const [staffStatus] = useState<string>();
+  const [draftFilters, setDraftFilters] = useState<StaffListFilters>({
+    ...EMPTY_STAFF_LIST_FILTERS,
+  });
+  const [filters, setFilters] = useState<StaffListFilters>({
+    ...EMPTY_STAFF_LIST_FILTERS,
+  });
   const [listVersion, setListVersion] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(STAFF_LIST_MIN_PAGE_SIZE);
-  const [isPageSizeReady, setIsPageSizeReady] = useState(false);
+  const pageSize = STAFF_LIST_PAGE_SIZE;
   const [staffTotal, setStaffTotal] = useState(0);
   const [staffLoading, setStaffLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+  const staffListNodeRef = useRef<HTMLDivElement | null>(null);
+  const loadMoreLockedRef = useRef(false);
   const [permissionExpanded, setPermissionExpanded] = useState(true);
   const initialPermissionState = getInitialPermissionState();
   const [activePermissionScene, setActivePermissionScene] = useState(
@@ -1962,13 +2003,17 @@ const StoreStaffListPage: React.FC = () => {
     initialPermissionState.pageKey,
   );
   const totalStaffs = staffTotal;
-  const maxPage = Math.max(1, Math.ceil(totalStaffs / pageSize));
-  const normalizedCurrentPage = Math.min(currentPage, maxPage);
   const pagedStaffs = staffs;
+  const hasMoreStaffs = staffs.length < totalStaffs;
+  const isInitialStaffLoading = staffLoading && pagedStaffs.length === 0;
   const selectedStaff = useMemo(
     () => staffs.find((item) => item.id === selectedStaffId) || pagedStaffs[0],
     [pagedStaffs, selectedStaffId, staffs],
   );
+  const selectedStaffDetailLoaded =
+    selectedStaff?.id === selectedStaffId
+      ? selectedStaff.detailLoaded
+      : undefined;
   useEffect(() => {
     const nextState = getInitialPermissionState(
       selectedStaff?.permissionScenes,
@@ -1980,37 +2025,6 @@ const StoreStaffListPage: React.FC = () => {
     setActivePageKey(nextState.pageKey);
   }, [selectedStaff]);
   useEffect(() => {
-    const listNode = staffListRef.current;
-    if (!listNode) return;
-    const updatePageSize = () => {
-      const nextPageSize = getResponsiveStaffPageSize(listNode.clientHeight);
-      setPageSize((prev) => (prev === nextPageSize ? prev : nextPageSize));
-      setIsPageSizeReady(true);
-    };
-    updatePageSize();
-    if (typeof ResizeObserver === 'undefined') return;
-    const resizeObserver = new ResizeObserver(updatePageSize);
-    resizeObserver.observe(listNode);
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
-  useEffect(() => {
-    setCurrentPage((prev) => Math.min(prev, maxPage));
-  }, [maxPage]);
-  useEffect(() => {
-    const debounceTimer = window.setTimeout(() => {
-      setQueryKeyword(staffKeyword.trim());
-      setCurrentPage(1);
-    }, 300);
-    return () => {
-      window.clearTimeout(debounceTimer);
-    };
-  }, [staffKeyword]);
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [staffStatus]);
-  useEffect(() => {
     if (pagedStaffs.length === 0) {
       setSelectedStaffId('');
       return;
@@ -2019,35 +2033,55 @@ const StoreStaffListPage: React.FC = () => {
     setSelectedStaffId(pagedStaffs[0].id);
   }, [pagedStaffs, selectedStaffId]);
   useEffect(() => {
-    if (!isPageSizeReady) return;
+    if (staffLoading || !hasMoreStaffs || pagedStaffs.length === 0) return;
+    const listNode = staffListNodeRef.current;
+    if (!listNode) return;
+    if (listNode.scrollHeight > listNode.clientHeight + 16) return;
+    loadMoreLockedRef.current = true;
+    setCurrentPage((prev) => prev + 1);
+  }, [hasMoreStaffs, pagedStaffs.length, staffLoading]);
+  useEffect(() => {
     let ignore = false;
     const abortController = new AbortController();
     const fetchStaffPage = async () => {
       setStaffLoading(true);
       try {
         const res = await getOrgUserPage(
-          buildOrgUserPageParams(normalizedCurrentPage, pageSize, queryKeyword),
+          buildOrgUserPageParams(currentPage, pageSize, filters),
           { signal: abortController.signal },
         );
         if (ignore) return;
         const records = Array.isArray(res?.records) ? res.records : [];
         const nextStaffs = records.map(normalizeOrgUserRecord);
-        setStaffs(nextStaffs);
-        setStaffTotal(Number(res?.total || 0));
-        setSelectedStaffId((current) => {
-          if (nextStaffs.some((staff) => staff.id === current)) return current;
-          return nextStaffs[0]?.id || '';
+        setStaffs((prev) => {
+          return currentPage === 1
+            ? nextStaffs
+            : [
+                ...prev,
+                ...nextStaffs.filter(
+                  (staff) =>
+                    !prev.some(
+                      (existingStaff) => existingStaff.id === staff.id,
+                    ),
+                ),
+              ];
         });
+        setStaffTotal(Number(res?.total || 0));
       } catch (error) {
         if (!ignore) {
           console.error('getOrgUserPage failed:', error);
           message.error('获取员工列表失败');
-          setStaffs([]);
-          setStaffTotal(0);
+          if (currentPage === 1) {
+            setStaffs([]);
+            setStaffTotal(0);
+          } else {
+            setCurrentPage((prev) => Math.max(1, prev - 1));
+          }
         }
       } finally {
         if (!ignore) {
           setStaffLoading(false);
+          loadMoreLockedRef.current = false;
         }
       }
     };
@@ -2057,20 +2091,20 @@ const StoreStaffListPage: React.FC = () => {
       abortController.abort();
     };
   }, [
-    isPageSizeReady,
+    currentPage,
     listVersion,
-    normalizedCurrentPage,
     pageSize,
-    queryKeyword,
+    filters.nickName,
+    filters.name,
+    filters.phone,
+    filters.account,
+    filters.state,
   ]);
   useEffect(() => {
     if (!selectedStaffId) return;
-    const currentStaff = staffs.find((staff) => staff.id === selectedStaffId);
-    if (
-      !currentStaff ||
-      (currentStaff.roleMap && currentStaff.permissionScenes)
-    )
+    if (selectedStaff?.id !== selectedStaffId || selectedStaffDetailLoaded) {
       return;
+    }
     let ignore = false;
     const fetchStaffDetail = async () => {
       setDetailLoading(true);
@@ -2117,7 +2151,7 @@ const StoreStaffListPage: React.FC = () => {
     return () => {
       ignore = true;
     };
-  }, [selectedStaffId, staffs]);
+  }, [selectedStaff?.id, selectedStaffDetailLoaded, selectedStaffId]);
   const handleSelectStaff = (staff: StaffRecord) => {
     setSelectedStaffId(staff.id);
     setPermissionExpanded(true);
@@ -2147,38 +2181,167 @@ const StoreStaffListPage: React.FC = () => {
       if (selectedStaffId === staffId) {
         setSelectedStaffId('');
       }
-      if (staffs.length <= 1 && currentPage > 1) {
-        setCurrentPage((prev) => Math.max(1, prev - 1));
-      } else {
-        setListVersion((prev) => prev + 1);
-      }
+      setCurrentPage(1);
+      setListVersion((prev) => prev + 1);
     } catch (error) {
       console.error('deleteOrgUser failed:', error);
       message.error(getErrorMessage(error, '删除员工失败'));
     }
   };
+  const handleSearch = () => {
+    const nextFilters = {
+      nickName: draftFilters.nickName.trim(),
+      name: draftFilters.name.trim(),
+      phone: draftFilters.phone.trim(),
+      account: draftFilters.account.trim(),
+      state: draftFilters.state,
+    };
+    if (isSameStaffListFilters(filters, nextFilters) && currentPage === 1) {
+      return;
+    }
+    if (!isSameStaffListFilters(filters, nextFilters)) {
+      setFilters(nextFilters);
+    }
+    setCurrentPage(1);
+  };
+  const handleReset = () => {
+    const nextFilters = { ...EMPTY_STAFF_LIST_FILTERS };
+    setDraftFilters(nextFilters);
+    if (!isSameStaffListFilters(filters, nextFilters)) {
+      setFilters(nextFilters);
+    }
+    setCurrentPage(1);
+  };
+  const handleStaffListScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const container = event.currentTarget;
+    const distanceToBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+    if (
+      distanceToBottom > 48 ||
+      staffLoading ||
+      loadMoreLockedRef.current ||
+      !hasMoreStaffs
+    ) {
+      return;
+    }
+    loadMoreLockedRef.current = true;
+    setCurrentPage((prev) => prev + 1);
+  };
   return (
     <div className="store-staff-page">
-      <div className="staff-filter-card">
-        <div className="staff-filter-fields">
-          <div className="staff-filter-field">
-            <span>员工信息</span>
-            <Input
-              allowClear
-              placeholder="昵称 / 姓名 / 手机号 / 账号"
-              value={staffKeyword}
-              onChange={(event) => setStaffKeyword(event.target.value)}
-            />
-          </div>
-        </div>
-        <Button
-          type="primary"
-          className="store-staff-create-btn"
-          onClick={() => history.push(STAFF_CREATE_PATH)}
-        >
-          新增员工
-        </Button>
-      </div>
+      <ExpandableFilterCard
+        className="store-staff-filter-card"
+        onSearch={handleSearch}
+        onReset={handleReset}
+        visibleCount={5}
+        extraActions={
+          <Button
+            type="primary"
+            onClick={() => history.push(STAFF_CREATE_PATH)}
+          >
+            新增员工
+          </Button>
+        }
+        fields={[
+          {
+            key: 'nickName',
+            label: '昵称',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入昵称"
+                value={draftFilters.nickName}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    nickName: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'name',
+            label: '姓名',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入姓名"
+                value={draftFilters.name}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    name: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'phone',
+            label: '手机号',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入手机号"
+                value={draftFilters.phone}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    phone: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'account',
+            label: '账号',
+            content: (
+              <Input
+                allowClear
+                placeholder="请输入账号"
+                value={draftFilters.account}
+                onChange={(event) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    account: event.target.value,
+                  }));
+                }}
+                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'state',
+            label: '状态',
+            content: (
+              <Select
+                allowClear
+                placeholder="请选择状态"
+                value={
+                  draftFilters.state === null
+                    ? undefined
+                    : String(draftFilters.state)
+                }
+                options={[
+                  { label: '启用', value: 'true' },
+                  { label: '禁用', value: 'false' },
+                ]}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    state: value === undefined ? null : value === 'true',
+                  }));
+                }}
+              />
+            ),
+          },
+        ]}
+      />
       <div className="store-staff-layout">
         <aside className="staff-list-card">
           <div className="staff-list-head">
@@ -2186,12 +2349,18 @@ const StoreStaffListPage: React.FC = () => {
               全部({totalStaffs})
             </button>
           </div>
-          <div className="staff-list" ref={staffListRef}>
-            {staffLoading ? <Spin className="staff-list-loading" /> : null}
-            {!staffLoading && totalStaffs === 0 ? (
+          <div
+            className="staff-list"
+            ref={staffListNodeRef}
+            onScroll={handleStaffListScroll}
+          >
+            {isInitialStaffLoading ? (
+              <Spin className="staff-list-loading" />
+            ) : null}
+            {!isInitialStaffLoading && totalStaffs === 0 ? (
               <Empty className="staff-list-empty" description="暂无员工数据" />
             ) : null}
-            {!staffLoading &&
+            {!isInitialStaffLoading &&
               pagedStaffs.map((staff) => {
                 const active = staff.id === selectedStaff?.id;
                 const staffListDisplayName = getStaffListDisplayName(staff);
@@ -2243,18 +2412,14 @@ const StoreStaffListPage: React.FC = () => {
                   </div>
                 );
               })}
+            {staffLoading && pagedStaffs.length > 0 ? (
+              <div className="staff-list-load-more">
+                <Spin size="small" />
+              </div>
+            ) : null}
           </div>
-          <div className="staff-list-pagination">
-            <Pagination
-              size="small"
-              current={normalizedCurrentPage}
-              pageSize={pageSize}
-              total={totalStaffs}
-              showSizeChanger={false}
-              showLessItems
-              showTotal={(total) => `共 ${total} 条`}
-              onChange={(page) => setCurrentPage(page)}
-            />
+          <div className="staff-list-footer">
+            <span>共 {totalStaffs} 条</span>
           </div>
         </aside>
         <main className="staff-detail-card">
@@ -2264,7 +2429,15 @@ const StoreStaffListPage: React.FC = () => {
               <div className="staff-detail-head">
                 <div className="staff-detail-title">
                   <span className="staff-avatar-wrap is-detail">
-                    <StaffAvatar staff={selectedStaff} size={58} />
+                    <StaffAvatar
+                      staff={{
+                        ...selectedStaff,
+                        avatar: selectedStaff.detailLoaded
+                          ? selectedStaff.avatar
+                          : '',
+                      }}
+                      size={58}
+                    />
                     {!selectedStaff.enabled ? (
                       <span className="staff-disabled-badge">禁用</span>
                     ) : null}

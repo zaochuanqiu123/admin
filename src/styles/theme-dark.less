@@ -17,6 +17,9 @@ body.theme-black-mode {
   --ant-color-border: var(--pc-dark-border);
   --ant-color-border-secondary: var(--pc-dark-border);
   --pc-sider-panel-bg: var(--pc-dark-bg-surface);
+  --pc-sider-hover-bg: rgba(255, 255, 255, 0.08);
+  --pc-sider-active-bg: color-mix(in srgb, var(--pc-color-primary) 24%, transparent);
+  --pc-sider-active-hover-bg: color-mix(in srgb, var(--pc-color-primary) 32%, transparent);
 }
 
 body.theme-black-mode,
@@ -96,8 +99,8 @@ body.theme-black-mode .dashboard-home-split-menu-icon-btn {
 
 body.theme-black-mode .dashboard-home-split-menu-icon-btn:hover,
 body.theme-black-mode .dashboard-home-split-menu-icon-btn-active {
-  color: var(--ant-color-primary) !important;
-  background: color-mix(in srgb, var(--ant-color-primary) 14%, transparent) !important;
+  color: var(--pc-color-primary) !important;
+  background: color-mix(in srgb, var(--pc-color-primary) 14%, transparent) !important;
   border-color: transparent !important;
 }
 
@@ -118,18 +121,10 @@ body.theme-black-mode .dashboard-home-split-menu-hover-panel .dashboard-home-spl
   border-radius: 10px;
 }
 
-body.theme-black-mode .dashboard-home-split-menu-hover-panel .dashboard-home-split-menu-hover-panel-ant .ant-menu-item-selected,
-body.theme-black-mode .dashboard-home-split-menu-hover-panel .dashboard-home-split-menu-hover-panel-ant .ant-menu-item-active,
 body.theme-black-mode .dashboard-home-split-menu-hover-panel .dashboard-home-split-menu-hover-panel-ant .ant-menu-submenu-selected > .ant-menu-submenu-title,
 body.theme-black-mode .dashboard-home-split-menu-hover-panel .dashboard-home-split-menu-hover-panel-ant .ant-menu-submenu-open > .ant-menu-submenu-title,
 body.theme-black-mode .dashboard-home-split-menu-hover-panel .dashboard-home-split-menu-hover-panel-ant .ant-menu-submenu-active > .ant-menu-submenu-title {
-  background: color-mix(in srgb, var(--ant-color-primary) 14%, transparent) !important;
-}
-
-body.theme-black-mode .dashboard-home-split-menu-hover-panel .dashboard-home-split-menu-hover-panel-ant .ant-menu-item-selected,
-body.theme-black-mode .dashboard-home-split-menu-hover-panel .dashboard-home-split-menu-hover-panel-ant .ant-menu-item-active {
-  background: transparent !important;
-  background-color: transparent !important;
+  background: color-mix(in srgb, var(--pc-color-primary) 14%, transparent) !important;
 }
 
 body.theme-black-mode .dashboard-home-split-menu-hover-panel .dashboard-home-split-menu-hover-panel-ant .ant-menu-submenu-selected > .ant-menu-submenu-title,
@@ -145,14 +140,14 @@ body.theme-black-mode .dashboard-home-split-menu-hover-panel-item {
 
 body.theme-black-mode .dashboard-home-split-menu-hover-panel-item:hover,
 body.theme-black-mode .dashboard-home-split-menu-hover-panel-item-active {
-  color: var(--ant-color-primary) !important;
-  background: color-mix(in srgb, var(--ant-color-primary) 14%, transparent) !important;
+  color: var(--pc-color-primary) !important;
+  background: var(--pc-sider-active-bg) !important;
 }
 
 body.theme-black-mode .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-icon-btn:hover,
 body.theme-black-mode .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-icon-btn-active {
-  color: var(--ant-color-primary) !important;
-  background: color-mix(in srgb, var(--ant-color-primary) 14%, transparent) !important;
+  color: var(--pc-color-primary) !important;
+  background: var(--pc-sider-active-bg) !important;
   border-radius: 10px;
 }
 
@@ -164,15 +159,29 @@ body.theme-black-mode .other-menus-split-menu-icon-btn {
 
 body.theme-black-mode .other-menus-split-menu-icon-btn:hover,
 body.theme-black-mode .other-menus-split-menu-icon-btn-active {
-  color: var(--ant-color-primary) !important;
-  background: color-mix(in srgb, var(--ant-color-primary) 14%, transparent) !important;
+  color: var(--pc-color-primary) !important;
+  background: color-mix(in srgb, var(--pc-color-primary) 14%, transparent) !important;
   border-color: transparent !important;
 }
 
-body.theme-black-mode .other-menus-split-menu-list-open .other-menus-split-menu-icon-btn:hover,
+body.theme-black-mode .other-menus-split-menu-list-open .other-menus-split-menu-icon-btn:hover:not(.other-menus-split-menu-icon-btn-active) {
+  color: var(--pc-dark-text-secondary) !important;
+  background: var(--pc-sider-hover-bg) !important;
+}
+
+body.theme-black-mode .other-menus-split-menu-list-open .other-menus-split-menu-icon-btn-preview {
+  color: var(--pc-dark-text-secondary) !important;
+  background: var(--pc-sider-hover-bg) !important;
+}
+
 body.theme-black-mode .other-menus-split-menu-list-open .other-menus-split-menu-icon-btn-active {
-  color: var(--ant-color-primary) !important;
-  background: color-mix(in srgb, var(--ant-color-primary) 14%, transparent) !important;
+  color: var(--pc-color-primary) !important;
+  background: var(--pc-sider-active-bg) !important;
+}
+
+body.theme-black-mode .other-menus-split-menu-list-open .other-menus-split-menu-icon-btn-active:hover {
+  color: var(--pc-color-primary) !important;
+  background: var(--pc-sider-active-hover-bg) !important;
 }
 
 body.theme-black-mode .other-menus-split-menu-shell {
@@ -192,8 +201,7 @@ body.theme-black-mode .other-menus-split-menu-submenu-panel {
 /* 非首页分栏：展开二级菜单内部面板统一暗黑底，覆盖基础白底规则 */
 body.theme-black-mode .other-menus-split-menu-submenu-panel .other-menus-split-menu-submenu-ant.ant-menu,
 body.theme-black-mode .other-menus-split-menu-submenu-panel .other-menus-split-menu-submenu-ant .ant-menu-sub.ant-menu-inline,
-body.theme-black-mode .other-menus-split-menu-submenu-panel .other-menus-split-menu-submenu-ant .ant-menu-submenu,
-body.theme-black-mode .other-menus-split-menu-submenu-panel .other-menus-split-menu-submenu-ant .ant-menu-item {
+body.theme-black-mode .other-menus-split-menu-submenu-panel .other-menus-split-menu-submenu-ant .ant-menu-submenu {
   background: var(--pc-dark-bg-surface) !important;
   background-color: var(--pc-dark-bg-surface) !important;
 }
@@ -204,8 +212,8 @@ body.theme-black-mode .other-menus-split-menu-hover-panel-item {
 
 body.theme-black-mode .other-menus-split-menu-hover-panel-item:hover,
 body.theme-black-mode .other-menus-split-menu-hover-panel-item-active {
-  color: var(--ant-color-primary) !important;
-  background: color-mix(in srgb, var(--ant-color-primary) 14%, transparent) !important;
+  color: var(--pc-color-primary) !important;
+  background: var(--pc-sider-active-bg) !important;
 }
 
 body.theme-black-mode .pc-admin-workplace-common .workplace-common-header-extra,
@@ -298,15 +306,25 @@ body.theme-black-mode .pc-admin-route-tab:hover {
   background: var(--pc-dark-bg-elevated) !important;
 }
 
-body.theme-black-mode .pc-admin-route-tabs-arrow,
 body.theme-black-mode .pc-admin-route-tabs-more {
   border-color: var(--pc-dark-border) !important;
   background: var(--pc-dark-bg-elevated) !important;
   color: var(--pc-dark-text) !important;
 }
 
-body.theme-black-mode .pc-admin-route-tabs-arrow:hover,
+body.theme-black-mode .pc-admin-route-tabs-arrow {
+  border-color: var(--pc-dark-border) !important;
+  background: var(--pc-dark-bg-elevated) !important;
+  color: var(--pc-dark-text) !important;
+}
+
 body.theme-black-mode .pc-admin-route-tabs-more:hover {
+  border-color: color-mix(in srgb, var(--ant-color-primary) 72%, var(--pc-dark-border)) !important;
+  background: var(--pc-dark-bg-elevated) !important;
+  color: var(--ant-color-primary) !important;
+}
+
+body.theme-black-mode .pc-admin-route-tabs-arrow:hover {
   border-color: color-mix(in srgb, var(--ant-color-primary) 72%, var(--pc-dark-border)) !important;
   background: var(--pc-dark-bg-elevated) !important;
   color: var(--ant-color-primary) !important;
@@ -405,17 +423,11 @@ body.theme-black-mode .plain-sider-menu-content .ant-menu-submenu-active>.ant-me
   color: var(--pc-dark-text) !important;
 }
 
-/* 分栏菜单（首页/非首页）暗黑态选中与展开：保持透明底，避免出现黑色块 */
-body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-item-selected,
-body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-item-active,
-body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-item:hover,
+/* 分栏菜单暗黑态：首页与非展开标题保持透明，其他侧边栏展开面板单独跟随 hover token。 */
 body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-submenu-selected>.ant-menu-submenu-title,
 body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-submenu-open>.ant-menu-submenu-title,
 body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-submenu-active>.ant-menu-submenu-title,
 body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-submenu-title:hover,
-body.theme-black-mode .other-menus-split-menu-ant .ant-menu-item-selected,
-body.theme-black-mode .other-menus-split-menu-ant .ant-menu-item-active,
-body.theme-black-mode .other-menus-split-menu-ant .ant-menu-item:hover,
 body.theme-black-mode .other-menus-split-menu-ant .ant-menu-submenu-selected>.ant-menu-submenu-title,
 body.theme-black-mode .other-menus-split-menu-ant .ant-menu-submenu-open>.ant-menu-submenu-title,
 body.theme-black-mode .other-menus-split-menu-ant .ant-menu-submenu-active>.ant-menu-submenu-title,
@@ -424,9 +436,17 @@ body.theme-black-mode .other-menus-split-menu-ant .ant-menu-submenu-title:hover 
   background-color: transparent !important;
 }
 
+body.theme-black-mode .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-submenu > .ant-menu-submenu-title:hover,
+body.theme-black-mode .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-submenu-open > .ant-menu-submenu-title,
+body.theme-black-mode .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-submenu-active > .ant-menu-submenu-title,
+body.theme-black-mode .ant-layout-sider .other-menus-split-menu-shell-open .other-menus-split-menu-submenu-panel-open .other-menus-split-menu-submenu-ant > .ant-menu-submenu-selected > .ant-menu-submenu-title {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
 body.theme-black-mode .other-menus-split-menu-ant>.other-menus-workplace-font.ant-menu-item:hover>.ant-menu-title-content,
 body.theme-black-mode .other-menus-split-menu-ant>.other-menus-workplace-font.ant-menu-item-active>.ant-menu-title-content {
-  color: var(--ant-color-primary) !important;
+  color: var(--pc-color-primary) !important;
 }
 
 body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-submenu-selected>.ant-menu-submenu-title *,
@@ -440,8 +460,6 @@ body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-submenu-title {
   border-radius: 10px;
 }
 
-body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-item-selected,
-body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-item-active,
 body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-submenu-selected > .ant-menu-submenu-title,
 body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-submenu-open > .ant-menu-submenu-title,
 body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-submenu-active > .ant-menu-submenu-title {
@@ -458,7 +476,7 @@ body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-submenu-active > 
 
 body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-item-selected .ant-menu-title-content,
 body.theme-black-mode .dashboard-home-split-menu-ant .ant-menu-item-active .ant-menu-title-content {
-  color: var(--ant-color-primary) !important;
+  color: var(--pc-color-primary) !important;
 }
 
 body.theme-black-mode .dashboard-card-tools__store-select.ant-select .ant-select-selection-item,

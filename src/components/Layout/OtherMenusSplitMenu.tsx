@@ -1,16 +1,3 @@
-import {
-  AppstoreOutlined,
-  BellOutlined,
-  CompassOutlined,
-  DatabaseOutlined,
-  FileTextOutlined,
-  HomeOutlined,
-  SettingOutlined,
-  ShopOutlined,
-  TagsOutlined,
-  TeamOutlined,
-  ToolOutlined,
-} from '@ant-design/icons';
 import type { MenuDataItem } from '@ant-design/pro-components';
 import { Menu, type MenuProps } from 'antd';
 import React from 'react';
@@ -19,6 +6,7 @@ import {
   resumeMenuHoverAutoOpen,
   suppressMenuHoverAutoOpen,
 } from '@/utils/menuHover';
+import { renderMenuIcon } from '@/utils/menuIcon';
 import { useSplitMenuHoverIntent } from './useSplitMenuHoverIntent';
 
 type OtherMenusSplitMenuProps = {
@@ -32,24 +20,12 @@ type MenuNode = {
   key: string;
   name: string;
   path?: string;
+  icon?: React.ReactNode;
   targetId?: string;
   sourceSystem?: number;
   children?: MenuNode[];
 };
 
-const FIRST_LEVEL_ICONS: React.ReactNode[] = [
-  <HomeOutlined key="home" />,
-  <AppstoreOutlined key="appstore" />,
-  <ShopOutlined key="shop" />,
-  <TagsOutlined key="tags" />,
-  <TeamOutlined key="team" />,
-  <ToolOutlined key="tool" />,
-  <BellOutlined key="bell" />,
-  <DatabaseOutlined key="database" />,
-  <FileTextOutlined key="file" />,
-  <CompassOutlined key="compass" />,
-  <SettingOutlined key="setting" />,
-];
 const OTHER_SPLIT_MENU_FADE_DURATION = 180;
 const DISABLED_INLINE_MENU_MOTION: MenuProps['motion'] = {
   motionAppear: false,
@@ -121,6 +97,7 @@ function buildNodes(
       key: nodeKey,
       name: itemName,
       path: itemPath || undefined,
+      icon: (item as any)?.icon,
       targetId:
         targetId === undefined || targetId === null
           ? undefined
@@ -175,13 +152,11 @@ function getBestPathMatchScoreInTree(node: MenuNode, pathname: string): number {
 
 function findFirstLeafNavigableNode(
   node: MenuNode | undefined,
-  inheritedPath?: string,
-  inheritedTargetId?: string,
   inheritedSourceSystem?: number,
 ): { path?: string; targetId?: string; sourceSystem?: number } | undefined {
   if (!node) return undefined;
-  const currentPath = node.path || inheritedPath;
-  const currentTargetId = node.targetId || inheritedTargetId;
+  const currentPath = node.path;
+  const currentTargetId = node.targetId;
   const currentSourceSystem = node.sourceSystem ?? inheritedSourceSystem;
 
   const children = node.children || [];
@@ -195,12 +170,7 @@ function findFirstLeafNavigableNode(
   }
 
   for (const child of children) {
-    const leafTarget = findFirstLeafNavigableNode(
-      child,
-      currentPath,
-      currentTargetId,
-      currentSourceSystem,
-    );
+    const leafTarget = findFirstLeafNavigableNode(child, currentSourceSystem);
     if (leafTarget?.path) return leafTarget;
   }
 
@@ -330,20 +300,16 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
     const toMenuItem = (
       node: MenuNode,
       parentKey?: string,
-      inheritedPath?: string,
     ): NonNullable<MenuProps['items']>[number] => {
       parentByKey.set(node.key, parentKey);
-      const resolvedPath = node.path || inheritedPath;
-      if (resolvedPath) {
-        pathByKey.set(node.key, resolvedPath);
+      if (node.path) {
+        pathByKey.set(node.key, node.path);
       }
       targetIdByKey.set(node.key, node.targetId);
       sourceSystemByKey.set(node.key, node.sourceSystem);
       const children =
         node.children && node.children.length > 0
-          ? node.children.map((child) =>
-              toMenuItem(child, node.key, resolvedPath),
-            )
+          ? node.children.map((child) => toMenuItem(child, node.key))
           : undefined;
       if (children && children.length > 0) {
         submenuKeys.push(node.key);
@@ -483,6 +449,7 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
     setOpenKeys(Array.from(new Set([...menuMeta.submenuKeys, ...parentKeys])));
   }, [menuMeta.parentByKey, menuMeta.submenuKeys, selectedKeys]);
   React.useEffect(() => {
+    if (!hoverListOpen) return;
     if (!hoverTopNode) {
       setHoverOpenKeys([]);
       return;
@@ -502,18 +469,14 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
     hoverMenuMeta.parentByKey,
     hoverMenuMeta.submenuKeys,
     hoverSelectedKeys,
+    hoverListOpen,
     hoverTopNode,
   ]);
 
   const handleTopClick = React.useCallback(
     (node: MenuNode) => {
       setActiveTopKey(node.key);
-      const defaultTarget = findFirstLeafNavigableNode(
-        node,
-        node.path,
-        node.targetId,
-        node.sourceSystem,
-      );
+      const defaultTarget = findFirstLeafNavigableNode(node, node.sourceSystem);
       if (defaultTarget?.path) {
         suppressMenuHoverAutoOpen();
         onNavigate(
@@ -731,9 +694,11 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
             (hoverListOpen ? ' other-menus-split-menu-list-open' : '')
           }
         >
-          {topNodes.map((node, index) => {
-            const active = node.key === displayTopKey;
-            const icon = FIRST_LEVEL_ICONS[index % FIRST_LEVEL_ICONS.length];
+          {topNodes.map((node) => {
+            const selected = node.key === activeTopNode?.key;
+            const hoveringPreview =
+              hoverListOpen && node.key === displayTopKey && !selected;
+            const icon = renderMenuIcon(node.icon);
             return (
               <button
                 key={node.key}
@@ -743,7 +708,10 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
                 type="button"
                 className={
                   'other-menus-split-menu-icon-btn' +
-                  (active ? ' other-menus-split-menu-icon-btn-active' : '')
+                  (selected ? ' other-menus-split-menu-icon-btn-active' : '') +
+                  (hoveringPreview
+                    ? ' other-menus-split-menu-icon-btn-preview'
+                    : '')
                 }
                 aria-label={node.name}
                 onMouseEnter={(event) =>

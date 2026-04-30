@@ -5,6 +5,7 @@ export type StorePageQueryParams = {
   pageSize: number;
   name?: string;
   storeClass?: number;
+  merchantOrgId?: string;
 };
 
 export type StorePageRecord = {
