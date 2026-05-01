@@ -54,7 +54,11 @@ export function getSpeakerNameLines(record: SpeakerRecord): string[] {
       record?.remark,
       record?.qrcodeTemplate?.name,
     ),
-    readText(record?.speakerConfigName, record?.speakerConfig, record?.configName),
+    readText(
+      record?.speakerConfigName,
+      record?.speakerConfig,
+      record?.configName,
+    ),
     readText(record?.model),
   ].filter(Boolean);
 
@@ -64,11 +68,10 @@ export function getSpeakerNameLines(record: SpeakerRecord): string[] {
 export function isSpeakerBound(record: SpeakerRecord): boolean {
   return Boolean(
     readText(
-      record?.bindTime,
-      record?.bindName,
-      record?.bindRemark,
-      record?.merchantOrg?.orgName,
+      record?.storeOrg?.id,
+      record?.storeOrg?.orgCode,
       record?.storeOrg?.orgName,
+      record?.storeOrgId,
     ),
   );
 }

@@ -12,6 +12,7 @@ type UseSplitMenuHoverIntentOptions = {
   clearCloseCleanupTimer?: () => void;
   getTopItemRect?: (topKey: string) => DOMRect | null;
   getHoverPanelRect?: () => DOMRect | null;
+  isTopItemHovered?: (topKey: string) => boolean;
 };
 
 type HoverIntentPoint = {
@@ -117,6 +118,7 @@ export function useSplitMenuHoverIntent({
   clearCloseCleanupTimer,
   getTopItemRect,
   getHoverPanelRect,
+  isTopItemHovered,
 }: UseSplitMenuHoverIntentOptions) {
   const intentTimerRef = React.useRef<number | null>(null);
   const pendingIntentKeyRef = React.useRef<string | null>(null);
@@ -160,10 +162,10 @@ export function useSplitMenuHoverIntent({
         return;
       }
 
+      const switchingTopMenu =
+        hoverOpen && activeHoverKey && activeHoverKey !== topKey;
       if (
-        hoverOpen &&
-        activeHoverKey &&
-        activeHoverKey !== topKey &&
+        switchingTopMenu &&
         pointer &&
         isMovingThroughSafeCorridor({
           previousPoint,
@@ -176,11 +178,21 @@ export function useSplitMenuHoverIntent({
         return;
       }
 
-      const switchingTopMenu =
-        hoverOpen && activeHoverKey && activeHoverKey !== topKey;
       const intentDelay = switchingTopMenu
         ? MENU_SWITCH_DWELL_DELAY
         : INITIAL_OPEN_DELAY;
+
+      if (
+        intentTimerRef.current !== null &&
+        pendingIntentKeyRef.current === topKey &&
+        (pendingIntentDelayRef.current ?? intentDelay) <= intentDelay
+      ) {
+        if (fromPointerMove && switchingTopMenu) {
+          clearHoverIntent();
+        } else {
+          return;
+        }
+      }
 
       if (
         intentTimerRef.current !== null &&
@@ -209,6 +221,9 @@ export function useSplitMenuHoverIntent({
         ) {
           return;
         }
+        if (isTopItemHovered && !isTopItemHovered(topKey)) {
+          return;
+        }
         onIntentOpen(topKey);
       }, intentDelay);
     },
@@ -220,6 +235,7 @@ export function useSplitMenuHoverIntent({
       hoverOpen,
       getHoverPanelRect,
       getTopItemRect,
+      isTopItemHovered,
       onIntentOpen,
     ],
   );

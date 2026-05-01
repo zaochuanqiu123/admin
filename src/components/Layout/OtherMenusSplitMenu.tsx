@@ -600,6 +600,10 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
     () => hoverPanelRef.current?.getBoundingClientRect() ?? null,
     [],
   );
+  const isTopItemHovered = React.useCallback(
+    (topKey: string) => Boolean(topItemRefs.current[topKey]?.matches(':hover')),
+    [],
+  );
 
   const { clearHoverIntent, queueHoverIntent } = useSplitMenuHoverIntent({
     hoverOpen: hoverListOpen,
@@ -609,6 +613,7 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
     clearCloseCleanupTimer,
     getTopItemRect,
     getHoverPanelRect,
+    isTopItemHovered,
   });
 
   const scheduleCloseHoverPanels = React.useCallback(() => {
@@ -682,10 +687,7 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
           (hoverListOpen ? ' other-menus-split-menu-shell-open' : '') +
           (panelClosing ? ' other-menus-split-menu-shell-closing' : '')
         }
-        onMouseEnter={() => {
-          clearHoverIntent();
-          handleHoverZoneEnter();
-        }}
+        onMouseEnter={handleHoverZoneEnter}
         onMouseLeave={handleHoverZoneLeave}
       >
         <div
@@ -713,14 +715,19 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
                     ? ' other-menus-split-menu-icon-btn-preview'
                     : '')
                 }
+                style={
+                  hoveringPreview
+                    ? { background: 'var(--pc-sider-hover-bg)' }
+                    : undefined
+                }
                 aria-label={node.name}
-                onMouseEnter={(event) =>
+                onMouseEnter={(event) => {
                   queueHoverIntent(node.key, false, {
                     clientX: event.clientX,
                     clientY: event.clientY,
                     timeStamp: event.timeStamp,
-                  })
-                }
+                  });
+                }}
                 onMouseMove={(event) =>
                   queueHoverIntent(node.key, true, {
                     clientX: event.clientX,
@@ -728,6 +735,7 @@ const OtherMenusSplitMenu: React.FC<OtherMenusSplitMenuProps> = ({
                     timeStamp: event.timeStamp,
                   })
                 }
+                onMouseLeave={clearHoverIntent}
                 onFocus={(event) => {
                   if (!isFocusVisible(event.currentTarget)) return;
                   clearHoverIntent();

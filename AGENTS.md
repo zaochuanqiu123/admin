@@ -172,6 +172,16 @@ src/
 7. 暗黑模式只在 `src/styles/theme-dark.less` 里补充 `body.theme-black-mode` 覆盖，仍然遵循同样边界：默认强调态走主色弱背景，危险/成功/警告/link 保持各自 token。
 8. 如果发现某块切主题色不变，先判断它是不是“默认强调态”。是，再改成 `primary` token；不是，不要为了统一视觉而污染语义色。
 
+### 4.11 业务状态 Tag 颜色规范
+
+1. 订单、支付、退款、开通等业务状态必须使用语义颜色，让用户能快速区分状态风险和进度；禁止把所有状态都渲染成灰色或主题主色。
+2. 待处理/待支付/待退款/部分完成：`Tag color="orange"`。
+3. 处理中/受理中/等待输入密码：`Tag color="blue"`。
+4. 成功/已支付/支付成功/退款成功/已开通/启用：`Tag color="green"`。
+5. 失败/支付失败/退款失败/异常/禁用危险态：`Tag color="red"`。
+6. 已取消/已过期/未开通/无状态：默认灰色 `Tag` 或 `Tag color="default"`。
+7. 新增列表页或详情页时，同一业务状态在筛选选项、表格列、详情描述里必须保持同一套文案和颜色，不允许列表和详情不一致。
+
 ---
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.

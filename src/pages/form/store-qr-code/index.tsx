@@ -13,6 +13,7 @@ import {
 } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { getCurrentMerchantStoreList } from '@/api/org';
 import {
   batchAddQrCode,
   bindQrCode,
@@ -38,6 +39,7 @@ import {
 import { BatchChangeTemplateModal } from './components/BatchChangeTemplateModal';
 import { BindQrCodeModal } from './components/BindQrCodeModal';
 import { CreateQrCodeModal } from './components/CreateQrCodeModal';
+import { ReceiptCodeRuleModal } from './components/ReceiptCodeRuleModal';
 import type { TemplateSelectOption } from './components/TemplatePreviewSelect';
 import { TransferModal } from './components/TransferModal';
 import './index.less';
@@ -52,6 +54,7 @@ const QR_CODE_PERMS = {
   exportData: 'admin:device:qrcode:exportData',
   exportQrcode: 'admin:device:qrcode:exportQrcode',
   exportCompose: 'admin:device:qrcode:exportCompose',
+  setReceiptRule: 'admin:receipt:receiptCodeRules:setByQrcode',
 } as const;
 
 type QueryFilters = {
@@ -70,6 +73,11 @@ type QueryFilters = {
   openType?: string;
   bindName: string;
   model: string;
+};
+
+type StoreOption = {
+  label: string;
+  value: string;
 };
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -150,14 +158,10 @@ function getPreviewImage(record: QrCodeRecord) {
 function isBound(record: QrCodeRecord) {
   return Boolean(
     readText(
-      record?.targetId,
-      record?.bindTime,
-      record?.bindName,
-      record?.merchantOrg?.orgName,
+      record?.storeOrg?.id,
+      record?.storeOrg?.orgCode,
       record?.storeOrg?.orgName,
-      record?.merchantOrgId,
       record?.storeOrgId,
-      record?.storeOrgUserId,
     ),
   );
 }
@@ -188,6 +192,8 @@ const StoreQrCodeListPage: React.FC = () => {
   const [templateOptionsSource, setTemplateOptionsSource] = useState<
     TemplateSelectOption[]
   >([]);
+  const [storeOptions, setStoreOptions] = useState<StoreOption[]>([]);
+  const [storeOptionsLoading, setStoreOptionsLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState('');
@@ -197,6 +203,7 @@ const StoreQrCodeListPage: React.FC = () => {
   const [bindModalOpen, setBindModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [batchChangeTemplateOpen, setBatchChangeTemplateOpen] = useState(false);
+  const [receiptRuleRecord, setReceiptRuleRecord] = useState<QrCodeRecord>();
 
   const [draftFilters, setDraftFilters] =
     useState<QueryFilters>(createEmptyFilters);
@@ -267,6 +274,39 @@ const StoreQrCodeListPage: React.FC = () => {
       setTemplateLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (!isMerchant) return;
+    let cancelled = false;
+    setStoreOptionsLoading(true);
+    getCurrentMerchantStoreList({ skipErrorHandler: true })
+      .then((res) => {
+        if (cancelled) return;
+        const nextOptions = (Array.isArray(res) ? res : [])
+          .map((item) => {
+            const value = readText(item?.id);
+            const name = readText(item?.orgName);
+            if (!value) return undefined;
+            return {
+              label: name ? `${name}（ID: ${value}）` : value,
+              value,
+            };
+          })
+          .filter(Boolean) as StoreOption[];
+        setStoreOptions(nextOptions);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error('load merchant store options failed:', error);
+        setStoreOptions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setStoreOptionsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isMerchant]);
 
   const loadQrCodes = useCallback(async () => {
     setLoading(true);
@@ -532,7 +572,7 @@ const StoreQrCodeListPage: React.FC = () => {
         {
           title: '操作',
           key: 'action',
-          width: 120,
+          width: 180,
           fixed: 'right',
           render: (_: unknown, record: QrCodeRecord) => {
             const hasBindInfo = isBound(record);
@@ -540,16 +580,27 @@ const StoreQrCodeListPage: React.FC = () => {
             return (
               <div className="qr-code-action-links">
                 {hasBindInfo ? (
-                  <PermissionVisible perm={QR_CODE_PERMS.unbind}>
-                    <a
-                      className="is-danger"
-                      onClick={() => {
-                        void handleUnbind(record);
-                      }}
-                    >
-                      解绑
-                    </a>
-                  </PermissionVisible>
+                  <>
+                    <PermissionVisible perm={QR_CODE_PERMS.setReceiptRule}>
+                      <a
+                        onClick={() => {
+                          setReceiptRuleRecord(record);
+                        }}
+                      >
+                        配置规则
+                      </a>
+                    </PermissionVisible>
+                    <PermissionVisible perm={QR_CODE_PERMS.unbind}>
+                      <a
+                        className="is-danger"
+                        onClick={() => {
+                          void handleUnbind(record);
+                        }}
+                      >
+                        解绑
+                      </a>
+                    </PermissionVisible>
+                  </>
                 ) : null}
               </div>
             );
@@ -661,7 +712,7 @@ const StoreQrCodeListPage: React.FC = () => {
                 },
               ]
             : []),
-          ...(isPlatform || isAgent || isMerchant
+          ...(isPlatform || isAgent
             ? [
                 {
                   key: 'storeOrgId',
@@ -678,6 +729,31 @@ const StoreQrCodeListPage: React.FC = () => {
                         }));
                       }}
                       onPressEnter={handleSearch}
+                    />
+                  ),
+                },
+              ]
+            : []),
+          ...(isMerchant
+            ? [
+                {
+                  key: 'storeOrgId',
+                  label: '门店组织ID',
+                  content: (
+                    <Select
+                      allowClear
+                      showSearch
+                      placeholder="请选择门店"
+                      loading={storeOptionsLoading}
+                      value={draftFilters.storeOrgId || undefined}
+                      options={storeOptions}
+                      optionFilterProp="label"
+                      onChange={(value) => {
+                        setDraftFilters((prev) => ({
+                          ...prev,
+                          storeOrgId: value || '',
+                        }));
+                      }}
                     />
                   ),
                 },
@@ -1055,6 +1131,16 @@ const StoreQrCodeListPage: React.FC = () => {
           });
           message.success(getApiMessage(res, '批量修改模板成功'));
           setBatchChangeTemplateOpen(false);
+          await loadQrCodes();
+        }}
+      />
+
+      <ReceiptCodeRuleModal
+        open={!!receiptRuleRecord}
+        record={receiptRuleRecord}
+        onCancel={() => setReceiptRuleRecord(undefined)}
+        onSuccess={async () => {
+          setReceiptRuleRecord(undefined);
           await loadQrCodes();
         }}
       />

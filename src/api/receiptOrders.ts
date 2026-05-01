@@ -89,7 +89,7 @@ export async function getReceiptOrderPage(
   options?: { [key: string]: any },
 ) {
   return apiData<ReceiptOrderPageResult>(
-    '/api/admin/receipt/v1/receiptOrders/page',
+    '/api/admin/receipt/v1/receiptOrder/page',
     {
       method: 'GET',
       params,
@@ -103,7 +103,7 @@ export async function getReceiptOrderDetail(
   options?: { [key: string]: any },
 ) {
   return apiData<ReceiptOrderRecord>(
-    `/api/admin/receipt/v1/receiptOrders/${encodeURIComponent(id)}`,
+    `/api/admin/receipt/v1/receiptOrder/${encodeURIComponent(id)}`,
     {
       method: 'GET',
       ...(options || {}),
@@ -115,7 +115,7 @@ export async function refundReceiptOrder(
   data: ReceiptOrderRefundParams,
   options?: { [key: string]: any },
 ) {
-  return apiRequest<any>('/api/admin/receipt/v1/receiptOrders/refund', {
+  return apiRequest<any>('/api/admin/receipt/v1/receiptOrder/refund', {
     method: 'POST',
     data,
     ...(options || {}),

@@ -1221,11 +1221,7 @@ export default function StoreCreatePage() {
           >
             {currentStep === 0 ? (
               <>
-                <Form.Item
-                  label="所属业态"
-                  name="businessCode"
-                  rules={[{ required: true, message: '请选择所属业态' }]}
-                >
+                <Form.Item label="所属业态" name="businessCode">
                   <Select
                     placeholder="请选择所属业态"
                     loading={businessLoading}

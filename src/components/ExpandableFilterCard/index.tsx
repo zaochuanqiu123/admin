@@ -8,6 +8,7 @@ export type ExpandableFilterField = {
   key: Key;
   label: ReactNode;
   content: ReactNode;
+  wideWhenCollapsed?: boolean;
 };
 
 type ExpandableFilterCardProps = {
@@ -43,12 +44,20 @@ const ExpandableFilterCard: FC<ExpandableFilterCardProps> = ({
 
     return fields.slice(0, visibleCount);
   }, [collapsed, fields, shouldShowCollapse, visibleCount]);
+  const shouldUseWideCollapsedLayout =
+    collapsed && visibleFields.some((field) => field.wideWhenCollapsed);
 
   return (
     <div
       className={`content-card common-filter-card${className ? ` ${className}` : ''}`}
     >
-      <div className="common-filter-grid">
+      <div
+        className={`common-filter-grid${
+          shouldUseWideCollapsedLayout
+            ? ' common-filter-grid-collapsed-wide'
+            : ''
+        }`}
+      >
         {visibleFields.map((field) => (
           <div key={field.key} className="common-filter-field">
             <span className="common-filter-label">{field.label}</span>

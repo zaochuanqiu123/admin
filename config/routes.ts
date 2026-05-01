@@ -267,12 +267,19 @@ const routes = [
     name: '收款订单',
     path: '/receipt/receipt-orders',
     component: './receipt/receipt-orders/index',
-    backendPathUrls: [
-      '/Retail/Orders/index',
-      '/admin/receipt/v1/receiptOrders/page',
-      '/admin/receipt/v1/receiptOrders/{id}',
-      '/admin/receipt/v1/receiptOrders/refund',
-    ],
+    backendPathUrls: ['/Retail/Orders/index'],
+    hideInMenu: true,
+  },
+  {
+    name: '支付记录',
+    path: '/trade/pay',
+    component: './finance/payment-record/index',
+    hideInMenu: true,
+  },
+  {
+    name: '退款记录',
+    path: '/trade/refund',
+    component: './finance/refund-record/index',
     hideInMenu: true,
   },
   {
@@ -338,6 +345,18 @@ const routes = [
       '/admin/system/v1/systemConfig/GLOBAL/DOMAIN/getList',
       '/admin/system/v1/systemConfig/modify/value',
     ],
+    hideInMenu: true,
+  },
+  {
+    name: '开放平台配置',
+    path: '/set/wechat-open-config',
+    component: './set/wechat-open-config/index',
+    hideInMenu: true,
+  },
+  {
+    name: '公众号配置',
+    path: '/set/wechat-mp-config',
+    component: './set/wechat-mp-config/index',
     hideInMenu: true,
   },
   {

@@ -18,6 +18,7 @@ import {
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import type { Dayjs } from 'dayjs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { getCurrentMerchantStoreList } from '@/api/org';
 import {
   getReceiptOrderDetail,
   getReceiptOrderPage,
@@ -75,11 +76,11 @@ const PAY_WAY_TEXT: Record<string, string> = {
 };
 
 const PAY_STATE_MAP: Record<string, { text: string; color: string }> = {
-  0: { text: '待支付', color: 'default' },
-  1: { text: '等待输入密码', color: 'processing' },
-  10: { text: '支付成功', color: 'success' },
-  90: { text: '支付失败', color: 'error' },
-  91: { text: '已取消', color: 'warning' },
+  0: { text: '待支付', color: 'orange' },
+  1: { text: '等待输入密码', color: 'blue' },
+  10: { text: '支付成功', color: 'green' },
+  90: { text: '支付失败', color: 'red' },
+  91: { text: '已取消', color: 'default' },
   92: { text: '已过期', color: 'default' },
 };
 
@@ -104,6 +105,11 @@ type QueryFilters = {
 type RefundFormValues = {
   amount?: number | null;
   refundReason?: string;
+};
+
+type StoreOption = {
+  label: string;
+  value: string;
 };
 
 function createEmptyFilters(): QueryFilters {
@@ -238,6 +244,8 @@ const ReceiptOrdersPage: React.FC = () => {
   const [draftTimeRange, setDraftTimeRange] = useState<[Dayjs, Dayjs] | null>(
     null,
   );
+  const [storeOptions, setStoreOptions] = useState<StoreOption[]>([]);
+  const [storeOptionsLoading, setStoreOptionsLoading] = useState(false);
   const [pagination, setPagination] = useState<TablePaginationConfig>({
     current: 1,
     pageSize: DEFAULT_PAGE_SIZE,
@@ -281,6 +289,39 @@ const ReceiptOrdersPage: React.FC = () => {
       (params as Record<string, unknown>)[key] = nextValue;
     }
   };
+
+  useEffect(() => {
+    if (!isMerchant) return;
+    let cancelled = false;
+    setStoreOptionsLoading(true);
+    getCurrentMerchantStoreList({ skipErrorHandler: true })
+      .then((res) => {
+        if (cancelled) return;
+        const nextOptions = (Array.isArray(res) ? res : [])
+          .map((item) => {
+            const value = String(item.id || '').trim();
+            const name = String(item.orgName || '').trim();
+            if (!value) return undefined;
+            return {
+              label: name ? `${name}（ID: ${value}）` : value,
+              value,
+            };
+          })
+          .filter(Boolean) as StoreOption[];
+        setStoreOptions(nextOptions);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error('load merchant store options failed:', error);
+        setStoreOptions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setStoreOptionsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isMerchant]);
 
   const loadReceiptOrderPage = useCallback(async () => {
     setLoading(true);
@@ -666,10 +707,28 @@ const ReceiptOrdersPage: React.FC = () => {
               label: '商户组织ID',
               content: renderInputControl('merchantOrgId', '请输入商户组织ID'),
             },
-            (isPlatform || isAgent || isMerchant) && {
+            (isPlatform || isAgent) && {
               key: 'storeOrgId',
               label: '门店组织ID',
               content: renderInputControl('storeOrgId', '请输入门店组织ID'),
+            },
+            isMerchant && {
+              key: 'storeOrgId',
+              label: '门店组织ID',
+              content: (
+                <Select
+                  allowClear
+                  showSearch
+                  placeholder="请选择门店"
+                  loading={storeOptionsLoading}
+                  value={draftFilters.storeOrgId || undefined}
+                  options={storeOptions}
+                  optionFilterProp="label"
+                  onChange={(value) => {
+                    updateDraftFilter('storeOrgId', value || '');
+                  }}
+                />
+              ),
             },
             {
               key: 'receiptCodeRuleId',

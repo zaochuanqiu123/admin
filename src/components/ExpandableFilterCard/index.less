@@ -14,6 +14,12 @@
   align-items: end;
 }
 
+.common-filter-grid-collapsed-wide {
+  grid-template-columns:
+    minmax(0, 1.45fr) minmax(0, 0.95fr) minmax(0, 0.95fr)
+    auto;
+}
+
 .common-filter-field {
   display: flex;
   align-items: center;
@@ -23,7 +29,8 @@
 
 .common-filter-label {
   flex-shrink: 0;
-  width: 76px;
+  min-width: 76px;
+  white-space: nowrap;
   color: #1f2837;
 }
 
@@ -46,6 +53,10 @@
   justify-content: flex-end;
   align-items: center;
   min-height: 32px;
+}
+
+.common-filter-grid-collapsed-wide .common-filter-actions {
+  min-width: 216px;
 }
 
 .common-filter-actions .ant-space {
@@ -72,8 +83,16 @@ body.theme-black-mode {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .common-filter-grid-collapsed-wide {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .common-filter-actions {
     grid-column: 2;
+  }
+
+  .common-filter-grid-collapsed-wide .common-filter-actions {
+    min-width: 0;
   }
 }
 

@@ -743,12 +743,12 @@ body .ant-layout-sider .ant-layout-sider-children>div {
   grid-template-columns: var(--other-split-menu-icon-content-width) var(--other-split-menu-label-width);
 }
 
-.other-menus-split-menu-list-open .other-menus-split-menu-icon-btn:hover:not(.other-menus-split-menu-icon-btn-active) {
+.other-menus-split-menu-list-open .other-menus-split-menu-icon-btn:hover:not(.other-menus-split-menu-icon-btn-active):not(.other-menus-split-menu-icon-btn-preview) {
   color: var(--pc-sider-text-secondary);
-  background: var(--pc-sider-hover-bg);
+  background: transparent;
 }
 
-.other-menus-split-menu-list-open .other-menus-split-menu-icon-btn-preview {
+.other-menus-split-menu-list-open .other-menus-split-menu-icon-btn.other-menus-split-menu-icon-btn-preview {
   color: var(--pc-sider-text-secondary);
   background: var(--pc-sider-hover-bg);
 }
