@@ -498,34 +498,6 @@ const ReceiptOrdersPage: React.FC = () => {
           ellipsis: true,
           render: (value: string) => value || '-',
         },
-        {
-          title: '支付流水号',
-          dataIndex: 'orderTradeNo',
-          width: 210,
-          ellipsis: true,
-          render: (value: string) => value || '-',
-        },
-        isPlatform && {
-          title: '代理组织',
-          key: 'agentOrg',
-          width: 180,
-          render: (_: unknown, record: ReceiptOrderRecord) =>
-            renderLines(getOrgLines(record.agentOrg, record.agentOrgId)),
-        },
-        (isPlatform || isAgent) && {
-          title: '集团组织',
-          key: 'groupOrg',
-          width: 180,
-          render: (_: unknown, record: ReceiptOrderRecord) =>
-            renderLines(getOrgLines(record.groupOrg, record.groupOrgId)),
-        },
-        (isPlatform || isAgent) && {
-          title: '商户组织',
-          key: 'merchantOrg',
-          width: 180,
-          render: (_: unknown, record: ReceiptOrderRecord) =>
-            renderLines(getOrgLines(record.merchantOrg, record.merchantOrgId)),
-        },
         (isPlatform || isAgent || isMerchant) && {
           title: '门店组织',
           key: 'storeOrg',
@@ -541,19 +513,6 @@ const ReceiptOrdersPage: React.FC = () => {
           render: (value: string) => value || '-',
         },
         {
-          title: '付款人手机号',
-          dataIndex: 'phone',
-          width: 150,
-          render: (value: string) => value || '-',
-        },
-        {
-          title: '支付金额',
-          dataIndex: 'payAmount',
-          width: 130,
-          align: 'right',
-          render: (value: number) => formatMoney(value),
-        },
-        {
           title: '订单金额',
           dataIndex: 'amount',
           width: 130,
@@ -564,6 +523,13 @@ const ReceiptOrdersPage: React.FC = () => {
           title: '服务费',
           dataIndex: 'serviceFee',
           width: 120,
+          align: 'right',
+          render: (value: number) => formatMoney(value),
+        },
+        {
+          title: '支付金额',
+          dataIndex: 'payAmount',
+          width: 130,
           align: 'right',
           render: (value: number) => formatMoney(value),
         },
@@ -586,13 +552,20 @@ const ReceiptOrdersPage: React.FC = () => {
           render: (value: ReceiptPayWay) => getPayWayText(value),
         },
         {
+          title: '流水号',
+          dataIndex: 'orderTradeNo',
+          width: 210,
+          ellipsis: true,
+          render: (value: string) => value || '-',
+        },
+        {
           title: '创建时间',
           dataIndex: 'createTime',
           width: 180,
           render: (value: string) => value || '-',
         },
         {
-          title: '支付完成时间',
+          title: '完成时间',
           dataIndex: 'finishTime',
           width: 180,
           render: (value: string) => value || '-',

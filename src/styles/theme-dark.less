@@ -97,10 +97,15 @@ body.theme-black-mode .dashboard-home-split-menu-icon-btn {
   border-color: transparent !important;
 }
 
-body.theme-black-mode .dashboard-home-split-menu-icon-btn:hover,
 body.theme-black-mode .dashboard-home-split-menu-icon-btn-active {
   color: var(--pc-color-primary) !important;
   background: color-mix(in srgb, var(--pc-color-primary) 14%, transparent) !important;
+  border-color: transparent !important;
+}
+
+body.theme-black-mode .dashboard-home-split-menu-icon-btn:hover {
+  color: var(--pc-dark-text-secondary) !important;
+  background: transparent !important;
   border-color: transparent !important;
 }
 
@@ -144,11 +149,15 @@ body.theme-black-mode .dashboard-home-split-menu-hover-panel-item-active {
   background: var(--pc-sider-active-bg) !important;
 }
 
-body.theme-black-mode .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-icon-btn:hover,
 body.theme-black-mode .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-icon-btn-active {
   color: var(--pc-color-primary) !important;
   background: var(--pc-sider-active-bg) !important;
   border-radius: 10px;
+}
+
+body.theme-black-mode .dashboard-home-split-menu-hover-wrap-open .dashboard-home-split-menu-icon-btn:hover:not(.dashboard-home-split-menu-icon-btn-active) {
+  color: var(--pc-dark-text-secondary) !important;
+  background: transparent !important;
 }
 
 body.theme-black-mode .other-menus-split-menu-icon-btn {

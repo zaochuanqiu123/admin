@@ -857,6 +857,7 @@ const QrTemplateListPage: React.FC = () => {
           offsetX: 0,
           offsetY: 0,
         });
+        setCropDragState(null);
         setCropModalOpen(true);
       } catch (error) {
         console.error('load background image failed:', error);
@@ -885,7 +886,7 @@ const QrTemplateListPage: React.FC = () => {
       const previewHeight = Math.round(
         previewWidth * (editorState.canvasHeight / editorState.canvasWidth),
       );
-      const baseScale = Math.max(
+      const baseScale = Math.min(
         previewWidth / cropDraft.naturalWidth,
         previewHeight / cropDraft.naturalHeight,
       );
@@ -1070,7 +1071,7 @@ const QrTemplateListPage: React.FC = () => {
     cropPreviewWidth * (editorState.canvasHeight / editorState.canvasWidth),
   );
   const cropBaseScale = cropDraft
-    ? Math.max(
+    ? Math.min(
         cropPreviewWidth / cropDraft.naturalWidth,
         cropPreviewHeight / cropDraft.naturalHeight,
       )
@@ -1360,7 +1361,9 @@ const QrTemplateListPage: React.FC = () => {
             <div className="qr-template-canvas-shell">
               <div className="qr-template-canvas-stage">
                 <div
-                  className="qr-template-canvas"
+                  className={`qr-template-canvas ${
+                    editorState.backgroundImage ? 'has-background-image' : ''
+                  }`}
                   style={{
                     width: editorState.canvasWidth,
                     height: editorState.canvasHeight,

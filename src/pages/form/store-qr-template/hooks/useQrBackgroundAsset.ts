@@ -41,7 +41,7 @@ function getCropImageMetrics(
   previewWidth: number,
   previewHeight: number,
 ) {
-  const baseScale = Math.max(
+  const baseScale = Math.min(
     previewWidth / draft.naturalWidth,
     previewHeight / draft.naturalHeight,
   );
@@ -222,6 +222,7 @@ export function useQrBackgroundAsset({
             cropPreviewHeight,
           ),
         );
+        setCropDragState(null);
         setCropModalOpen(true);
       } catch (error) {
         console.error('load background image failed:', error);

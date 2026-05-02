@@ -360,6 +360,12 @@ const routes = [
     hideInMenu: true,
   },
   {
+    name: '支付宝网页配置',
+    path: '/set/alipay-web-config',
+    component: './set/alipay-web-config/index',
+    hideInMenu: true,
+  },
+  {
     path: '/',
     redirect: '/dashboard/index',
   },

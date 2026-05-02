@@ -1,9 +1,10 @@
-import { UserOutlined } from '@ant-design/icons';
+import { DownOutlined, UserOutlined } from '@ant-design/icons';
 import { history } from '@umijs/max';
 import {
   Alert,
   Avatar,
   Button,
+  Dropdown,
   Empty,
   Input,
   message,
@@ -23,6 +24,8 @@ import {
 } from '@/components';
 import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
 import { AGENT_PERMS } from '../agent-perms';
+import AgentPaymentChannelModal from './components/AgentPaymentChannelModal';
+import AgentPlugModal from './components/AgentPlugModal';
 import './index.less';
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -142,6 +145,9 @@ const AgentListPage: React.FC = () => {
     Record<string, boolean>
   >({});
   const [deletingIds, setDeletingIds] = useState<Record<string, boolean>>({});
+  const [paymentChannelModalRecord, setPaymentChannelModalRecord] =
+    useState<AgentPageRecord>();
+  const [plugModalRecord, setPlugModalRecord] = useState<AgentPageRecord>();
   const [pagination, setPagination] = useState<TablePaginationConfig>({
     current: 1,
     pageSize: DEFAULT_PAGE_SIZE,
@@ -350,12 +356,45 @@ const AgentListPage: React.FC = () => {
       {
         title: '操作',
         key: 'action',
-        width: 160,
+        width: 210,
         fixed: 'right',
         render: (_, record) => {
           const id = normalizeText(record.id);
+          const oldOrgId = normalizeText(record.oldOrgId);
           return (
             <div className="agent-list-action-links">
+              <Dropdown
+                trigger={['click']}
+                menu={{
+                  items: [
+                    {
+                      key: 'paymentChannel',
+                      label: '支付通道',
+                    },
+                    {
+                      key: 'plug',
+                      label: '功能应用',
+                    },
+                  ],
+                  onClick: ({ key }) => {
+                    if (!oldOrgId) {
+                      message.warning(
+                        '当前代理商缺少 oldOrgId，无法打开该功能',
+                      );
+                      return;
+                    }
+                    if (key === 'paymentChannel') {
+                      setPaymentChannelModalRecord(record);
+                      return;
+                    }
+                    setPlugModalRecord(record);
+                  },
+                }}
+              >
+                <Button type="link" size="small">
+                  更多 <DownOutlined />
+                </Button>
+              </Dropdown>
               <PermissionVisible perm={AGENT_PERMS.modify}>
                 <Button
                   type="link"
@@ -454,7 +493,7 @@ const AgentListPage: React.FC = () => {
             loading={refreshing}
             columns={columns}
             dataSource={records}
-            scroll={{ x: 1360 }}
+            scroll={{ x: 1460 }}
             locale={{
               emptyText: <Empty description="暂无代理商数据" />,
             }}
@@ -472,6 +511,24 @@ const AgentListPage: React.FC = () => {
           />
         )}
       </div>
+
+      <AgentPaymentChannelModal
+        open={!!paymentChannelModalRecord}
+        agentId={normalizeText(paymentChannelModalRecord?.oldOrgId)}
+        agentName={normalizeText(paymentChannelModalRecord?.name)}
+        onCancel={() => {
+          setPaymentChannelModalRecord(undefined);
+        }}
+      />
+
+      <AgentPlugModal
+        open={!!plugModalRecord}
+        agentId={normalizeText(plugModalRecord?.oldOrgId)}
+        agentName={normalizeText(plugModalRecord?.name)}
+        onCancel={() => {
+          setPlugModalRecord(undefined);
+        }}
+      />
     </div>
   );
 };

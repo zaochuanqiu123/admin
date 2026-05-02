@@ -29,6 +29,7 @@ import {
   PermissionVisible,
 } from '@/components';
 import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
+import AgentPaymentChannelModal from '../../agent/list/components/AgentPaymentChannelModal';
 import { MERCHANT_PERMS } from '../merchant-perms';
 import MerchantAppModal from './components/MerchantAppModal';
 import MerchantBusinessModal from './components/MerchantBusinessModal';
@@ -159,6 +160,8 @@ const MerchantListPage: React.FC = () => {
   });
   const [appModalRecord, setAppModalRecord] = useState<MerchantPageRecord>();
   const [businessModalRecord, setBusinessModalRecord] =
+    useState<MerchantPageRecord>();
+  const [paymentChannelModalRecord, setPaymentChannelModalRecord] =
     useState<MerchantPageRecord>();
   const [storeCountModalRecord, setStoreCountModalRecord] =
     useState<MerchantPageRecord>();
@@ -396,12 +399,18 @@ const MerchantListPage: React.FC = () => {
           <div className="merchant-list-action-links">
             <Dropdown
               trigger={['click']}
-              disabled={!normalizeText(record.orgId)}
+              disabled={
+                !normalizeText(record.orgId) && !normalizeText(record.oldOrgId)
+              }
               menu={{
                 items: [
                   {
+                    key: 'paymentChannel',
+                    label: '支付通道',
+                  },
+                  {
                     key: 'app',
-                    label: '应用管理',
+                    label: '功能应用',
                   },
                   {
                     key: 'business',
@@ -413,6 +422,16 @@ const MerchantListPage: React.FC = () => {
                   },
                 ],
                 onClick: ({ key }) => {
+                  if (key === 'paymentChannel') {
+                    if (!normalizeText(record.oldOrgId)) {
+                      message.warning(
+                        '当前商户缺少 oldOrgId，无法打开支付通道',
+                      );
+                      return;
+                    }
+                    setPaymentChannelModalRecord(record);
+                    return;
+                  }
                   if (key === 'app') {
                     setAppModalRecord(record);
                     return;
@@ -428,7 +447,10 @@ const MerchantListPage: React.FC = () => {
               <Button
                 type="link"
                 size="small"
-                disabled={!normalizeText(record.orgId)}
+                disabled={
+                  !normalizeText(record.orgId) &&
+                  !normalizeText(record.oldOrgId)
+                }
               >
                 管理 <DownOutlined />
               </Button>
@@ -533,6 +555,18 @@ const MerchantListPage: React.FC = () => {
         merchantName={normalizeText(appModalRecord?.merchantName)}
         onCancel={() => {
           setAppModalRecord(undefined);
+        }}
+      />
+
+      <AgentPaymentChannelModal
+        open={!!paymentChannelModalRecord}
+        agentId={normalizeText(paymentChannelModalRecord?.oldOrgId)}
+        agentName={normalizeText(paymentChannelModalRecord?.merchantName)}
+        listUrl="/Agent/Payment/getList"
+        userType="3"
+        switchEnabled={false}
+        onCancel={() => {
+          setPaymentChannelModalRecord(undefined);
         }}
       />
 

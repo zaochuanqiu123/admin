@@ -28,7 +28,9 @@ const QrTemplateCanvasPreview: React.FC<QrTemplateCanvasPreviewProps> = ({
       <div className="qr-template-canvas-shell">
         <div className="qr-template-canvas-stage">
           <div
-            className="qr-template-canvas"
+            className={`qr-template-canvas ${
+              editorState.backgroundImage ? 'has-background-image' : ''
+            }`}
             style={{
               width: editorState.canvasWidth,
               height: editorState.canvasHeight,

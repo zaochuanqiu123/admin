@@ -2,7 +2,6 @@ import { useModel } from '@umijs/max';
 import {
   Alert,
   Empty,
-  Image,
   Input,
   Modal,
   message,
@@ -39,6 +38,7 @@ import {
 import { BatchChangeTemplateModal } from './components/BatchChangeTemplateModal';
 import { BindQrCodeModal } from './components/BindQrCodeModal';
 import { CreateQrCodeModal } from './components/CreateQrCodeModal';
+import { QrCodeComposePreview } from './components/QrCodeComposePreview';
 import { ReceiptCodeRuleModal } from './components/ReceiptCodeRuleModal';
 import type { TemplateSelectOption } from './components/TemplatePreviewSelect';
 import { TransferModal } from './components/TransferModal';
@@ -195,8 +195,7 @@ const StoreQrCodeListPage: React.FC = () => {
   const [storeOptions, setStoreOptions] = useState<StoreOption[]>([]);
   const [storeOptionsLoading, setStoreOptionsLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewImage, setPreviewImage] = useState('');
+  const [previewRecord, setPreviewRecord] = useState<QrCodeRecord>();
 
   // Modals state
   const [transferModalOpen, setTransferModalOpen] = useState(false);
@@ -446,15 +445,14 @@ const StoreQrCodeListPage: React.FC = () => {
             const imageUrl = getPreviewImage(record);
             if (imageUrl) {
               return (
-                <div className="qr-code-preview-box">
+                <div
+                  className="qr-code-preview-box"
+                  onClick={() => setPreviewRecord(record)}
+                >
                   <img
                     src={imageUrl}
                     alt={getTemplateName(record) || '收款码预览'}
                     className="qr-code-preview-image"
-                    onClick={() => {
-                      setPreviewImage(imageUrl);
-                      setPreviewOpen(true);
-                    }}
                   />
                 </div>
               );
@@ -1145,20 +1143,44 @@ const StoreQrCodeListPage: React.FC = () => {
         }}
       />
 
-      <Image
-        preview={{
-          visible: previewOpen,
-          src: previewImage,
-          onVisibleChange: (visible) => {
-            setPreviewOpen(visible);
-            if (!visible) {
-              setPreviewImage('');
-            }
-          },
-        }}
-        src={previewImage || undefined}
-        style={{ display: 'none' }}
-      />
+      <Modal
+        open={!!previewRecord}
+        title="二维码预览"
+        width={920}
+        footer={null}
+        destroyOnHidden
+        onCancel={() => setPreviewRecord(undefined)}
+      >
+        {previewRecord ? (
+          <div className="qr-code-preview-modal">
+            <section className="qr-code-preview-modal__panel">
+              <div className="qr-code-preview-modal__raw">
+                <QrCodeComposePreview
+                  record={previewRecord}
+                  mode="raw"
+                  className="qr-code-preview-modal__raw-image"
+                />
+              </div>
+              <div className="qr-code-preview-modal__meta">
+                <div>
+                  <strong>{readText(previewRecord?.sn) || '-'}</strong>
+                </div>
+              </div>
+            </section>
+            <section className="qr-code-preview-modal__panel">
+              <div className="qr-code-preview-modal__compose">
+                <QrCodeComposePreview
+                  record={previewRecord}
+                  className="qr-code-preview-modal__compose-image"
+                />
+              </div>
+              <div className="qr-code-preview-modal__template-name">
+                {getTemplateName(previewRecord) || '未配置模板'}
+              </div>
+            </section>
+          </div>
+        ) : null}
+      </Modal>
     </div>
   );
 };

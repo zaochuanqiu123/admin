@@ -115,7 +115,7 @@ export async function refundReceiptOrder(
   data: ReceiptOrderRefundParams,
   options?: { [key: string]: any },
 ) {
-  return apiRequest<any>('/api/admin/receipt/v1/receiptOrder/refund', {
+  return apiRequest<any>('/api/admin/receipt/v1/receiptRefund/refund', {
     method: 'POST',
     data,
     ...(options || {}),

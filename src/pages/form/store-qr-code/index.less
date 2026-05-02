@@ -79,7 +79,8 @@
     padding: 6px;
     overflow: hidden;
     border-radius: 12px;
-      background: var(--ant-color-fill-quaternary);
+    background: var(--ant-color-fill-quaternary);
+    cursor: pointer;
   }
 
   .qr-code-preview-box img {
@@ -154,6 +155,88 @@
   }
 }
 
+.qr-code-preview-modal {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: 18px;
+
+  &__panel {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    padding: 16px;
+    border: 1px solid var(--ant-color-border-secondary);
+    border-radius: 10px;
+    background: var(--ant-color-fill-quaternary);
+  }
+
+  &__title {
+    margin-bottom: 14px;
+    color: var(--ant-color-text-heading, var(--ant-color-text));
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  &__raw,
+  &__compose {
+    display: flex;
+    flex: 1;
+    min-height: 360px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: var(--ant-color-bg-container);
+  }
+
+  &__raw-image {
+    display: block;
+    width: 240px;
+    max-width: 100%;
+    height: auto;
+  }
+
+  &__compose-image {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    max-height: 480px;
+    object-fit: contain;
+  }
+
+  &__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 12px;
+
+    div {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      gap: 4px;
+      align-items: center;
+      text-align: center;
+    }
+
+    span {
+      color: var(--ant-color-text-secondary);
+      font-size: 12px;
+    }
+
+    strong {
+      color: var(--ant-color-text);
+      font-weight: 500;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  &__template-name {
+    margin-top: 12px;
+    color: var(--ant-color-text-secondary);
+    text-align: center;
+  }
+}
+
 body.theme-black-mode .qr-code-page {
   .content-card {
     background: var(--pc-dark-bg-surface) !important;
@@ -162,6 +245,13 @@ body.theme-black-mode .qr-code-page {
 
   .field-label {
     color: var(--pc-dark-text) !important;
+  }
+}
+
+body.theme-black-mode .qr-code-preview-modal {
+  &__panel {
+    border-color: var(--pc-dark-border);
+    background: var(--pc-dark-bg-elevated);
   }
 }
 
@@ -181,5 +271,11 @@ body.theme-black-mode .qr-code-page {
       width: 100%;
       justify-content: flex-end;
     }
+  }
+}
+
+@media (max-width: 768px) {
+  .qr-code-preview-modal {
+    grid-template-columns: 1fr;
   }
 }

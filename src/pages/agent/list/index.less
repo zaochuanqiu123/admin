@@ -75,6 +75,44 @@
   }
 }
 
+.agent-payment-channel-modal {
+  .ant-table-wrapper {
+    margin-top: 12px;
+  }
+
+  .agent-payment-channel-logo.ant-avatar {
+    border: 1px solid var(--ant-color-border-secondary);
+    background: var(--ant-color-fill-quaternary);
+  }
+}
+
+.agent-plug-modal {
+  .ant-spin-nested-loading {
+    min-height: 160px;
+  }
+
+  .ant-collapse {
+    margin-top: 12px;
+    background: transparent;
+  }
+
+  .ant-collapse-item {
+    border-radius: 8px;
+    border: 1px solid var(--ant-color-border-secondary);
+    background: var(--ant-color-bg-container);
+
+    & + .ant-collapse-item {
+      margin-top: 12px;
+    }
+  }
+
+  .agent-plug-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(120px, 1fr));
+    gap: 14px 28px;
+  }
+}
+
 body.theme-black-mode .agent-list-page {
   .content-card {
     border-color: var(--pc-dark-border);
@@ -88,5 +126,21 @@ body.theme-black-mode .agent-list-page {
   .agent-list-avatar.ant-avatar {
     border-color: var(--pc-dark-border);
     background: rgba(255, 255, 255, 0.06);
+  }
+}
+
+body.theme-black-mode {
+  .agent-payment-channel-modal {
+    .agent-payment-channel-logo.ant-avatar {
+      border-color: var(--pc-dark-border);
+      background: rgba(255, 255, 255, 0.06);
+    }
+  }
+
+  .agent-plug-modal {
+    .ant-collapse-item {
+      border-color: var(--pc-dark-border);
+      background: var(--pc-dark-bg-surface);
+    }
   }
 }
