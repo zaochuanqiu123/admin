@@ -144,6 +144,7 @@ const STAFF_FORM_SECTIONS = [
 type StaffFormSectionKey = (typeof STAFF_FORM_SECTIONS)[number]['key'];
 const STAFF_LIST_PATH = '/permission/store-staff';
 const STAFF_CREATE_PATH = `${STAFF_LIST_PATH}/create`;
+const STAFF_SELECTED_QUERY_KEY = 'selectedStaffId';
 const EMPTY_PERMISSION_TREE: StaffPermissionModule[] = [];
 const EMPTY_STAFF_LIST_FILTERS: StaffListFilters = {
   nickName: '',
@@ -453,24 +454,23 @@ function applyUncheckedSetToPermissionNode(
   });
 }
 
+function isPermissionNodeFullyUnchecked(node: StaffPermissionNode): boolean {
+  if (node.checked) return false;
+  if (node.children.length === 0) return true;
+  return node.children.every(isPermissionNodeFullyUnchecked);
+}
+
 function collectUncheckedPermissionNodeIds(nodes: StaffPermissionNode[]) {
   const result: string[] = [];
-  const walk = (items: StaffPermissionNode[], depth: number) => {
+  const walk = (items: StaffPermissionNode[]) => {
     items.forEach((item) => {
-      if (item.children.length > 0) {
-        walk(item.children, depth + 1);
-        return;
-      }
-      if (
-        !item.checked &&
-        item.permissionId &&
-        (item.isButtonPermission || depth >= 3)
-      ) {
+      if (isPermissionNodeFullyUnchecked(item) && item.permissionId) {
         result.push(item.permissionId);
       }
+      if (item.children.length > 0) walk(item.children);
     });
   };
-  walk(nodes, 0);
+  walk(nodes);
   return Array.from(new Set(result));
 }
 
@@ -698,6 +698,13 @@ function isSameStaffListFilters(
     left.state === right.state
   );
 }
+
+function getSelectedStaffIdFromSearch(search: string) {
+  return normalizeText(
+    new URLSearchParams(search).get(STAFF_SELECTED_QUERY_KEY),
+  );
+}
+
 function getInitialPermissionKeys(permissionTree?: StaffPermissionModule[]) {
   const moduleKey = permissionTree?.[0]?.key || '';
   const pageKey = permissionTree?.[0]?.children[0]?.key || '';
@@ -1522,8 +1529,19 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
   }, [form]);
 
   const navigateBackToStaffList = useCallback(
-    (options?: { refreshList?: boolean; closeCreateTab?: boolean }) => {
-      history.push(STAFF_LIST_PATH);
+    (options?: {
+      refreshList?: boolean;
+      closeCreateTab?: boolean;
+      selectedStaffId?: string;
+    }) => {
+      const selectedStaffId = normalizeText(options?.selectedStaffId);
+      history.push(
+        selectedStaffId
+          ? `${STAFF_LIST_PATH}?${STAFF_SELECTED_QUERY_KEY}=${encodeURIComponent(
+              selectedStaffId,
+            )}`
+          : STAFF_LIST_PATH,
+      );
       if (!options?.refreshList && !options?.closeCreateTab) return;
       window.setTimeout(() => {
         if (options?.closeCreateTab) {
@@ -1676,7 +1694,7 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
           { skipErrorHandler: true },
         );
         message.success(getApiMessage(res, '修改员工成功'));
-        navigateBackToStaffList({ refreshList: true });
+        navigateBackToStaffList({ refreshList: true, selectedStaffId: id });
         return;
       }
       const avatar =
@@ -1757,7 +1775,13 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
           {isEdit ? '修改员工账号' : '新增员工账号'}
         </div>
         <Space>
-          <Button onClick={() => navigateBackToStaffList()}>取消</Button>
+          <Button
+            onClick={() =>
+              navigateBackToStaffList({ selectedStaffId: staffId })
+            }
+          >
+            取消
+          </Button>
           <Button type="primary" loading={submitLoading} onClick={handleSubmit}>
             保存
           </Button>
@@ -1972,8 +1996,15 @@ const StoreStaffCreatePage: React.FC<StoreStaffFormPageProps> = ({
   );
 };
 const StoreStaffListPage: React.FC = () => {
+  const location = useLocation();
+  const preferredSelectedStaffId = useMemo(
+    () => getSelectedStaffIdFromSearch(location.search),
+    [location.search],
+  );
   const [staffs, setStaffs] = useState<StaffRecord[]>([]);
-  const [selectedStaffId, setSelectedStaffId] = useState('');
+  const [selectedStaffId, setSelectedStaffId] = useState(
+    preferredSelectedStaffId,
+  );
   const [draftFilters, setDraftFilters] = useState<StaffListFilters>({
     ...EMPTY_STAFF_LIST_FILTERS,
   });
@@ -1988,6 +2019,7 @@ const StoreStaffListPage: React.FC = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const staffListNodeRef = useRef<HTMLDivElement | null>(null);
   const loadMoreLockedRef = useRef(false);
+  const consumedSelectedStaffIdRef = useRef(preferredSelectedStaffId);
   const [permissionExpanded, setPermissionExpanded] = useState(true);
   const initialPermissionState = getInitialPermissionState();
   const [activePermissionScene, setActivePermissionScene] = useState(
@@ -2007,7 +2039,10 @@ const StoreStaffListPage: React.FC = () => {
   const hasMoreStaffs = staffs.length < totalStaffs;
   const isInitialStaffLoading = staffLoading && pagedStaffs.length === 0;
   const selectedStaff = useMemo(
-    () => staffs.find((item) => item.id === selectedStaffId) || pagedStaffs[0],
+    () =>
+      selectedStaffId
+        ? staffs.find((item) => item.id === selectedStaffId)
+        : pagedStaffs[0],
     [pagedStaffs, selectedStaffId, staffs],
   );
   const selectedStaffDetailLoaded =
@@ -2025,13 +2060,22 @@ const StoreStaffListPage: React.FC = () => {
     setActivePageKey(nextState.pageKey);
   }, [selectedStaff]);
   useEffect(() => {
+    if (
+      preferredSelectedStaffId &&
+      consumedSelectedStaffIdRef.current !== preferredSelectedStaffId
+    ) {
+      consumedSelectedStaffIdRef.current = preferredSelectedStaffId;
+      setSelectedStaffId(preferredSelectedStaffId);
+      return;
+    }
     if (pagedStaffs.length === 0) {
+      if (selectedStaffId) return;
       setSelectedStaffId('');
       return;
     }
     if (pagedStaffs.some((staff) => staff.id === selectedStaffId)) return;
     setSelectedStaffId(pagedStaffs[0].id);
-  }, [pagedStaffs, selectedStaffId]);
+  }, [pagedStaffs, preferredSelectedStaffId, selectedStaffId]);
   useEffect(() => {
     if (staffLoading || !hasMoreStaffs || pagedStaffs.length === 0) return;
     const listNode = staffListNodeRef.current;

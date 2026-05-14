@@ -128,6 +128,7 @@ export type QrCodeBindParams = {
   id?: string;
   sn?: string;
   storeOrgId?: string;
+  storeOrgUserId?: string;
   bindName?: string;
   bindRemark?: string;
 };

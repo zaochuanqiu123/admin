@@ -777,7 +777,7 @@ body.theme-black-mode .qr-template-drawer {
 .qr-template-crop-modal {
   .ant-modal-content {
     border-radius: 0;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .ant-modal-header {
@@ -787,6 +787,8 @@ body.theme-black-mode .qr-template-drawer {
 
   .ant-modal-body {
     padding-top: 16px;
+    max-height: calc(100vh - 180px);
+    overflow: auto;
   }
 
   .qr-template-crop-panel {
@@ -806,7 +808,8 @@ body.theme-black-mode .qr-template-drawer {
     align-items: center;
     justify-content: center;
     margin: 0 auto;
-    padding: 12px;
+    max-width: 100%;
+    padding: 0;
     border-radius: 0;
     // background: var(--ant-color-fill-quaternary);
   }

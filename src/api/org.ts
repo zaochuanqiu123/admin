@@ -7,15 +7,21 @@ export type AgentOrgPageQueryParams = {
   orgCode?: string;
 };
 
+export type OrgLevelCode = 'AGENT' | 'GROUP' | 'MERCHANT' | 'STORE';
+
+export const ORG_LEVEL_CODE = {
+  agent: 'AGENT',
+  group: 'GROUP',
+  merchant: 'MERCHANT',
+  store: 'STORE',
+} as const satisfies Record<string, OrgLevelCode>;
+
 export type AgentOrgRecord = {
   id: string;
   orgCode?: string;
   orgLevelCode?: string;
   orgName?: string;
   createTime?: string;
-  phone?: string;
-  mobile?: string;
-  contactPhone?: string;
 };
 
 export type OrgRecord = {
@@ -27,6 +33,41 @@ export type OrgRecord = {
 
 export type AgentOrgPageResult = {
   records?: AgentOrgRecord[];
+  total?: number;
+  size?: number;
+  current?: number;
+  orders?: Array<{
+    column?: string;
+    asc?: boolean;
+  }>;
+  optimizeCountSql?: boolean;
+  searchCount?: boolean;
+  optimizeJoinOfCountSql?: boolean;
+  maxLimit?: number;
+  countId?: string;
+  timestamp?: number;
+};
+
+export type OrgOptionsQueryParams = {
+  current: number;
+  pageSize: number;
+  orgCode?: string;
+  orgName?: string;
+  orgLevelCode: OrgLevelCode;
+  parentOrgId: string;
+  state?: boolean;
+};
+
+export type OrgOptionsRecord = {
+  id: string;
+  orgCode?: string;
+  orgLevelCode?: OrgLevelCode | string;
+  orgName?: string;
+  state?: boolean;
+};
+
+export type OrgOptionsResult = {
+  records?: OrgOptionsRecord[];
   total?: number;
   size?: number;
   current?: number;
@@ -54,6 +95,17 @@ export async function getAgentOrgPageQuery(
       ...(options || {}),
     },
   );
+}
+
+export async function getOrgOptions(
+  data: OrgOptionsQueryParams,
+  options?: { [key: string]: any },
+) {
+  return apiData<OrgOptionsResult>('/api/admin/org/v1/org/getOrgOptions', {
+    method: 'POST',
+    data,
+    ...(options || {}),
+  });
 }
 
 export async function getCurrentMerchantStoreList(options?: {

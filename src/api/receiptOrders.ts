@@ -1,7 +1,23 @@
 import { apiData, apiRequest } from '@/api/http';
 
-export type ReceiptPayMethod = 'WECHAT' | 'ALIPAY' | 'UNIONPAY' | string;
-export type ReceiptPayWay = 'MINI' | 'H5' | 'BARCODE' | string;
+export type ReceiptPayMethod =
+  | 'WECHAT'
+  | 'ALIPAY'
+  | 'UNIONPAY'
+  | 'UNION_CARD'
+  | 'MEMBER_CARD'
+  | 'CASH'
+  | string;
+export type ReceiptPayWay =
+  | 'BARCODE'
+  | 'JSAPI'
+  | 'MINI_PROGRAM'
+  | 'H5'
+  | 'NATIVE'
+  | 'BANK_TRANSFER'
+  | 'QUICK'
+  | 'CARD_PRESENT'
+  | string;
 
 export type ReceiptOrderPageParams = {
   current: number;
@@ -10,17 +26,17 @@ export type ReceiptOrderPageParams = {
   storeOrgId?: string;
   agentOrgId?: string;
   groupOrgId?: string;
-  receiptCodeRuleId?: string;
-  qrcodeId?: string;
-  qrcodeSn?: string;
-  userId?: string;
   orderNo?: string;
   orderTradeNo?: string;
   phone?: string;
+  payState?: number | string;
   payMethod?: ReceiptPayMethod;
   payWay?: ReceiptPayWay;
-  startTime?: string;
-  endTime?: string;
+  deviceSn?: string;
+  finishTimeStart?: string;
+  finishTimeEnd?: string;
+  createTimeStart?: string;
+  createTimeEnd?: string;
 };
 
 export type ReceiptOrderRefundParams = {
@@ -36,6 +52,16 @@ export type ReceiptOrderOrgInfo = {
   orgLevelCode?: string;
 };
 
+export type ReceiptOrderCashierInfo = {
+  id?: string;
+  orgId?: string;
+  orgCode?: string;
+  userId?: string;
+  nickName?: string;
+  state?: boolean;
+  [key: string]: any;
+};
+
 export type ReceiptOrderRecord = {
   id?: string;
   merchantOrgId?: string;
@@ -46,6 +72,7 @@ export type ReceiptOrderRecord = {
   storeOrg?: ReceiptOrderOrgInfo;
   agentOrg?: ReceiptOrderOrgInfo;
   groupOrg?: ReceiptOrderOrgInfo;
+  cashier?: ReceiptOrderCashierInfo;
   receiptColeRulesId?: string;
   receiptCodeRuleId?: string;
   qrcodeId?: string;
@@ -61,6 +88,10 @@ export type ReceiptOrderRecord = {
   goodsDesc?: string;
   limitPay?: string;
   payState?: number;
+  payRefundState?: number;
+  payRefundStateName?: string;
+  refundAmount?: number;
+  deviceSn?: string;
   finishTime?: string;
   payMethod?: ReceiptPayMethod;
   payWay?: ReceiptPayWay;

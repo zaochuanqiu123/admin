@@ -196,32 +196,6 @@ function readPhpTotal(payload: any, fallback: number) {
   return Number.isFinite(total) ? total : fallback;
 }
 
-function appendPlugRecord(
-  formData: FormData,
-  index: number,
-  record: AgentPlugRecord,
-) {
-  Object.entries(record).forEach(([key, value]) => {
-    if (
-      key === 'children' ||
-      key === 'list' ||
-      key === 'plug_list' ||
-      key === 'categoryName' ||
-      key === 'identification'
-    ) {
-      return;
-    }
-    if (value === undefined || value === null) return;
-    if (typeof value === 'object') return;
-    formData.append(`identification[${index}][${key}]`, String(value));
-  });
-
-  formData.append(
-    `identification[${index}]`,
-    String(record.identification || record.name || record.plug_name || ''),
-  );
-}
-
 const AGENT_PAYMENT_SWITCH_URL_MAP: Record<AgentPaymentSwitchType, string> = {
   channel: '/Super/Payment/openAgentPayment',
   serviceConfig: '/Super/Payment/openAgentPConfig',
@@ -328,55 +302,6 @@ export async function getAgentPaymentChannelList(
     current: params.page,
     pageSize: params.limit,
   } as AgentPaymentChannelPageResult;
-}
-
-export async function getAgentPlugList(agentId: string) {
-  const formData = new FormData();
-  formData.append('agent_id', agentId);
-
-  const response = await phpRequest<PhpResponse<any>>(
-    '/Admin/Agent/getAgentPlugList',
-    {
-      method: 'POST',
-      data: formData,
-      tokenHeaderName: 'Authorization',
-      tokenPrefix: 'bearer ',
-    },
-  );
-
-  if (!isPhpSuccess(response?.status)) {
-    throw new Error(response?.message || response?.msg || '获取功能应用失败');
-  }
-
-  const records = readPhpList<AgentPlugRecord>(response?.data);
-  return records.length > 0 ? records : readPhpList<AgentPlugRecord>(response);
-}
-
-export async function updateAgentPlugList(
-  agentId: string,
-  records: AgentPlugRecord[],
-) {
-  const formData = new FormData();
-  formData.append('agent_id', agentId);
-  records.forEach((record, index) => {
-    appendPlugRecord(formData, index, record);
-  });
-
-  const response = await phpRequest<PhpResponse<any>>(
-    '/Admin/Agent/doChangePlug',
-    {
-      method: 'POST',
-      data: formData,
-      tokenHeaderName: 'Authorization',
-      tokenPrefix: 'bearer ',
-    },
-  );
-
-  if (!isPhpSuccess(response?.status)) {
-    throw new Error(response?.message || response?.msg || '保存功能应用失败');
-  }
-
-  return response;
 }
 
 export async function updateAgentPaymentSwitch(

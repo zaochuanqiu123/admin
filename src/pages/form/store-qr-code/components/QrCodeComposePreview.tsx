@@ -154,8 +154,9 @@ async function buildComposeTemplateState(template: Record<string, any>) {
   const snFontSize = readNumber(snConfig?.size, 16);
   const snX = readNumber(snConfig?.x, qrcodeBox.x + qrcodeBox.size / 2);
   const snOffsetY = readNumber(snConfig?.y, Math.max(14, snFontSize));
-  const snY = qrcodeBox.y + qrcodeBox.size + snOffsetY;
-  const snBottom = snY + Math.max(28, snFontSize * 1.4 + 8);
+  const snTextHeight = Math.max(28, snFontSize * 1.4 + 8);
+  const snY = qrcodeBox.y + qrcodeBox.size + snOffsetY + snTextHeight / 2;
+  const snBottom = snY + snTextHeight / 2;
 
   return {
     backgroundUrl,

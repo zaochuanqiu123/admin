@@ -1,0 +1,142 @@
+.mpos-transfer-modal {
+  .ant-modal-body {
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+
+  .mpos-transfer-filter-area {
+    margin-bottom: 24px;
+
+    .filter-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .filter-row-last {
+      margin-bottom: 0;
+    }
+
+    .filter-label {
+      width: 82px;
+      flex: none;
+      color: var(--ant-color-text);
+      font-weight: 500;
+    }
+
+    .filter-content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+
+      &.target-org-picker {
+        .ant-input {
+          max-width: 360px;
+        }
+      }
+    }
+  }
+
+  .mpos-transfer-shuttle-area {
+    display: flex;
+    align-items: stretch;
+    gap: 16px;
+    height: 392px;
+    padding: 16px;
+    border-radius: 10px;
+    background: var(--ant-color-fill-quaternary);
+  }
+
+  .mpos-shuttle-panel {
+    flex: 1;
+    width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--ant-color-bg-container);
+    border: 1px solid var(--ant-color-border-secondary);
+    border-radius: 8px;
+  }
+
+  .mpos-shuttle-table {
+    flex: 1;
+    overflow: auto;
+
+    .ant-table-thead > tr > th {
+      padding: 10px 16px;
+      background: var(--ant-color-primary-bg);
+      color: var(--ant-color-text);
+      font-weight: 500;
+    }
+
+    .ant-table-tbody > tr > td {
+      padding: 10px 16px;
+    }
+  }
+
+  .mpos-shuttle-footer {
+    padding: 12px 16px;
+    border-top: 1px solid var(--ant-color-border-secondary);
+    color: var(--ant-color-text-secondary);
+    font-size: 13px;
+  }
+
+  .mpos-shuttle-actions {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 12px;
+
+    .ant-btn {
+      width: 40px;
+      height: 32px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: var(--ant-color-primary-bg);
+      color: var(--ant-color-primary);
+
+      &:disabled {
+        background: var(--ant-color-fill-tertiary);
+        color: var(--ant-color-text-disabled);
+      }
+
+      &:hover:not(:disabled) {
+        background: var(--ant-color-primary);
+        color: var(--ant-color-text-light-solid);
+      }
+    }
+  }
+}
+
+body.theme-black-mode .mpos-transfer-modal {
+  .mpos-transfer-shuttle-area {
+    background: var(--pc-dark-bg-page);
+  }
+
+  .mpos-shuttle-panel {
+    background: var(--pc-dark-bg-surface);
+    border-color: var(--pc-dark-border);
+  }
+
+  .mpos-shuttle-table {
+    .ant-table-thead > tr > th {
+      background: var(--ant-color-fill-secondary);
+      color: var(--pc-dark-text);
+    }
+
+    .ant-table-tbody > tr > td,
+    .ant-empty-description {
+      color: var(--pc-dark-text);
+    }
+  }
+
+  .mpos-shuttle-footer {
+    border-color: var(--pc-dark-border);
+    color: var(--pc-dark-text-secondary);
+  }
+}

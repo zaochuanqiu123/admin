@@ -1,0 +1,199 @@
+@import (reference) '../../../styles/utilities.less';
+
+.my-app-page {
+  min-height: calc(100vh - 96px);
+}
+
+.my-app-panel {
+  min-height: calc(100vh - 96px);
+  padding: 18px 20px 24px;
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 16px;
+  background: var(--ant-color-bg-container);
+  box-sizing: border-box;
+}
+
+.my-app-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+
+  h1 {
+    margin: 0;
+    color: var(--ant-color-text);
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  p {
+    margin: 8px 0 0;
+    color: var(--ant-color-text-tertiary);
+    font-size: 13px;
+  }
+}
+
+.my-app-category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+}
+
+.my-app-category-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+
+  h2 {
+    margin: 0;
+    color: var(--ant-color-text);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.5;
+  }
+
+  span {
+    color: var(--ant-color-text-tertiary);
+    font-size: 13px;
+  }
+}
+
+.my-app-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(240px, 1fr));
+  gap: 16px 18px;
+}
+
+.my-app-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  min-height: 84px;
+  padding: 16px 14px 16px 18px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: color-mix(
+    in srgb,
+    var(--ant-color-primary) 5%,
+    var(--ant-color-bg-container)
+  );
+  box-sizing: border-box;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+
+  &:hover {
+    border-color: var(--ant-color-border-secondary);
+    background: color-mix(
+      in srgb,
+      var(--ant-color-primary) 8%,
+      var(--ant-color-bg-container)
+    );
+  }
+}
+
+.my-app-icon {
+  .mixin-flex-center();
+  flex: 0 0 46px;
+  width: 46px;
+  height: 46px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--ant-color-fill-quaternary);
+
+  img {
+    display: block;
+    width: 46px;
+    height: 46px;
+    object-fit: cover;
+  }
+}
+
+.my-app-icon-fallback {
+  .mixin-flex-center();
+  width: 46px;
+  height: 46px;
+  color: var(--ant-color-primary);
+  font-size: 18px;
+  font-weight: 600;
+  background: var(--ant-color-primary-bg);
+}
+
+.my-app-card-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.my-app-card-title {
+  overflow: hidden;
+  color: var(--ant-color-text);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-app-card-desc {
+  overflow: hidden;
+  margin-top: 4px;
+  color: var(--ant-color-text-tertiary);
+  font-size: 13px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-app-config-btn.ant-btn {
+  flex: 0 0 auto;
+  padding-inline: 0;
+}
+
+.my-app-state-card {
+  padding: 32px 0;
+}
+
+body.theme-black-mode {
+  .my-app-panel {
+    border-color: var(--pc-dark-border);
+    background: var(--pc-dark-bg-surface);
+  }
+
+  .my-app-card {
+    border-color: transparent;
+    background: color-mix(
+      in srgb,
+      var(--ant-color-primary) 9%,
+      var(--pc-dark-bg-surface)
+    );
+
+    &:hover {
+      border-color: var(--pc-dark-border);
+      background: color-mix(
+        in srgb,
+        var(--ant-color-primary) 13%,
+        var(--pc-dark-bg-surface)
+      );
+    }
+  }
+
+  .my-app-icon {
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+
+@media (max-width: 1500px) {
+  .my-app-grid {
+    grid-template-columns: repeat(3, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 1200px) {
+  .my-app-grid {
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+  }
+}

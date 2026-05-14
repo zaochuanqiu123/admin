@@ -16,9 +16,9 @@ import {
   Tag,
 } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
-import type { Dayjs } from 'dayjs';
+import dayjs, { type Dayjs } from 'dayjs';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getCurrentMerchantStoreList } from '@/api/org';
+import { ORG_LEVEL_CODE } from '@/api/org';
 import {
   getReceiptOrderDetail,
   getReceiptOrderPage,
@@ -29,9 +29,10 @@ import {
   type ReceiptPayWay,
   refundReceiptOrder,
 } from '@/api/receiptOrders';
+import { getReceiptRefundOrderDetailByNo } from '@/api/receiptRefundOrders';
 import {
   ExpandableFilterCard,
-  OrganizationPickerInput,
+  OrgOptionsSelect,
   PageSectionSkeleton,
   PermissionVisible,
 } from '@/components';
@@ -44,6 +45,7 @@ import './index.less';
 
 const DEFAULT_PAGE_SIZE = 10;
 const DATETIME_FORMAT = 'YYYY-MM-DD HH:mm:ss';
+const REFUND_RESULT_POLL_INTERVAL = 1000;
 
 const RECEIPT_ORDER_PERMS = {
   detail: 'admin:receipt:receiptOrders:queryById',
@@ -55,24 +57,41 @@ const PAY_METHOD_OPTIONS = [
   { label: 'WECHAT-微信', value: 'WECHAT' },
   { label: 'ALIPAY-支付宝', value: 'ALIPAY' },
   { label: 'UNIONPAY-云闪付', value: 'UNIONPAY' },
+  { label: 'UNION_CARD-银联卡', value: 'UNION_CARD' },
+  { label: 'MEMBER_CARD-会员卡', value: 'MEMBER_CARD' },
+  { label: 'CASH-现金', value: 'CASH' },
 ];
 
 const PAY_WAY_OPTIONS = [
-  { label: 'MINI-小程序', value: 'MINI' },
-  { label: 'H5-H5', value: 'H5' },
   { label: 'BARCODE-付款码', value: 'BARCODE' },
+  { label: 'JSAPI-JSAPI', value: 'JSAPI' },
+  { label: 'MINI_PROGRAM-小程序', value: 'MINI_PROGRAM' },
+  { label: 'H5-H5', value: 'H5' },
+  { label: 'NATIVE-扫码', value: 'NATIVE' },
+  { label: 'BANK_TRANSFER-银行转账', value: 'BANK_TRANSFER' },
+  { label: 'QUICK-快捷支付', value: 'QUICK' },
+  { label: 'CARD_PRESENT-刷卡', value: 'CARD_PRESENT' },
 ];
 
 const PAY_METHOD_TEXT: Record<string, string> = {
   WECHAT: '微信',
   ALIPAY: '支付宝',
   UNIONPAY: '云闪付',
+  UNION_CARD: '银联卡',
+  MEMBER_CARD: '会员卡',
+  CASH: '现金',
 };
 
 const PAY_WAY_TEXT: Record<string, string> = {
-  MINI: '小程序',
-  H5: 'H5',
   BARCODE: '付款码',
+  JSAPI: 'JSAPI',
+  MINI: '小程序',
+  MINI_PROGRAM: '小程序',
+  H5: 'H5',
+  NATIVE: '扫码',
+  BANK_TRANSFER: '银行转账',
+  QUICK: '快捷支付',
+  CARD_PRESENT: '刷卡',
 };
 
 const PAY_STATE_MAP: Record<string, { text: string; color: string }> = {
@@ -84,22 +103,35 @@ const PAY_STATE_MAP: Record<string, { text: string; color: string }> = {
   92: { text: '已过期', color: 'default' },
 };
 
+const PAY_STATE_OPTIONS = Object.entries(PAY_STATE_MAP).map(
+  ([value, { text }]) => ({
+    label: `${value}-${text}`,
+    value,
+  }),
+);
+
+const PAY_REFUND_STATE_MAP: Record<string, { text: string; color: string }> = {
+  0: { text: '未退款', color: 'default' },
+  1: { text: '部分退款', color: 'orange' },
+  10: { text: '全部退款', color: 'green' },
+};
+
 type QueryFilters = {
   merchantOrgId: string;
   storeOrgId: string;
   agentOrgId: string;
   groupOrgId: string;
-  receiptCodeRuleId: string;
-  qrcodeId: string;
-  qrcodeSn: string;
-  userId: string;
   orderNo: string;
   orderTradeNo: string;
+  createTimeStart: string;
+  createTimeEnd: string;
   phone: string;
+  payState?: string;
   payMethod?: ReceiptPayMethod;
   payWay?: ReceiptPayWay;
-  startTime: string;
-  endTime: string;
+  deviceSn: string;
+  finishTimeStart: string;
+  finishTimeEnd: string;
 };
 
 type RefundFormValues = {
@@ -107,28 +139,28 @@ type RefundFormValues = {
   refundReason?: string;
 };
 
-type StoreOption = {
-  label: string;
-  value: string;
-};
+function createDefaultDateTimeRange(): [Dayjs, Dayjs] {
+  return [dayjs().startOf('day'), dayjs().endOf('day')];
+}
 
-function createEmptyFilters(): QueryFilters {
+function createDefaultFilters(): QueryFilters {
+  const [createTimeStart, createTimeEnd] = createDefaultDateTimeRange();
   return {
     merchantOrgId: '',
     storeOrgId: '',
     agentOrgId: '',
     groupOrgId: '',
-    receiptCodeRuleId: '',
-    qrcodeId: '',
-    qrcodeSn: '',
-    userId: '',
     orderNo: '',
     orderTradeNo: '',
+    createTimeStart: createTimeStart.format(DATETIME_FORMAT),
+    createTimeEnd: createTimeEnd.format(DATETIME_FORMAT),
     phone: '',
+    payState: undefined,
     payMethod: undefined,
     payWay: undefined,
-    startTime: '',
-    endTime: '',
+    deviceSn: '',
+    finishTimeStart: '',
+    finishTimeEnd: '',
   };
 }
 
@@ -150,6 +182,63 @@ function formatMoney(value?: number | string) {
   return numberValue.toFixed(2);
 }
 
+function getFirstRecordValue(
+  record: ReceiptOrderRecord,
+  keys: string[],
+): unknown {
+  for (const key of keys) {
+    const value = record[key];
+    if (value !== undefined && value !== null && value !== '') {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function getOrderQuantity(record: ReceiptOrderRecord) {
+  const value = getFirstRecordValue(record, [
+    'orderQuantity',
+    'quantity',
+    'orderNum',
+    'orderCount',
+    'goodsNum',
+    'num',
+  ]);
+  return value === undefined ? '-' : String(value);
+}
+
+function getRefundAmount(record: ReceiptOrderRecord) {
+  const value = getFirstRecordValue(record, [
+    'refundAmount',
+    'payRefundAmount',
+    'refundedAmount',
+  ]);
+  return formatMoney(value as number | string | undefined);
+}
+
+function getDeviceSn(record: ReceiptOrderRecord) {
+  return normalizeText(record.deviceSn) || normalizeText(record.sn) || '-';
+}
+
+function getPayerLines(record: ReceiptOrderRecord) {
+  const payerName =
+    normalizeText(record.payerName) ||
+    normalizeText(record.payUserName) ||
+    normalizeText(record.userName) ||
+    normalizeText(record.nickName);
+  const phone = normalizeText(record.phone);
+  const lines = [payerName, phone].filter(Boolean) as string[];
+  return lines.length > 0 ? lines : ['-'];
+}
+
+function getCashierLines(record: ReceiptOrderRecord) {
+  const cashierName =
+    normalizeText(record.cashier?.nickName) ||
+    normalizeText(record.cashierNickName) ||
+    normalizeText(record.storeOrgUserName);
+  return cashierName ? [cashierName] : ['-'];
+}
+
 function getPayMethodText(value?: ReceiptPayMethod) {
   const nextValue = normalizeText(value);
   return nextValue ? PAY_METHOD_TEXT[nextValue] || nextValue : '-';
@@ -158,6 +247,27 @@ function getPayMethodText(value?: ReceiptPayMethod) {
 function getPayWayText(value?: ReceiptPayWay) {
   const nextValue = normalizeText(value);
   return nextValue ? PAY_WAY_TEXT[nextValue] || nextValue : '-';
+}
+
+function isUnionCardPayMethod(value?: string) {
+  const nextValue = normalizeText(value)?.replace(/_/g, '').toUpperCase();
+  return nextValue === 'UNIONCARD';
+}
+
+function getResponseData(source: any) {
+  if (source?.data && typeof source.data === 'object') {
+    return source.data;
+  }
+  return source;
+}
+
+function getRefundPollingNo(source: any, payMethod?: string) {
+  const data = getResponseData(source);
+  if (isUnionCardPayMethod(payMethod)) {
+    return normalizeText(data?.accRefundTradeNo);
+  }
+
+  return normalizeText(data?.refundNo);
 }
 
 function renderPayState(value?: number | string) {
@@ -170,6 +280,22 @@ function renderPayState(value?: number | string) {
   }
 
   return <Tag color={stateInfo.color}>{stateInfo.text}</Tag>;
+}
+
+function renderPayRefundState(value?: number | string, text?: string) {
+  const nextValue =
+    value === undefined || value === null ? undefined : String(value);
+  const stateInfo = nextValue ? PAY_REFUND_STATE_MAP[nextValue] : undefined;
+
+  if (!stateInfo) {
+    return text || nextValue || '-';
+  }
+
+  return <Tag color={stateInfo.color}>{text || stateInfo.text}</Tag>;
+}
+
+function canRefundReceiptOrder(record: ReceiptOrderRecord) {
+  return String(record.payRefundState ?? '') !== '10';
 }
 
 function renderLines(lines: string[]) {
@@ -227,6 +353,8 @@ const ReceiptOrdersPage: React.FC = () => {
   const [listError, setListError] = useState<string>();
   const [records, setRecords] = useState<ReceiptOrderRecord[]>([]);
   const recordsRef = useRef<ReceiptOrderRecord[]>([]);
+  const refundResultPollTimerRef = useRef<number | undefined>(undefined);
+  const refundResultPollingRef = useRef(false);
   const [serverTotal, setServerTotal] = useState(0);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -239,13 +367,14 @@ const ReceiptOrdersPage: React.FC = () => {
   const [refundSubmitting, setRefundSubmitting] = useState(false);
   const [refundForm] = Form.useForm<RefundFormValues>();
   const [draftFilters, setDraftFilters] =
-    useState<QueryFilters>(createEmptyFilters);
-  const [filters, setFilters] = useState<QueryFilters>(createEmptyFilters);
-  const [draftTimeRange, setDraftTimeRange] = useState<[Dayjs, Dayjs] | null>(
-    null,
-  );
-  const [storeOptions, setStoreOptions] = useState<StoreOption[]>([]);
-  const [storeOptionsLoading, setStoreOptionsLoading] = useState(false);
+    useState<QueryFilters>(createDefaultFilters);
+  const [filters, setFilters] = useState<QueryFilters>(createDefaultFilters);
+  const [draftCreateTimeRange, setDraftCreateTimeRange] = useState<
+    [Dayjs, Dayjs] | null
+  >(createDefaultDateTimeRange);
+  const [draftFinishTimeRange, setDraftFinishTimeRange] = useState<
+    [Dayjs, Dayjs] | null
+  >(null);
   const [pagination, setPagination] = useState<TablePaginationConfig>({
     current: 1,
     pageSize: DEFAULT_PAGE_SIZE,
@@ -290,39 +419,6 @@ const ReceiptOrdersPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    if (!isMerchant) return;
-    let cancelled = false;
-    setStoreOptionsLoading(true);
-    getCurrentMerchantStoreList({ skipErrorHandler: true })
-      .then((res) => {
-        if (cancelled) return;
-        const nextOptions = (Array.isArray(res) ? res : [])
-          .map((item) => {
-            const value = String(item.id || '').trim();
-            const name = String(item.orgName || '').trim();
-            if (!value) return undefined;
-            return {
-              label: name ? `${name}（ID: ${value}）` : value,
-              value,
-            };
-          })
-          .filter(Boolean) as StoreOption[];
-        setStoreOptions(nextOptions);
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        console.error('load merchant store options failed:', error);
-        setStoreOptions([]);
-      })
-      .finally(() => {
-        if (!cancelled) setStoreOptionsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isMerchant]);
-
   const loadReceiptOrderPage = useCallback(async () => {
     setLoading(true);
     setListError(undefined);
@@ -344,15 +440,17 @@ const ReceiptOrdersPage: React.FC = () => {
         appendTextParam(params, 'storeOrgId', filters.storeOrgId);
       }
 
-      appendTextParam(params, 'receiptCodeRuleId', filters.receiptCodeRuleId);
-      appendTextParam(params, 'qrcodeId', filters.qrcodeId);
-      appendTextParam(params, 'qrcodeSn', filters.qrcodeSn);
-      appendTextParam(params, 'userId', filters.userId);
       appendTextParam(params, 'orderNo', filters.orderNo);
       appendTextParam(params, 'orderTradeNo', filters.orderTradeNo);
+      appendTextParam(params, 'createTimeStart', filters.createTimeStart);
+      appendTextParam(params, 'createTimeEnd', filters.createTimeEnd);
       appendTextParam(params, 'phone', filters.phone);
-      appendTextParam(params, 'startTime', filters.startTime);
-      appendTextParam(params, 'endTime', filters.endTime);
+      appendTextParam(params, 'deviceSn', filters.deviceSn);
+      appendTextParam(params, 'finishTimeStart', filters.finishTimeStart);
+      appendTextParam(params, 'finishTimeEnd', filters.finishTimeEnd);
+      if (filters.payState) {
+        params.payState = filters.payState;
+      }
       if (filters.payMethod) {
         params.payMethod = filters.payMethod;
       }
@@ -380,21 +478,21 @@ const ReceiptOrdersPage: React.FC = () => {
     }
   }, [
     current,
+    filters.createTimeEnd,
+    filters.createTimeStart,
+    filters.deviceSn,
     filters.agentOrgId,
-    filters.endTime,
+    filters.finishTimeEnd,
+    filters.finishTimeStart,
     filters.groupOrgId,
     filters.merchantOrgId,
     filters.orderNo,
     filters.orderTradeNo,
     filters.payMethod,
     filters.payWay,
+    filters.payState,
     filters.phone,
-    filters.qrcodeId,
-    filters.qrcodeSn,
-    filters.receiptCodeRuleId,
-    filters.startTime,
     filters.storeOrgId,
-    filters.userId,
     isAgent,
     isMerchant,
     isPlatform,
@@ -404,6 +502,43 @@ const ReceiptOrdersPage: React.FC = () => {
   useEffect(() => {
     void loadReceiptOrderPage();
   }, [loadReceiptOrderPage]);
+
+  const clearRefundResultPolling = useCallback(() => {
+    if (refundResultPollTimerRef.current !== undefined) {
+      window.clearInterval(refundResultPollTimerRef.current);
+      refundResultPollTimerRef.current = undefined;
+    }
+    refundResultPollingRef.current = false;
+  }, []);
+
+  const startRefundResultPolling = useCallback(
+    (no: string, payMethod: string) => {
+      clearRefundResultPolling();
+
+      refundResultPollTimerRef.current = window.setInterval(() => {
+        if (refundResultPollingRef.current) return;
+        refundResultPollingRef.current = true;
+
+        getReceiptRefundOrderDetailByNo(no, payMethod, {
+          skipErrorHandler: true,
+        })
+          .then((res) => {
+            if (!res) return;
+            clearRefundResultPolling();
+            void loadReceiptOrderPage();
+          })
+          .catch(() => undefined)
+          .finally(() => {
+            if (refundResultPollTimerRef.current !== undefined) {
+              refundResultPollingRef.current = false;
+            }
+          });
+      }, REFUND_RESULT_POLL_INTERVAL);
+    },
+    [clearRefundResultPolling, loadReceiptOrderPage],
+  );
+
+  useEffect(() => clearRefundResultPolling, [clearRefundResultPolling]);
 
   const handleOpenDetail = useCallback(async (record: ReceiptOrderRecord) => {
     const id = normalizeText(String(record.id ?? ''));
@@ -476,9 +611,17 @@ const ReceiptOrdersPage: React.FC = () => {
         },
       );
       message.success(getApiMessage(res, '退款提交成功'));
+      const responseData = getResponseData(res);
+      const payMethod =
+        normalizeText(responseData?.payMethod) ||
+        normalizeText(refundModalRecord?.payMethod);
+      const pollingNo = getRefundPollingNo(res, payMethod);
       setRefundModalRecord(null);
       refundForm.resetFields();
       await loadReceiptOrderPage();
+      if (pollingNo && payMethod) {
+        startRefundResultPolling(pollingNo, payMethod);
+      }
     } catch (error) {
       if ((error as any)?.errorFields) return;
       console.error('refund receipt order failed:', error);
@@ -486,7 +629,13 @@ const ReceiptOrdersPage: React.FC = () => {
     } finally {
       setRefundSubmitting(false);
     }
-  }, [loadReceiptOrderPage, refundForm, refundModalRecord?.orderNo]);
+  }, [
+    loadReceiptOrderPage,
+    refundForm,
+    refundModalRecord?.orderNo,
+    refundModalRecord?.payMethod,
+    startRefundResultPolling,
+  ]);
 
   const columns = useMemo<ColumnsType<ReceiptOrderRecord>>(
     () =>
@@ -498,23 +647,16 @@ const ReceiptOrdersPage: React.FC = () => {
           ellipsis: true,
           render: (value: string) => value || '-',
         },
-        (isPlatform || isAgent || isMerchant) && {
-          title: '门店组织',
-          key: 'storeOrg',
-          width: 180,
-          render: (_: unknown, record: ReceiptOrderRecord) =>
-            renderLines(getOrgLines(record.storeOrg, record.storeOrgId)),
-        },
         {
-          title: '二维码编号',
-          dataIndex: 'qrcodeSn',
-          width: 180,
+          title: '支付流水号',
+          dataIndex: 'orderTradeNo',
+          width: 210,
           ellipsis: true,
           render: (value: string) => value || '-',
         },
         {
-          title: '订单金额',
-          dataIndex: 'amount',
+          title: '支付金额',
+          dataIndex: 'payAmount',
           width: 130,
           align: 'right',
           render: (value: number) => formatMoney(value),
@@ -527,17 +669,11 @@ const ReceiptOrdersPage: React.FC = () => {
           render: (value: number) => formatMoney(value),
         },
         {
-          title: '支付金额',
-          dataIndex: 'payAmount',
-          width: 130,
-          align: 'right',
-          render: (value: number) => formatMoney(value),
-        },
-        {
-          title: '支付状态',
-          dataIndex: 'payState',
-          width: 140,
-          render: (value: number) => renderPayState(value),
+          title: '订单数量',
+          key: 'orderQuantity',
+          width: 110,
+          render: (_: unknown, record: ReceiptOrderRecord) =>
+            getOrderQuantity(record),
         },
         {
           title: '支付方式',
@@ -552,11 +688,47 @@ const ReceiptOrdersPage: React.FC = () => {
           render: (value: ReceiptPayWay) => getPayWayText(value),
         },
         {
-          title: '流水号',
-          dataIndex: 'orderTradeNo',
-          width: 210,
+          title: '支付状态',
+          dataIndex: 'payState',
+          width: 140,
+          render: (value: number) => renderPayState(value),
+        },
+        {
+          title: '付款人',
+          key: 'payer',
+          width: 160,
+          render: (_: unknown, record: ReceiptOrderRecord) =>
+            renderLines(getPayerLines(record)),
+        },
+        {
+          title: '收银员',
+          key: 'cashier',
+          width: 140,
+          render: (_: unknown, record: ReceiptOrderRecord) =>
+            renderLines(getCashierLines(record)),
+        },
+        {
+          title: '退款金额',
+          key: 'refundAmount',
+          width: 120,
+          align: 'right',
+          render: (_: unknown, record: ReceiptOrderRecord) =>
+            getRefundAmount(record),
+        },
+        {
+          title: '退款状态',
+          dataIndex: 'payRefundState',
+          width: 140,
+          render: (value: number, record: ReceiptOrderRecord) =>
+            renderPayRefundState(value, record.payRefundStateName),
+        },
+        {
+          title: '设备编号',
+          key: 'deviceSn',
+          width: 160,
           ellipsis: true,
-          render: (value: string) => value || '-',
+          render: (_: unknown, record: ReceiptOrderRecord) =>
+            getDeviceSn(record),
         },
         {
           title: '创建时间',
@@ -565,10 +737,38 @@ const ReceiptOrdersPage: React.FC = () => {
           render: (value: string) => value || '-',
         },
         {
-          title: '完成时间',
+          title: '支付完成时间',
           dataIndex: 'finishTime',
           width: 180,
           render: (value: string) => value || '-',
+        },
+        {
+          title: '商户组织',
+          key: 'merchantOrg',
+          width: 180,
+          render: (_: unknown, record: ReceiptOrderRecord) =>
+            renderLines(getOrgLines(record.merchantOrg, record.merchantOrgId)),
+        },
+        {
+          title: '门店组织',
+          key: 'storeOrg',
+          width: 180,
+          render: (_: unknown, record: ReceiptOrderRecord) =>
+            renderLines(getOrgLines(record.storeOrg, record.storeOrgId)),
+        },
+        {
+          title: '代理组织',
+          key: 'agentOrg',
+          width: 180,
+          render: (_: unknown, record: ReceiptOrderRecord) =>
+            renderLines(getOrgLines(record.agentOrg, record.agentOrgId)),
+        },
+        {
+          title: '集团组织',
+          key: 'groupOrg',
+          width: 180,
+          render: (_: unknown, record: ReceiptOrderRecord) =>
+            renderLines(getOrgLines(record.groupOrg, record.groupOrgId)),
         },
         {
           title: '操作',
@@ -589,24 +789,26 @@ const ReceiptOrdersPage: React.FC = () => {
                 </Button>
               </PermissionVisible>
               <PermissionVisible perm={RECEIPT_ORDER_PERMS.refund}>
-                <Button
-                  type="link"
-                  danger
-                  size="small"
-                  className="is-danger"
-                  disabled={!normalizeText(record.orderNo)}
-                  onClick={() => {
-                    handleOpenRefund(record);
-                  }}
-                >
-                  退款
-                </Button>
+                {canRefundReceiptOrder(record) ? (
+                  <Button
+                    type="link"
+                    danger
+                    size="small"
+                    className="is-danger"
+                    disabled={!normalizeText(record.orderNo)}
+                    onClick={() => {
+                      handleOpenRefund(record);
+                    }}
+                  >
+                    退款
+                  </Button>
+                ) : null}
               </PermissionVisible>
             </div>
           ),
         },
       ].filter(Boolean) as ColumnsType<ReceiptOrderRecord>,
-    [handleOpenDetail, handleOpenRefund, isAgent, isMerchant, isPlatform],
+    [handleOpenDetail, handleOpenRefund],
   );
 
   const handleSearch = () => {
@@ -615,17 +817,17 @@ const ReceiptOrdersPage: React.FC = () => {
       storeOrgId: draftFilters.storeOrgId.trim(),
       agentOrgId: draftFilters.agentOrgId.trim(),
       groupOrgId: draftFilters.groupOrgId.trim(),
-      receiptCodeRuleId: draftFilters.receiptCodeRuleId.trim(),
-      qrcodeId: draftFilters.qrcodeId.trim(),
-      qrcodeSn: draftFilters.qrcodeSn.trim(),
-      userId: draftFilters.userId.trim(),
       orderNo: draftFilters.orderNo.trim(),
       orderTradeNo: draftFilters.orderTradeNo.trim(),
+      createTimeStart: draftCreateTimeRange?.[0]?.format(DATETIME_FORMAT) || '',
+      createTimeEnd: draftCreateTimeRange?.[1]?.format(DATETIME_FORMAT) || '',
       phone: draftFilters.phone.trim(),
+      payState: draftFilters.payState,
       payMethod: draftFilters.payMethod,
       payWay: draftFilters.payWay,
-      startTime: draftTimeRange?.[0]?.format(DATETIME_FORMAT) || '',
-      endTime: draftTimeRange?.[1]?.format(DATETIME_FORMAT) || '',
+      deviceSn: draftFilters.deviceSn.trim(),
+      finishTimeStart: draftFinishTimeRange?.[0]?.format(DATETIME_FORMAT) || '',
+      finishTimeEnd: draftFinishTimeRange?.[1]?.format(DATETIME_FORMAT) || '',
     };
 
     setFilters(nextFilters);
@@ -636,10 +838,11 @@ const ReceiptOrdersPage: React.FC = () => {
   };
 
   const handleReset = () => {
-    const nextFilters = createEmptyFilters();
+    const nextFilters = createDefaultFilters();
     setDraftFilters(nextFilters);
     setFilters(nextFilters);
-    setDraftTimeRange(null);
+    setDraftCreateTimeRange(createDefaultDateTimeRange());
+    setDraftFinishTimeRange(null);
     setPagination((prev) => ({
       ...prev,
       current: 1,
@@ -657,74 +860,20 @@ const ReceiptOrdersPage: React.FC = () => {
         onReset={handleReset}
         fields={
           [
-            isPlatform && {
-              key: 'agentOrgId',
-              label: '代理组织ID',
+            {
+              key: 'createTime',
+              label: '订单时间',
               content: (
-                <OrganizationPickerInput
-                  placeholder="请选择代理组织"
-                  value={draftFilters.agentOrgId}
-                  onChange={(value) => {
-                    updateDraftFilter('agentOrgId', value);
-                  }}
-                />
-              ),
-            },
-            (isPlatform || isAgent) && {
-              key: 'groupOrgId',
-              label: '集团组织ID',
-              content: renderInputControl('groupOrgId', '请输入集团组织ID'),
-            },
-            (isPlatform || isAgent) && {
-              key: 'merchantOrgId',
-              label: '商户组织ID',
-              content: renderInputControl('merchantOrgId', '请输入商户组织ID'),
-            },
-            (isPlatform || isAgent) && {
-              key: 'storeOrgId',
-              label: '门店组织ID',
-              content: renderInputControl('storeOrgId', '请输入门店组织ID'),
-            },
-            isMerchant && {
-              key: 'storeOrgId',
-              label: '门店组织ID',
-              content: (
-                <Select
+                <DatePicker.RangePicker
+                  showTime
                   allowClear
-                  showSearch
-                  placeholder="请选择门店"
-                  loading={storeOptionsLoading}
-                  value={draftFilters.storeOrgId || undefined}
-                  options={storeOptions}
-                  optionFilterProp="label"
-                  onChange={(value) => {
-                    updateDraftFilter('storeOrgId', value || '');
+                  value={draftCreateTimeRange}
+                  format={DATETIME_FORMAT}
+                  onChange={(dates) => {
+                    setDraftCreateTimeRange(dates as [Dayjs, Dayjs] | null);
                   }}
                 />
               ),
-            },
-            {
-              key: 'receiptCodeRuleId',
-              label: '收款码ID',
-              content: renderInputControl(
-                'receiptCodeRuleId',
-                '请输入收款码规则ID',
-              ),
-            },
-            {
-              key: 'qrcodeId',
-              label: '二维码ID',
-              content: renderInputControl('qrcodeId', '请输入二维码ID'),
-            },
-            {
-              key: 'qrcodeSn',
-              label: '二维码编号',
-              content: renderInputControl('qrcodeSn', '请输入二维码编号'),
-            },
-            {
-              key: 'userId',
-              label: '付款用户ID',
-              content: renderInputControl('userId', '请输入付款用户ID'),
             },
             {
               key: 'orderNo',
@@ -740,6 +889,21 @@ const ReceiptOrdersPage: React.FC = () => {
               key: 'phone',
               label: '付款人手机号',
               content: renderInputControl('phone', '请输入付款人手机号'),
+            },
+            {
+              key: 'payState',
+              label: '支付状态',
+              content: (
+                <Select
+                  allowClear
+                  placeholder="请选择支付状态"
+                  value={draftFilters.payState}
+                  options={PAY_STATE_OPTIONS}
+                  onChange={(value) => {
+                    updateDraftFilter('payState', value);
+                  }}
+                />
+              ),
             },
             {
               key: 'payMethod',
@@ -772,16 +936,95 @@ const ReceiptOrdersPage: React.FC = () => {
               ),
             },
             {
-              key: 'orderTime',
-              label: '订单时间',
+              key: 'deviceSn',
+              label: '设备编号',
+              content: renderInputControl('deviceSn', '请输入设备编号'),
+            },
+            {
+              key: 'finishTime',
+              label: '支付完成时间',
               content: (
                 <DatePicker.RangePicker
                   showTime
                   allowClear
-                  value={draftTimeRange}
+                  value={draftFinishTimeRange}
                   format={DATETIME_FORMAT}
                   onChange={(dates) => {
-                    setDraftTimeRange(dates as [Dayjs, Dayjs] | null);
+                    setDraftFinishTimeRange(dates as [Dayjs, Dayjs] | null);
+                  }}
+                />
+              ),
+            },
+            isPlatform && {
+              key: 'agentOrgId',
+              label: '代理组织',
+              content: (
+                <OrgOptionsSelect
+                  orgLevelCode={ORG_LEVEL_CODE.agent}
+                  placeholder="请选择代理组织"
+                  value={draftFilters.agentOrgId}
+                  onChange={(value) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      agentOrgId: value,
+                      groupOrgId: '',
+                      merchantOrgId: '',
+                      storeOrgId: '',
+                    }));
+                  }}
+                />
+              ),
+            },
+            (isPlatform || isAgent) && {
+              key: 'groupOrgId',
+              label: '集团组织',
+              content: (
+                <OrgOptionsSelect
+                  orgLevelCode={ORG_LEVEL_CODE.group}
+                  parentOrgId={draftFilters.agentOrgId}
+                  placeholder="请选择集团组织"
+                  value={draftFilters.groupOrgId}
+                  onChange={(value) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      groupOrgId: value,
+                      merchantOrgId: '',
+                      storeOrgId: '',
+                    }));
+                  }}
+                />
+              ),
+            },
+            (isPlatform || isAgent) && {
+              key: 'merchantOrgId',
+              label: '商户组织',
+              content: (
+                <OrgOptionsSelect
+                  orgLevelCode={ORG_LEVEL_CODE.merchant}
+                  parentOrgId={draftFilters.groupOrgId}
+                  placeholder="请选择商户组织"
+                  value={draftFilters.merchantOrgId}
+                  onChange={(value) => {
+                    setDraftFilters((prev) => ({
+                      ...prev,
+                      merchantOrgId: value,
+                      storeOrgId: '',
+                    }));
+                  }}
+                />
+              ),
+            },
+            (isPlatform || isAgent || isMerchant) && {
+              key: 'storeOrgId',
+              label: '门店组织',
+              content: (
+                <OrgOptionsSelect
+                  orgLevelCode={ORG_LEVEL_CODE.store}
+                  parentOrgId={draftFilters.merchantOrgId}
+                  placeholder="请选择门店"
+                  value={draftFilters.storeOrgId}
+                  onChange={(value) => {
+                    updateDraftFilter('storeOrgId', value || '');
                   }}
                 />
               ),
@@ -809,7 +1052,7 @@ const ReceiptOrdersPage: React.FC = () => {
             loading={refreshingList}
             columns={columns}
             dataSource={records}
-            scroll={{ x: 2340 }}
+            scroll={{ x: 3000 }}
             locale={{
               emptyText: <Empty description="暂无收款订单数据" />,
             }}

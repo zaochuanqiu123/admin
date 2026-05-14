@@ -1,6 +1,7 @@
 import { Form, Input, Modal, message, Select } from 'antd';
 import React from 'react';
 import { getCurrentMerchantStoreList, type OrgRecord } from '@/api/org';
+import { type CashierOptionRecord, getCashierOptions } from '@/api/orgUser';
 import type { QrCodeBindParams } from '@/api/qrCode';
 import { getErrorMessage } from '@/utils/apiMessage';
 import './BindQrCodeModal.less';
@@ -10,6 +11,7 @@ export type StoreOrgIdInputMode = 'hidden' | 'merchantSelect' | 'manual';
 type BindQrCodeModalProps = {
   open: boolean;
   storeOrgIdInputMode?: StoreOrgIdInputMode;
+  currentStoreOrgId?: string;
   onCancel: () => void;
   onOk: (values: QrCodeBindParams) => Promise<void> | void;
 };
@@ -17,6 +19,7 @@ type BindQrCodeModalProps = {
 type FormValues = {
   sn?: string;
   storeOrgId?: string;
+  storeOrgUserId?: string;
   bindName?: string;
   bindRemark?: string;
 };
@@ -24,6 +27,7 @@ type FormValues = {
 export const BindQrCodeModal: React.FC<BindQrCodeModalProps> = ({
   open,
   storeOrgIdInputMode = 'manual',
+  currentStoreOrgId,
   onCancel,
   onOk,
 }) => {
@@ -31,14 +35,69 @@ export const BindQrCodeModal: React.FC<BindQrCodeModalProps> = ({
   const [submitting, setSubmitting] = React.useState(false);
   const [storeOptions, setStoreOptions] = React.useState<OrgRecord[]>([]);
   const [storeLoading, setStoreLoading] = React.useState(false);
+  const [cashierOptions, setCashierOptions] = React.useState<
+    CashierOptionRecord[]
+  >([]);
+  const [cashierLoading, setCashierLoading] = React.useState(false);
   const shouldShowStoreOrgId = storeOrgIdInputMode !== 'hidden';
   const shouldUseMerchantStoreSelect = storeOrgIdInputMode === 'merchantSelect';
+  const selectedStoreOrgId = Form.useWatch('storeOrgId', form);
+  const cashierStoreOrgId = String(
+    shouldShowStoreOrgId ? selectedStoreOrgId || '' : currentStoreOrgId || '',
+  ).trim();
 
   React.useEffect(() => {
     if (!open) return;
     form.resetFields();
     setSubmitting(false);
   }, [form, open]);
+
+  React.useEffect(() => {
+    if (!open) return;
+
+    let cancelled = false;
+
+    const loadCashierOptions = async () => {
+      if (!cashierStoreOrgId) {
+        setCashierOptions([]);
+        setCashierLoading(false);
+        form.setFieldValue('storeOrgUserId', undefined);
+        return;
+      }
+
+      form.setFieldValue('storeOrgUserId', undefined);
+      setCashierLoading(true);
+      try {
+        const res = await getCashierOptions(
+          {
+            nickName: '',
+            storeOrgId: cashierStoreOrgId,
+          },
+          {
+            skipErrorHandler: true,
+          },
+        );
+        if (!cancelled) {
+          setCashierOptions(Array.isArray(res) ? res : []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setCashierOptions([]);
+          message.error(getErrorMessage(error, '获取收银员选项失败'));
+        }
+      } finally {
+        if (!cancelled) {
+          setCashierLoading(false);
+        }
+      }
+    };
+
+    void loadCashierOptions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cashierStoreOrgId, form, open]);
 
   React.useEffect(() => {
     if (!open || !shouldUseMerchantStoreSelect) return;
@@ -92,6 +151,24 @@ export const BindQrCodeModal: React.FC<BindQrCodeModalProps> = ({
     [storeOptions],
   );
 
+  const cashierSelectOptions = React.useMemo(
+    () =>
+      cashierOptions
+        .map((item) => {
+          const value = String(
+            item?.id || item?.cashierId || item?.userId || '',
+          ).trim();
+          if (!value) return null;
+          const nickName = String(item?.nickName || '').trim();
+          return {
+            label: nickName || value,
+            value,
+          };
+        })
+        .filter(Boolean) as Array<{ label: string; value: string }>,
+    [cashierOptions],
+  );
+
   const handleOk = async () => {
     try {
       const values = await form.validateFields();
@@ -100,6 +177,10 @@ export const BindQrCodeModal: React.FC<BindQrCodeModalProps> = ({
         bindName: String(values.bindName || '').trim() || undefined,
         bindRemark: String(values.bindRemark || '').trim() || undefined,
       };
+      const storeOrgUserId = String(values.storeOrgUserId || '').trim();
+      if (storeOrgUserId) {
+        payload.storeOrgUserId = storeOrgUserId;
+      }
       if (shouldShowStoreOrgId) {
         const storeOrgId = String(values.storeOrgId || '').trim();
         if (storeOrgId) {
@@ -170,6 +251,17 @@ export const BindQrCodeModal: React.FC<BindQrCodeModalProps> = ({
               <Input placeholder="请输入门店组织ID" allowClear />
             </Form.Item>
           ) : null}
+
+          <Form.Item label="收银员" name="storeOrgUserId">
+            <Select
+              allowClear
+              showSearch
+              loading={cashierLoading}
+              placeholder="请选择收银员"
+              options={cashierSelectOptions}
+              optionFilterProp="label"
+            />
+          </Form.Item>
 
           <Form.Item label="绑定名称" name="bindName">
             <Input placeholder="请输入绑定名称" allowClear />

@@ -360,6 +360,7 @@ const AgentListPage: React.FC = () => {
         fixed: 'right',
         render: (_, record) => {
           const id = normalizeText(record.id);
+          const orgId = normalizeText(record.orgId);
           const oldOrgId = normalizeText(record.oldOrgId);
           return (
             <div className="agent-list-action-links">
@@ -377,14 +378,18 @@ const AgentListPage: React.FC = () => {
                     },
                   ],
                   onClick: ({ key }) => {
-                    if (!oldOrgId) {
-                      message.warning(
-                        '当前代理商缺少 oldOrgId，无法打开该功能',
-                      );
+                    if (key === 'paymentChannel') {
+                      if (!oldOrgId) {
+                        message.warning(
+                          '当前代理商缺少 oldOrgId，无法打开支付通道',
+                        );
+                        return;
+                      }
+                      setPaymentChannelModalRecord(record);
                       return;
                     }
-                    if (key === 'paymentChannel') {
-                      setPaymentChannelModalRecord(record);
+                    if (!orgId) {
+                      message.warning('当前代理商缺少 orgId，无法打开功能应用');
                       return;
                     }
                     setPlugModalRecord(record);
@@ -523,7 +528,7 @@ const AgentListPage: React.FC = () => {
 
       <AgentPlugModal
         open={!!plugModalRecord}
-        agentId={normalizeText(plugModalRecord?.oldOrgId)}
+        orgId={normalizeText(plugModalRecord?.orgId)}
         agentName={normalizeText(plugModalRecord?.name)}
         onCancel={() => {
           setPlugModalRecord(undefined);

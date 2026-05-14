@@ -38,6 +38,11 @@ type FormValues = {
   minPayAmount?: number | null;
   maxPayAmount?: number | null;
   limitPay?: 'NONE' | 'NO_CREDIT';
+  isMemberDiscounts?: boolean;
+  isMerchantName?: boolean;
+  isNicknameAvatar?: boolean;
+  isMemberPay?: boolean;
+  isDiscountCoupon?: boolean;
   remarkRequired?: boolean;
   phoneRequired?: boolean;
   goodsDesc?: string;
@@ -103,6 +108,10 @@ function toOptionalNumber(value?: number | null) {
   return Number.isNaN(numberValue) ? undefined : numberValue;
 }
 
+function toSwitchChecked(value: unknown) {
+  return Number(value || 0) === 1;
+}
+
 function buildFormValues(detail?: ReceiptCodeRuleDetail): FormValues {
   return {
     amountMode: normalizeEnum(detail?.amountMode, amountModeValues, 'INPUT'),
@@ -118,8 +127,13 @@ function buildFormValues(detail?: ReceiptCodeRuleDetail): FormValues {
     minPayAmount: detail?.minPayAmount ?? null,
     maxPayAmount: detail?.maxPayAmount ?? null,
     limitPay: normalizeEnum(detail?.limitPay, limitPayValues, 'NONE'),
-    remarkRequired: Number(detail?.remarkRequired || 0) === 1,
-    phoneRequired: Number(detail?.phoneRequired || 0) === 1,
+    isMemberDiscounts: toSwitchChecked(detail?.isMemberDiscounts),
+    isMerchantName: toSwitchChecked(detail?.isMerchantName),
+    isNicknameAvatar: toSwitchChecked(detail?.isNicknameAvatar),
+    isMemberPay: toSwitchChecked(detail?.isMemberPay),
+    isDiscountCoupon: toSwitchChecked(detail?.isDiscountCoupon),
+    remarkRequired: toSwitchChecked(detail?.remarkRequired),
+    phoneRequired: toSwitchChecked(detail?.phoneRequired),
     goodsDesc: readText(detail?.goodsDesc),
   };
 }
@@ -228,6 +242,11 @@ export const ReceiptCodeRuleModal: React.FC<ReceiptCodeRuleModalProps> = ({
         minPayAmount,
         maxPayAmount,
         limitPay: values.limitPay || 'NONE',
+        isMemberDiscounts: values.isMemberDiscounts ? 1 : 0,
+        isMerchantName: values.isMerchantName ? 1 : 0,
+        isNicknameAvatar: values.isNicknameAvatar ? 1 : 0,
+        isMemberPay: values.isMemberPay ? 1 : 0,
+        isDiscountCoupon: values.isDiscountCoupon ? 1 : 0,
         remarkRequired: values.remarkRequired ? 1 : 0,
         phoneRequired: values.phoneRequired ? 1 : 0,
         goodsDesc: String(values.goodsDesc ?? '').trim(),
@@ -381,6 +400,46 @@ export const ReceiptCodeRuleModal: React.FC<ReceiptCodeRuleModalProps> = ({
             rules={[{ required: true, message: '请选择限制支付' }]}
           >
             <Select options={limitPayOptions} />
+          </Form.Item>
+
+          <Form.Item
+            label="会员折扣"
+            name="isMemberDiscounts"
+            valuePropName="checked"
+          >
+            <Switch checkedChildren="可以" unCheckedChildren="不可以" />
+          </Form.Item>
+
+          <Form.Item
+            label="商户名称"
+            name="isMerchantName"
+            valuePropName="checked"
+          >
+            <Switch checkedChildren="显示" unCheckedChildren="不显示" />
+          </Form.Item>
+
+          <Form.Item
+            label="昵称头像"
+            name="isNicknameAvatar"
+            valuePropName="checked"
+          >
+            <Switch checkedChildren="获取" unCheckedChildren="不获取" />
+          </Form.Item>
+
+          <Form.Item
+            label="会员卡支付"
+            name="isMemberPay"
+            valuePropName="checked"
+          >
+            <Switch checkedChildren="可以" unCheckedChildren="不可以" />
+          </Form.Item>
+
+          <Form.Item
+            label="优惠卡券"
+            name="isDiscountCoupon"
+            valuePropName="checked"
+          >
+            <Switch checkedChildren="可以" unCheckedChildren="不可以" />
           </Form.Item>
 
           <Form.Item

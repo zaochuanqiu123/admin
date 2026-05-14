@@ -16,6 +16,11 @@ export type ReceiptCodeRuleDetail = ReceiptCodeRuleQrcodeParams & {
   minPayAmount?: number;
   maxPayAmount?: number;
   limitPay?: 'NONE' | 'NO_CREDIT' | string;
+  isMemberDiscounts?: number;
+  isMerchantName?: number;
+  isNicknameAvatar?: number;
+  isMemberPay?: number;
+  isDiscountCoupon?: number;
   remarkRequired?: number;
   phoneRequired?: number;
   goodsDesc?: string;
@@ -32,6 +37,11 @@ export type ReceiptCodeRuleSetByQrcodeParams = ReceiptCodeRuleQrcodeParams & {
   minPayAmount?: number;
   maxPayAmount?: number;
   limitPay: string;
+  isMemberDiscounts: number;
+  isMerchantName: number;
+  isNicknameAvatar: number;
+  isMemberPay: number;
+  isDiscountCoupon: number;
   remarkRequired: number;
   phoneRequired: number;
   goodsDesc: string;

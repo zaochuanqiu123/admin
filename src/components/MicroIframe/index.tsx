@@ -53,6 +53,15 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
     return undefined;
   }, [idParamKey, location.search]);
 
+  const resolvedPathUrl = useMemo(() => {
+    const statePathUrl = String((location.state as any)?.pathUrl || '').trim();
+    if (statePathUrl) return statePathUrl;
+
+    const query = new URLSearchParams(location.search);
+    const pathUrl = String(query.get('pathUrl') || '').trim();
+    return pathUrl || undefined;
+  }, [location.search, location.state]);
+
   const iframeOrigin = useMemo(() => {
     try {
       return new URL(baseUrl, window.location.href).origin;
@@ -70,6 +79,7 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
       type: initType,
       payload: {
         token,
+        pathUrl: resolvedPathUrl,
       },
     };
 
@@ -80,7 +90,7 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
     });
 
     iframeWindow.postMessage(bootstrapMessage, iframeOrigin);
-  }, [iframeOrigin, initType]);
+  }, [iframeOrigin, initType, resolvedPathUrl]);
 
   useEffect(() => {
     const query = new URLSearchParams(location.search);
@@ -189,8 +199,10 @@ const MicroIframe: React.FC<MicroIframeProps> = ({
     <div
       style={{
         position: 'relative',
-        overflow: 'auto',
-        height: 'calc(100vh - 44px)',
+        overflow: 'hidden',
+        height: 'calc(100vh - 60px - 32px)',
+        minHeight: 0,
+        boxSizing: 'border-box',
         borderRadius: 16,
         background: loadingMaskBg,
       }}

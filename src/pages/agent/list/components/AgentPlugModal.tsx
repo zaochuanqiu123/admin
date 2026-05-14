@@ -1,15 +1,17 @@
 import { Alert, Checkbox, Collapse, Empty, Modal, message, Spin } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { AgentPlugRecord } from '@/api/agent';
 import {
-  type AgentPlugRecord,
-  getAgentPlugList,
-  updateAgentPlugList,
-} from '@/api/agent';
-import { getErrorMessage } from '@/utils/apiMessage';
+  getOrgAppList,
+  grantOrgApp,
+  type OrgAppGroupRecord,
+  revokeGrantOrgApp,
+} from '@/api/app';
+import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
 
 type AgentPlugModalProps = {
   open: boolean;
-  agentId?: string;
+  orgId?: string;
   agentName?: string;
   onCancel: () => void;
 };
@@ -100,6 +102,31 @@ function getPlugRecordKey(record: AgentPlugRecord) {
   );
 }
 
+function mapOrgAppGroupsToPlugRecords(
+  groups: OrgAppGroupRecord[],
+): AgentPlugRecord[] {
+  return groups.map((group) => ({
+    category_name: readText(group.categoryName, group.typeName),
+    plug_list: (Array.isArray(group.appList) ? group.appList : []).map(
+      (app) => {
+        const checked = readChecked(app.openStatus, app.state);
+        return {
+          id: app.id,
+          plug_id: app.id,
+          identification: readText(app.appCode, app.id),
+          plug_name: app.appName,
+          app_name: app.appName,
+          information: app.appDesc,
+          openStatus: app.openStatus,
+          open_status: app.openStatus,
+          state: app.state,
+          status: checked ? 1 : 0,
+        };
+      },
+    ),
+  }));
+}
+
 function patchPlugRecordStatus(
   records: AgentPlugRecord[],
   targetKey: string,
@@ -137,7 +164,11 @@ function patchPlugRecordStatus(
     if (getPlugRecordKey(record) !== targetKey) return record;
     return {
       ...record,
+      is_open: checked,
+      openStatus: checked ? 'ACTIVE' : 'INACTIVE',
+      open_status: checked ? 'ACTIVE' : 'INACTIVE',
       status: checked ? 1 : 0,
+      state: checked,
     };
   });
 }
@@ -163,7 +194,7 @@ function flattenPlugRecords(
 
 const AgentPlugModal: React.FC<AgentPlugModalProps> = ({
   open,
-  agentId,
+  orgId,
   agentName,
   onCancel,
 }) => {
@@ -173,17 +204,20 @@ const AgentPlugModal: React.FC<AgentPlugModalProps> = ({
   const [error, setError] = useState<string>();
 
   const loadList = useCallback(async () => {
-    const normalizedAgentId = readText(agentId);
-    if (!normalizedAgentId) {
+    const normalizedOrgId = readText(orgId);
+    if (!normalizedOrgId) {
       setRecords([]);
-      setError('当前代理商缺少 oldOrgId，无法获取功能应用');
+      setError('当前代理商缺少 orgId，无法获取功能应用');
       return;
     }
 
     setLoading(true);
     setError(undefined);
     try {
-      setRecords(await getAgentPlugList(normalizedAgentId));
+      const res = await getOrgAppList(normalizedOrgId, {
+        skipErrorHandler: true,
+      });
+      setRecords(mapOrgAppGroupsToPlugRecords(Array.isArray(res) ? res : []));
     } catch (loadError) {
       console.error('load agent plug list failed:', loadError);
       const errorMessage = getErrorMessage(loadError, '获取功能应用失败');
@@ -192,7 +226,7 @@ const AgentPlugModal: React.FC<AgentPlugModalProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [agentId]);
+  }, [orgId]);
 
   useEffect(() => {
     if (!open) {
@@ -206,25 +240,81 @@ const AgentPlugModal: React.FC<AgentPlugModalProps> = ({
     void loadList();
   }, [loadList, open]);
 
-  const handleSubmit = useCallback(async () => {
-    const normalizedAgentId = readText(agentId);
-    if (!normalizedAgentId) {
-      message.warning('当前代理商缺少 oldOrgId，无法保存功能应用');
+  const handleToggleGrant = useCallback(
+    async (record: AgentPlugRecord, checked: boolean) => {
+      const normalizedOrgId = readText(orgId);
+      if (!normalizedOrgId) {
+        message.warning('当前代理商缺少 orgId，无法变更功能应用授权');
+        return;
+      }
+
+      const appId = readText(record.id, record.plug_id);
+      if (!appId) {
+        message.warning('当前应用缺少 appId，无法变更授权');
+        return;
+      }
+
+      setSubmitting(true);
+      try {
+        const res = checked
+          ? await grantOrgApp(
+              {
+                appId,
+                targetOrgId: normalizedOrgId,
+              },
+              {
+                skipErrorHandler: true,
+              },
+            )
+          : await revokeGrantOrgApp(
+              {
+                appId,
+                targetOrgId: normalizedOrgId,
+              },
+              {
+                skipErrorHandler: true,
+              },
+            );
+        setRecords((prev) =>
+          patchPlugRecordStatus(prev, getPlugRecordKey(record), checked),
+        );
+        message.success(
+          getApiMessage(
+            res,
+            checked ? '授权功能应用成功' : '取消授权功能应用成功',
+          ),
+        );
+      } catch (submitError) {
+        console.error('toggle agent app grant failed:', submitError);
+        message.error(
+          getErrorMessage(
+            submitError,
+            checked ? '授权功能应用失败' : '取消授权功能应用失败',
+          ),
+        );
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [orgId],
+  );
+
+  const handleCheckboxChange = useCallback(
+    (record: AgentPlugRecord, checked: boolean) => {
+      if (submitting) {
+        return;
+      }
+      void handleToggleGrant(record, checked);
+    },
+    [handleToggleGrant, submitting],
+  );
+
+  const handleCancel = useCallback(() => {
+    if (submitting) {
       return;
     }
-
-    setSubmitting(true);
-    try {
-      await updateAgentPlugList(normalizedAgentId, flattenPlugRecords(records));
-      message.success('保存功能应用成功');
-      await loadList();
-    } catch (submitError) {
-      console.error('save agent plug list failed:', submitError);
-      message.error(getErrorMessage(submitError, '保存功能应用失败'));
-    } finally {
-      setSubmitting(false);
-    }
-  }, [agentId, loadList, records]);
+    onCancel();
+  }, [onCancel, submitting]);
 
   const groupedRecords = useMemo(() => {
     const groups = new Map<string, FlatAgentPlugRecord[]>();
@@ -252,16 +342,15 @@ const AgentPlugModal: React.FC<AgentPlugModalProps> = ({
             <Checkbox
               key={`${group.categoryName}-${id}-${name}`}
               checked={readChecked(
-                record.is_open,
+                record.openStatus,
                 record.open_status,
+                record.is_open,
                 record.status,
                 record.state,
               )}
               disabled={submitting}
               onChange={(event) => {
-                setRecords((prev) =>
-                  patchPlugRecordStatus(prev, id, event.target.checked),
-                );
+                handleCheckboxChange(record, event.target.checked);
               }}
             >
               {name}
@@ -277,17 +366,10 @@ const AgentPlugModal: React.FC<AgentPlugModalProps> = ({
       title={agentName ? `功能应用 - ${agentName}` : '功能应用'}
       open={open}
       width={860}
-      okText="保存"
-      cancelText="取消"
-      confirmLoading={submitting}
-      okButtonProps={{
-        disabled: loading || groupedRecords.length === 0,
-      }}
+      footer={null}
+      maskClosable={!submitting}
       destroyOnClose
-      onCancel={onCancel}
-      onOk={() => {
-        void handleSubmit();
-      }}
+      onCancel={handleCancel}
       className="agent-plug-modal"
     >
       {error ? <Alert type="error" showIcon message={error} /> : null}

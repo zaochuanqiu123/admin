@@ -99,6 +99,7 @@ declare namespace API {
     account?: string;
     account?: string;
     loginType?: string;
+    captchaToken?: string;
   };
 
   type NoticeIconList = {

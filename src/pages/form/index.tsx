@@ -443,7 +443,7 @@ const StorePage: React.FC = () => {
             },
             {
               key: 'app',
-              label: '应用开通',
+              label: '应用授权',
             },
           ];
 

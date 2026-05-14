@@ -477,6 +477,21 @@ function isExternalUrl(path: string): boolean {
   return /^(https?:)?\/\//i.test(String(path || '').trim());
 }
 
+function isLegacyIframeShellPath(path: string): boolean {
+  const normalized = normalizePathname(path);
+  return [
+    '/app',
+    '/device',
+    '/permission',
+    '/warehouse',
+    '/profile',
+    '/result',
+    '/exception',
+    '/account',
+    '/finance',
+  ].includes(normalized);
+}
+
 function getTargetIdFromSearch(search: string | undefined): string | undefined {
   const rawSearch = String(search || '');
   if (!rawSearch) return undefined;
@@ -803,7 +818,10 @@ export const layout: RunTimeLayoutConfig = ({
       return;
     }
 
-    if (sourceSystem === 1 || (sourceSystem === undefined && targetId)) {
+    if (
+      (sourceSystem === 1 || (sourceSystem === undefined && targetId)) &&
+      isLegacyIframeShellPath(targetPath)
+    ) {
       const nextUrl = buildIframeRouteWithParams(targetPath, targetId);
       history.push(nextUrl);
       return;

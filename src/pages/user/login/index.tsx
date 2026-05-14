@@ -18,7 +18,8 @@ import {
   Tabs,
 } from 'antd';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { login } from '@/api/auth';
+import { checkCaptchaRequired, login } from '@/api/auth';
+import { LOGIN_AUTH_SCENE } from '@/api/requestMeta';
 import {
   clearSelectedOrgCode,
   setLoginOrgList,
@@ -49,6 +50,11 @@ const devBypassAuth =
 const DEFAULT_SERVICE_PHONE = '400-000-8583';
 const DEFAULT_SITE_NAME = '随付达';
 const DEFAULT_BANNER_IMAGES = [Banner1, Banner2, Banner3, Banner4];
+const TAC_LOADER_FILE = 'tac/js/load.min.js';
+const TAC_RESOURCE_DIR = 'tac';
+const TAC_BIND_EL = '#login-tac-captcha';
+const TAC_CAPTCHA_URL = '/mp-api/admin/auth/v1/captcha/getCaptcha';
+const TAC_VALID_CAPTCHA_URL = '/mp-api/admin/auth/v1/captcha/validateCaptcha';
 
 type LoginStaticResourceState = {
   logoUrl: string;
@@ -70,6 +76,48 @@ type BannerConfig = {
   intervalMs?: number;
 };
 
+type TacInstance = {
+  init: () => void;
+  destroyWindow: () => void;
+  reloadCaptcha: () => void;
+  config?: {
+    addRequestChain?: (chain: TacRequestChain) => void;
+  };
+};
+
+type TacRequestOptions = {
+  data?: any;
+  headers?: Record<string, string>;
+  method?: string;
+  url?: string;
+};
+
+type TacRequestChain = {
+  preRequest?: (scene: string, request: TacRequestOptions) => boolean;
+};
+
+type TacConfig = {
+  requestCaptchaDataUrl: string;
+  validCaptchaUrl: string;
+  bindEl: string;
+  validSuccess: (res: any, captcha: any, tac: TacInstance) => void;
+  validFail?: (res: any, captcha: any, tac: TacInstance) => void;
+  btnRefreshFun?: (el: HTMLElement, tac: TacInstance) => void;
+  btnCloseFun?: (el: HTMLElement, tac: TacInstance) => void;
+};
+
+type TacStyle = Record<string, any>;
+
+declare global {
+  interface Window {
+    initTAC?: (
+      resourcePath: string,
+      config: TacConfig,
+      style?: TacStyle,
+    ) => Promise<TacInstance>;
+  }
+}
+
 const defaultLoginStaticResources: LoginStaticResourceState = {
   logoUrl: LogoDark,
   siteName: DEFAULT_SITE_NAME,
@@ -78,6 +126,88 @@ const defaultLoginStaticResources: LoginStaticResourceState = {
   carouselAutoplay: true,
   carouselIntervalMs: 3000,
 };
+
+const getRuntimeBasePath = () => {
+  const appPublicPath = String(process.env.APP_PUBLIC_PATH || '/mp/').trim();
+  const normalizedPath = appPublicPath || '/';
+  const withLeadingSlash = normalizedPath.startsWith('/')
+    ? normalizedPath
+    : `/${normalizedPath}`;
+  return withLeadingSlash.endsWith('/')
+    ? withLeadingSlash
+    : `${withLeadingSlash}/`;
+};
+
+const joinBaseAssetPath = (assetPath: string) =>
+  `${getRuntimeBasePath()}${assetPath.replace(/^\/+/, '')}`;
+
+const getLoginAccount = (values: API.LoginParams, loginType: string) =>
+  loginType === 'mobile' ? values.mobile : values.account;
+
+const getCaptchaTokenFromResponse = (res: any) => {
+  const token = [
+    typeof res?.data === 'string' ? res.data : '',
+    res?.data?.token,
+    res?.data?.captchaToken,
+    res?.data?.tokenValue,
+    res?.token,
+    res?.captchaToken,
+    res?.tokenValue,
+  ].find((item) => typeof item === 'string' && item.trim());
+  return typeof token === 'string' ? token.trim() : '';
+};
+
+const waitForInitTac = () =>
+  new Promise<void>((resolve, reject) => {
+    const startedAt = Date.now();
+    const checkReady = () => {
+      if (window.initTAC) {
+        resolve();
+        return;
+      }
+      if (Date.now() - startedAt > 3000) {
+        reject(new Error('滑动验证码初始化失败'));
+        return;
+      }
+      window.setTimeout(checkReady, 30);
+    };
+    checkReady();
+  });
+
+const ensureTacLoader = () =>
+  new Promise<void>((resolve, reject) => {
+    if (typeof window === 'undefined') {
+      reject(new Error('当前环境不支持滑动验证'));
+      return;
+    }
+    if (window.initTAC) {
+      resolve();
+      return;
+    }
+    const loaderSrc = joinBaseAssetPath(TAC_LOADER_FILE);
+
+    const existingScript = Array.from(document.scripts).find((script) =>
+      script.src.endsWith('/tac/js/load.min.js'),
+    );
+    if (existingScript) {
+      void waitForInitTac().then(resolve).catch(reject);
+      existingScript.addEventListener(
+        'error',
+        () => reject(new Error('滑动验证码加载失败')),
+        { once: true },
+      );
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = loaderSrc;
+    script.async = true;
+    script.onload = () => {
+      void waitForInitTac().then(resolve).catch(reject);
+    };
+    script.onerror = () => reject(new Error('滑动验证码加载失败'));
+    document.head.appendChild(script);
+  });
 
 const isDisplaySrc = (value?: unknown) => {
   const text = String(value || '').trim();
@@ -376,20 +506,17 @@ const Login: React.FC = () => {
 
   // 移除缩放逻辑，改用响应式布局
 
-  const handleSubmit = async (values: API.LoginParams) => {
-    setSubmitting(true);
+  const performLogin = async (
+    values: API.LoginParams,
+    captchaToken?: string,
+  ) => {
     try {
-      setLoginError(null);
-      setLogoutReasonText(undefined);
-      if (devBypassAuth) {
-        // ... bypass 逻辑，这里没动
-        return;
-      }
       // 登录
       const res = await login({
-        account: type === 'mobile' ? values.mobile : values.account,
+        account: getLoginAccount(values, type),
         password: type === 'mobile' ? values.captcha : values.password,
         loginType: 'PC',
+        ...(captchaToken ? { captchaToken } : {}),
       } as any);
 
       // 兼容不同登录接口返回中的 token 字段。
@@ -496,6 +623,101 @@ const Login: React.FC = () => {
         normalizeLoginError(error, type, defaultLoginFailureMessage),
       );
     } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSubmit = async (values: API.LoginParams) => {
+    setSubmitting(true);
+    setLoginError(null);
+    setLogoutReasonText(undefined);
+    if (devBypassAuth) {
+      // ... bypass 逻辑，这里没动
+      setSubmitting(false);
+      return;
+    }
+
+    try {
+      const username = String(getLoginAccount(values, type) || '').trim();
+      const captchaRequiredInfo = await checkCaptchaRequired(username, {
+        meta: {
+          authScene: LOGIN_AUTH_SCENE,
+          skipAuthRedirect: true,
+          skipGlobalBizError: true,
+        },
+      });
+
+      if (!captchaRequiredInfo?.required) {
+        await performLogin(values);
+        return;
+      }
+
+      await ensureTacLoader();
+      if (!window.initTAC) {
+        throw new Error('滑动验证码初始化失败');
+      }
+
+      const bindEl = document.querySelector(TAC_BIND_EL);
+      if (bindEl) {
+        bindEl.innerHTML = '';
+      }
+
+      const tac = await window.initTAC(
+        joinBaseAssetPath(TAC_RESOURCE_DIR),
+        {
+          requestCaptchaDataUrl: TAC_CAPTCHA_URL,
+          validCaptchaUrl: TAC_VALID_CAPTCHA_URL,
+          bindEl: TAC_BIND_EL,
+          validSuccess: (res, _captcha, currentTac) => {
+            const captchaToken = getCaptchaTokenFromResponse(res);
+            currentTac.destroyWindow();
+            if (!captchaToken) {
+              setLoginError({ message: '验证码校验未返回 token' });
+              setSubmitting(false);
+              return;
+            }
+            void performLogin(values, captchaToken);
+          },
+          validFail: (_res, _captcha, currentTac) => {
+            setSubmitting(false);
+            currentTac.reloadCaptcha();
+          },
+          btnRefreshFun: (_el, currentTac) => {
+            currentTac.reloadCaptcha();
+          },
+          btnCloseFun: (_el, currentTac) => {
+            currentTac.destroyWindow();
+            setSubmitting(false);
+          },
+        },
+        {
+          logoUrl: null,
+        },
+      );
+      tac.config?.addRequestChain?.({
+        preRequest: (scene, request) => {
+          if (
+            scene === 'validCaptcha' &&
+            request.data &&
+            'data' in request.data
+          ) {
+            request.data = {
+              id: request.data.id,
+              track: request.data.data,
+            };
+          }
+          return true;
+        },
+      });
+      tac.init();
+    } catch (error) {
+      const defaultLoginFailureMessage = intl.formatMessage({
+        id: 'pages.login.failure',
+        defaultMessage: '登录失败，请重试！',
+      });
+      setLoginError(
+        normalizeLoginError(error, type, defaultLoginFailureMessage),
+      );
       setSubmitting(false);
     }
   };
@@ -640,6 +862,7 @@ const Login: React.FC = () => {
                 )}
 
                 {loginError && <LoginMessage content={loginError.message} />}
+                <div id="login-tac-captcha" className="loginTacCaptcha" />
 
                 <Form
                   className="form"

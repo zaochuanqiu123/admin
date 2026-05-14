@@ -12,6 +12,7 @@ import {
 } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ORG_LEVEL_CODE } from '@/api/org';
 import {
   type DeviceTransferDetailRecord,
   type DeviceTransferDeviceType,
@@ -20,7 +21,11 @@ import {
   getDeviceTransferDetailPage,
   getDeviceTransferPage,
 } from '@/api/transfer';
-import { ExpandableFilterCard, PageSectionSkeleton } from '@/components';
+import {
+  ExpandableFilterCard,
+  OrgOptionsSelect,
+  PageSectionSkeleton,
+} from '@/components';
 import { getErrorMessage } from '@/utils/apiMessage';
 import './index.less';
 
@@ -30,7 +35,10 @@ type QueryFilters = {
   orderNo: string;
   transferType?: DeviceTransferType;
   deviceType?: DeviceTransferDeviceType;
-  orgId: string;
+  agentOrgId: string;
+  groupOrgId: string;
+  merchantOrgId: string;
+  storeOrgId: string;
 };
 
 type DetailQueryFilters = {
@@ -45,6 +53,15 @@ function getDeviceTypeText(value?: DeviceTransferDeviceType) {
   if (value === 'SPEAKER') return '音箱';
   if (value === 'PRINTER') return '打印机';
   return '二维码';
+}
+
+function getSelectedOrgId(filters: QueryFilters) {
+  return (
+    filters.storeOrgId ||
+    filters.merchantOrgId ||
+    filters.groupOrgId ||
+    filters.agentOrgId
+  ).trim();
 }
 
 const TransferRecordPage: React.FC = () => {
@@ -66,13 +83,19 @@ const TransferRecordPage: React.FC = () => {
     orderNo: '',
     transferType: undefined,
     deviceType: undefined,
-    orgId: '',
+    agentOrgId: '',
+    groupOrgId: '',
+    merchantOrgId: '',
+    storeOrgId: '',
   });
   const [filters, setFilters] = useState<QueryFilters>({
     orderNo: '',
     transferType: undefined,
     deviceType: undefined,
-    orgId: '',
+    agentOrgId: '',
+    groupOrgId: '',
+    merchantOrgId: '',
+    storeOrgId: '',
   });
   const [detailDraftFilters, setDetailDraftFilters] =
     useState<DetailQueryFilters>({
@@ -112,7 +135,7 @@ const TransferRecordPage: React.FC = () => {
           orderNo: filters.orderNo.trim() || undefined,
           transferType: filters.transferType,
           deviceType: filters.deviceType,
-          orgId: filters.orgId.trim() || undefined,
+          orgId: getSelectedOrgId(filters) || undefined,
         },
         {
           skipErrorHandler: true,
@@ -130,8 +153,11 @@ const TransferRecordPage: React.FC = () => {
   }, [
     current,
     filters.deviceType,
+    filters.agentOrgId,
+    filters.groupOrgId,
+    filters.merchantOrgId,
     filters.orderNo,
-    filters.orgId,
+    filters.storeOrgId,
     filters.transferType,
     pageSize,
   ]);
@@ -330,7 +356,10 @@ const TransferRecordPage: React.FC = () => {
       orderNo: draftFilters.orderNo.trim(),
       transferType: draftFilters.transferType,
       deviceType: draftFilters.deviceType,
-      orgId: draftFilters.orgId.trim(),
+      agentOrgId: draftFilters.agentOrgId.trim(),
+      groupOrgId: draftFilters.groupOrgId.trim(),
+      merchantOrgId: draftFilters.merchantOrgId.trim(),
+      storeOrgId: draftFilters.storeOrgId.trim(),
     });
     setPagination((prev) => ({
       ...prev,
@@ -343,7 +372,10 @@ const TransferRecordPage: React.FC = () => {
       orderNo: '',
       transferType: undefined,
       deviceType: undefined,
-      orgId: '',
+      agentOrgId: '',
+      groupOrgId: '',
+      merchantOrgId: '',
+      storeOrgId: '',
     };
     setDraftFilters(nextFilters);
     setFilters(nextFilters);
@@ -448,20 +480,79 @@ const TransferRecordPage: React.FC = () => {
             ),
           },
           {
-            key: 'orgId',
-            label: '组织ID',
+            key: 'agentOrgId',
+            label: '代理组织',
             content: (
-              <Input
-                allowClear
-                placeholder="请输入组织ID"
-                value={draftFilters.orgId}
-                onChange={(event) => {
+              <OrgOptionsSelect
+                orgLevelCode={ORG_LEVEL_CODE.agent}
+                placeholder="请选择代理组织"
+                value={draftFilters.agentOrgId}
+                onChange={(value) => {
                   setDraftFilters((prev) => ({
                     ...prev,
-                    orgId: event.target.value,
+                    agentOrgId: value,
+                    groupOrgId: '',
+                    merchantOrgId: '',
+                    storeOrgId: '',
                   }));
                 }}
-                onPressEnter={handleSearch}
+              />
+            ),
+          },
+          {
+            key: 'groupOrgId',
+            label: '集团组织',
+            content: (
+              <OrgOptionsSelect
+                orgLevelCode={ORG_LEVEL_CODE.group}
+                parentOrgId={draftFilters.agentOrgId}
+                placeholder="请选择集团组织"
+                value={draftFilters.groupOrgId}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    groupOrgId: value,
+                    merchantOrgId: '',
+                    storeOrgId: '',
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'merchantOrgId',
+            label: '商户组织',
+            content: (
+              <OrgOptionsSelect
+                orgLevelCode={ORG_LEVEL_CODE.merchant}
+                parentOrgId={draftFilters.groupOrgId}
+                placeholder="请选择商户组织"
+                value={draftFilters.merchantOrgId}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    merchantOrgId: value,
+                    storeOrgId: '',
+                  }));
+                }}
+              />
+            ),
+          },
+          {
+            key: 'storeOrgId',
+            label: '门店组织',
+            content: (
+              <OrgOptionsSelect
+                orgLevelCode={ORG_LEVEL_CODE.store}
+                parentOrgId={draftFilters.merchantOrgId}
+                placeholder="请选择门店组织"
+                value={draftFilters.storeOrgId}
+                onChange={(value) => {
+                  setDraftFilters((prev) => ({
+                    ...prev,
+                    storeOrgId: value,
+                  }));
+                }}
               />
             ),
           },

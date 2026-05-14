@@ -11,6 +11,7 @@ import Footer from './Footer';
 import MicroIframe from './MicroIframe';
 import OrganizationPickerModal from './OrganizationPickerModal';
 import OrganizationPickerInput from './OrganizationPickerModal/OrganizationPickerInput';
+import OrgOptionsSelect from './OrgOptionsSelect';
 import PageSectionSkeleton from './Page/PageSectionSkeleton';
 import PermissionButton from './Permission/PermissionButton';
 import PermissionVisible from './Permission/PermissionVisible';
@@ -26,6 +27,7 @@ export {
   SelectLang,
   NoticeBell,
   MicroIframe,
+  OrgOptionsSelect,
   OrganizationPickerInput,
   OrganizationPickerModal,
   PageSectionSkeleton,

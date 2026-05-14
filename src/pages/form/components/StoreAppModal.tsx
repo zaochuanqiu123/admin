@@ -1,12 +1,13 @@
-import { Alert, Button, Empty, Modal, message, Table, Tag } from 'antd';
+import { Alert, Checkbox, Empty, Modal, message, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  getStoreApplicationStatusList,
+  getOrgAppList,
+  grantOrgApp,
   type OrgAppGroupRecord,
   type OrgAppRecord,
-  storeEnableDisableApp,
+  revokeGrantOrgApp,
 } from '@/api/app';
 import { getApiMessage, getErrorMessage } from '@/utils/apiMessage';
 
@@ -22,6 +23,7 @@ type StoreAppRecord = {
   id: string;
   name: string;
   state: boolean;
+  openStatus?: string;
 };
 
 function normalizeText(value: unknown) {
@@ -29,10 +31,13 @@ function normalizeText(value: unknown) {
   return nextValue || undefined;
 }
 
-function normalizeAppState(value?: number | boolean | string) {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value > 0;
-  if (typeof value === 'string') {
+function normalizeAppState(
+  ...values: Array<number | boolean | string | undefined>
+) {
+  for (const value of values) {
+    if (value === undefined || value === null || value === '') continue;
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value > 0;
     const nextValue = value.trim().toUpperCase();
     if (
       ['TRUE', '1', 'ENABLE', 'ENABLED', 'OPEN', 'ON', 'ACTIVE'].includes(
@@ -69,7 +74,8 @@ function mapAppRecord(
     key: id || `${groupIndex}-${appIndex}`,
     id,
     name: normalizeText(app.appName) || '-',
-    state: normalizeAppState(app.state),
+    state: normalizeAppState(app.openStatus, app.state),
+    openStatus: app.openStatus,
   };
 }
 
@@ -119,14 +125,9 @@ const StoreAppModal: React.FC<StoreAppModalProps> = ({
       setLoading(true);
       setListError(undefined);
       try {
-        const res = await getStoreApplicationStatusList(
-          {
-            storeOrgId: normalizedStoreOrgId,
-          },
-          {
-            skipErrorHandler: true,
-          },
-        );
+        const res = await getOrgAppList(normalizedStoreOrgId, {
+          skipErrorHandler: true,
+        });
         if (cancelled) return;
         setRecords(flattenAppGroups(Array.isArray(res) ? res : []));
       } catch (error) {
@@ -147,45 +148,54 @@ const StoreAppModal: React.FC<StoreAppModalProps> = ({
   }, [normalizedStoreOrgId, open]);
 
   const handleToggle = useCallback(
-    async (record: StoreAppRecord, enable: boolean) => {
+    async (record: StoreAppRecord, checked: boolean) => {
       if (!normalizedStoreOrgId) {
-        message.warning('缺少门店组织 ID，无法操作应用');
+        message.warning('缺少门店组织 ID，无法变更应用授权');
         return;
       }
       if (!record.id) {
-        message.warning('缺少应用 ID，无法操作应用');
+        message.warning('缺少应用 ID，无法变更授权');
         return;
       }
 
-      const nextSubmittingKey = `${record.key}:${enable ? 'enable' : 'disable'}`;
-      setSubmittingKey(nextSubmittingKey);
+      setSubmittingKey(record.key);
       try {
-        const res = await storeEnableDisableApp(
-          {
-            storeOrgId: normalizedStoreOrgId,
-            appId: record.id,
-            enable,
-          },
-          {
-            skipErrorHandler: true,
-          },
-        );
+        const res = checked
+          ? await grantOrgApp(
+              {
+                appId: record.id,
+                targetOrgId: normalizedStoreOrgId,
+              },
+              {
+                skipErrorHandler: true,
+              },
+            )
+          : await revokeGrantOrgApp(
+              {
+                appId: record.id,
+                targetOrgId: normalizedStoreOrgId,
+              },
+              {
+                skipErrorHandler: true,
+              },
+            );
         setRecords((prev) =>
           prev.map((item) =>
             item.key === record.key
               ? {
                   ...item,
-                  state: enable,
+                  state: checked,
+                  openStatus: checked ? 'ACTIVE' : 'INACTIVE',
                 }
               : item,
           ),
         );
         message.success(
-          getApiMessage(res, enable ? '应用已开通' : '应用已关闭'),
+          getApiMessage(res, checked ? '授权应用成功' : '取消授权应用成功'),
         );
       } catch (error) {
         message.error(
-          getErrorMessage(error, enable ? '开通应用失败' : '关闭应用失败'),
+          getErrorMessage(error, checked ? '授权应用失败' : '取消授权应用失败'),
         );
       } finally {
         setSubmittingKey(undefined);
@@ -203,54 +213,27 @@ const StoreAppModal: React.FC<StoreAppModalProps> = ({
         render: (value) => value || '-',
       },
       {
-        title: '开通状态',
+        title: '授权状态',
         dataIndex: 'state',
         width: 120,
         render: (value) =>
-          value ? <Tag color="success">已开通</Tag> : <Tag>未开通</Tag>,
+          value ? <Tag color="success">已授权</Tag> : <Tag>未授权</Tag>,
       },
       {
-        title: '开通应用',
-        key: 'enable',
-        width: 120,
+        title: '授权应用',
+        key: 'grant',
+        width: 130,
         render: (_, record) => {
-          const rowSubmitting = submittingKey?.startsWith(`${record.key}:`);
-          const currentSubmittingKey = `${record.key}:enable`;
           return (
-            <Button
-              type="link"
-              size="small"
-              loading={submittingKey === currentSubmittingKey}
-              disabled={record.state || rowSubmitting || !record.id}
-              onClick={() => {
-                void handleToggle(record, true);
+            <Checkbox
+              checked={record.state}
+              disabled={!!submittingKey || !record.id}
+              onChange={(event) => {
+                void handleToggle(record, event.target.checked);
               }}
             >
-              开通应用
-            </Button>
-          );
-        },
-      },
-      {
-        title: '关闭应用',
-        key: 'disable',
-        width: 120,
-        render: (_, record) => {
-          const rowSubmitting = submittingKey?.startsWith(`${record.key}:`);
-          const currentSubmittingKey = `${record.key}:disable`;
-          return (
-            <Button
-              type="link"
-              size="small"
-              danger
-              loading={submittingKey === currentSubmittingKey}
-              disabled={!record.state || rowSubmitting || !record.id}
-              onClick={() => {
-                void handleToggle(record, false);
-              }}
-            >
-              关闭应用
-            </Button>
+              授权
+            </Checkbox>
           );
         },
       },
@@ -261,7 +244,7 @@ const StoreAppModal: React.FC<StoreAppModalProps> = ({
   return (
     <Modal
       title={
-        normalizedStoreName ? `${normalizedStoreName}应用开通` : '应用开通'
+        normalizedStoreName ? `${normalizedStoreName}应用授权` : '应用授权'
       }
       open={open}
       onCancel={onCancel}

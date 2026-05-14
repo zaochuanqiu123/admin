@@ -12,7 +12,7 @@ import {
 } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getCurrentMerchantStoreList } from '@/api/org';
+import { ORG_LEVEL_CODE } from '@/api/org';
 import {
   batchAddQrCode,
   bindQrCode,
@@ -25,7 +25,7 @@ import {
 import { getQrCodeTemplateList } from '@/api/qrCodeTemplate';
 import {
   ExpandableFilterCard,
-  OrganizationPickerInput,
+  OrgOptionsSelect,
   PageSectionSkeleton,
   PermissionButton,
   PermissionVisible,
@@ -73,11 +73,6 @@ type QueryFilters = {
   openType?: string;
   bindName: string;
   model: string;
-};
-
-type StoreOption = {
-  label: string;
-  value: string;
 };
 
 const DEFAULT_PAGE_SIZE = 10;
@@ -192,8 +187,6 @@ const StoreQrCodeListPage: React.FC = () => {
   const [templateOptionsSource, setTemplateOptionsSource] = useState<
     TemplateSelectOption[]
   >([]);
-  const [storeOptions, setStoreOptions] = useState<StoreOption[]>([]);
-  const [storeOptionsLoading, setStoreOptionsLoading] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [previewRecord, setPreviewRecord] = useState<QrCodeRecord>();
 
@@ -273,39 +266,6 @@ const StoreQrCodeListPage: React.FC = () => {
       setTemplateLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    if (!isMerchant) return;
-    let cancelled = false;
-    setStoreOptionsLoading(true);
-    getCurrentMerchantStoreList({ skipErrorHandler: true })
-      .then((res) => {
-        if (cancelled) return;
-        const nextOptions = (Array.isArray(res) ? res : [])
-          .map((item) => {
-            const value = readText(item?.id);
-            const name = readText(item?.orgName);
-            if (!value) return undefined;
-            return {
-              label: name ? `${name}（ID: ${value}）` : value,
-              value,
-            };
-          })
-          .filter(Boolean) as StoreOption[];
-        setStoreOptions(nextOptions);
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        console.error('load merchant store options failed:', error);
-        setStoreOptions([]);
-      })
-      .finally(() => {
-        if (!cancelled) setStoreOptionsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isMerchant]);
 
   const loadQrCodes = useCallback(async () => {
     setLoading(true);
@@ -574,20 +534,23 @@ const StoreQrCodeListPage: React.FC = () => {
           fixed: 'right',
           render: (_: unknown, record: QrCodeRecord) => {
             const hasBindInfo = isBound(record);
+            const hasStoreOrgId = Boolean(readText(record?.storeOrgId));
 
             return (
               <div className="qr-code-action-links">
                 {hasBindInfo ? (
                   <>
-                    <PermissionVisible perm={QR_CODE_PERMS.setReceiptRule}>
-                      <a
-                        onClick={() => {
-                          setReceiptRuleRecord(record);
-                        }}
-                      >
-                        配置规则
-                      </a>
-                    </PermissionVisible>
+                    {hasStoreOrgId ? (
+                      <PermissionVisible perm={QR_CODE_PERMS.setReceiptRule}>
+                        <a
+                          onClick={() => {
+                            setReceiptRuleRecord(record);
+                          }}
+                        >
+                          配置规则
+                        </a>
+                      </PermissionVisible>
+                    ) : null}
                     <PermissionVisible perm={QR_CODE_PERMS.unbind}>
                       <a
                         className="is-danger"
@@ -654,15 +617,19 @@ const StoreQrCodeListPage: React.FC = () => {
             ? [
                 {
                   key: 'agentOrgId',
-                  label: '代理组织ID',
+                  label: '代理组织',
                   content: (
-                    <OrganizationPickerInput
+                    <OrgOptionsSelect
+                      orgLevelCode={ORG_LEVEL_CODE.agent}
                       placeholder="请选择代理组织"
                       value={draftFilters.agentOrgId}
                       onChange={(value) => {
                         setDraftFilters((prev) => ({
                           ...prev,
                           agentOrgId: value,
+                          groupOrgId: '',
+                          merchantOrgId: '',
+                          storeOrgId: '',
                         }));
                       }}
                     />
@@ -674,37 +641,40 @@ const StoreQrCodeListPage: React.FC = () => {
             ? [
                 {
                   key: 'groupOrgId',
-                  label: '集团组织ID',
+                  label: '集团组织',
                   content: (
-                    <Input
-                      allowClear
-                      placeholder="请输入集团组织ID"
+                    <OrgOptionsSelect
+                      orgLevelCode={ORG_LEVEL_CODE.group}
+                      parentOrgId={draftFilters.agentOrgId}
+                      placeholder="请选择集团组织"
                       value={draftFilters.groupOrgId}
-                      onChange={(event) => {
+                      onChange={(value) => {
                         setDraftFilters((prev) => ({
                           ...prev,
-                          groupOrgId: event.target.value,
+                          groupOrgId: value,
+                          merchantOrgId: '',
+                          storeOrgId: '',
                         }));
                       }}
-                      onPressEnter={handleSearch}
                     />
                   ),
                 },
                 {
                   key: 'merchantOrgId',
-                  label: '商户组织ID',
+                  label: '商户组织',
                   content: (
-                    <Input
-                      allowClear
-                      placeholder="请输入商户组织ID"
+                    <OrgOptionsSelect
+                      orgLevelCode={ORG_LEVEL_CODE.merchant}
+                      parentOrgId={draftFilters.groupOrgId}
+                      placeholder="请选择商户组织"
                       value={draftFilters.merchantOrgId}
-                      onChange={(event) => {
+                      onChange={(value) => {
                         setDraftFilters((prev) => ({
                           ...prev,
-                          merchantOrgId: event.target.value,
+                          merchantOrgId: value,
+                          storeOrgId: '',
                         }));
                       }}
-                      onPressEnter={handleSearch}
                     />
                   ),
                 },
@@ -714,19 +684,19 @@ const StoreQrCodeListPage: React.FC = () => {
             ? [
                 {
                   key: 'storeOrgId',
-                  label: '门店组织ID',
+                  label: '门店组织',
                   content: (
-                    <Input
-                      allowClear
-                      placeholder="请输入门店组织ID"
+                    <OrgOptionsSelect
+                      orgLevelCode={ORG_LEVEL_CODE.store}
+                      parentOrgId={draftFilters.merchantOrgId}
+                      placeholder="请选择门店组织"
                       value={draftFilters.storeOrgId}
-                      onChange={(event) => {
+                      onChange={(value) => {
                         setDraftFilters((prev) => ({
                           ...prev,
-                          storeOrgId: event.target.value,
+                          storeOrgId: value,
                         }));
                       }}
-                      onPressEnter={handleSearch}
                     />
                   ),
                 },
@@ -736,16 +706,12 @@ const StoreQrCodeListPage: React.FC = () => {
             ? [
                 {
                   key: 'storeOrgId',
-                  label: '门店组织ID',
+                  label: '门店组织',
                   content: (
-                    <Select
-                      allowClear
-                      showSearch
+                    <OrgOptionsSelect
+                      orgLevelCode={ORG_LEVEL_CODE.store}
                       placeholder="请选择门店"
-                      loading={storeOptionsLoading}
                       value={draftFilters.storeOrgId || undefined}
-                      options={storeOptions}
-                      optionFilterProp="label"
                       onChange={(value) => {
                         setDraftFilters((prev) => ({
                           ...prev,
@@ -1089,6 +1055,7 @@ const StoreQrCodeListPage: React.FC = () => {
         storeOrgIdInputMode={
           isStore ? 'hidden' : isMerchant ? 'merchantSelect' : 'manual'
         }
+        currentStoreOrgId={isStore ? currentIdentity?.id : undefined}
         onCancel={() => {
           setBindModalOpen(false);
         }}

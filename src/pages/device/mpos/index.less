@@ -1,0 +1,68 @@
+@import (reference) '../../../styles/utilities.less';
+
+.mpos-page {
+  min-height: calc(100vh - 112px);
+
+  .content-card {
+    padding: 22px 24px 18px;
+    border: 1px solid var(--ant-color-border-secondary);
+    border-radius: 14px;
+    background: var(--ant-color-bg-container);
+  }
+
+  .mpos-table-card {
+    margin-top: 16px;
+  }
+
+  .mpos-toolbar {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding-bottom: 12px;
+  }
+
+  .mpos-table-card {
+    .ant-table-thead > tr > th {
+      color: var(--ant-color-text-heading, var(--ant-color-text));
+      font-weight: 600;
+    }
+
+    .ant-table-tbody > tr > td {
+      color: var(--ant-color-text);
+      vertical-align: middle;
+    }
+  }
+
+  .mpos-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    line-height: 1.6;
+  }
+
+  .mpos-sub-text {
+    color: var(--ant-color-text-secondary);
+  }
+
+  .mpos-action-links {
+    .mixin-flex-center();
+    gap: 10px;
+
+    a {
+      color: var(--pc-color-link);
+      white-space: nowrap;
+    }
+  }
+}
+
+body.theme-black-mode .mpos-page {
+  .content-card {
+    background: var(--pc-dark-bg-surface);
+    border-color: var(--pc-dark-border);
+  }
+
+  .mpos-sub-text {
+    color: var(--pc-dark-text-secondary);
+  }
+}

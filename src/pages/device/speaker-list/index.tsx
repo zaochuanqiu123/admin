@@ -13,6 +13,7 @@ import {
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ORG_LEVEL_CODE } from '@/api/org';
 import {
   broadcastSpeaker,
   getSpeakerPageQuery,
@@ -21,7 +22,7 @@ import {
 } from '@/api/speaker';
 import {
   ExpandableFilterCard,
-  OrganizationPickerInput,
+  OrgOptionsSelect,
   PageSectionSkeleton,
   PermissionButton,
   PermissionVisible,
@@ -458,15 +459,19 @@ const SpeakerListPage: React.FC = () => {
             ? [
                 {
                   key: 'agentOrgId',
-                  label: '代理组织ID',
+                  label: '代理组织',
                   content: (
-                    <OrganizationPickerInput
+                    <OrgOptionsSelect
+                      orgLevelCode={ORG_LEVEL_CODE.agent}
                       placeholder="请选择代理组织"
                       value={draftFilters.agentOrgId}
                       onChange={(value) => {
                         setDraftFilters((prev) => ({
                           ...prev,
                           agentOrgId: value,
+                          groupOrgId: '',
+                          merchantOrgId: '',
+                          storeOrgId: '',
                         }));
                       }}
                     />
@@ -478,37 +483,40 @@ const SpeakerListPage: React.FC = () => {
             ? [
                 {
                   key: 'groupOrgId',
-                  label: '集团组织ID',
+                  label: '集团组织',
                   content: (
-                    <Input
-                      allowClear
-                      placeholder="请输入集团组织ID"
+                    <OrgOptionsSelect
+                      orgLevelCode={ORG_LEVEL_CODE.group}
+                      parentOrgId={draftFilters.agentOrgId}
+                      placeholder="请选择集团组织"
                       value={draftFilters.groupOrgId}
-                      onChange={(event) => {
+                      onChange={(value) => {
                         setDraftFilters((prev) => ({
                           ...prev,
-                          groupOrgId: event.target.value,
+                          groupOrgId: value,
+                          merchantOrgId: '',
+                          storeOrgId: '',
                         }));
                       }}
-                      onPressEnter={handleSearch}
                     />
                   ),
                 },
                 {
                   key: 'merchantOrgId',
-                  label: '商户组织ID',
+                  label: '商户组织',
                   content: (
-                    <Input
-                      allowClear
-                      placeholder="请输入商户组织ID"
+                    <OrgOptionsSelect
+                      orgLevelCode={ORG_LEVEL_CODE.merchant}
+                      parentOrgId={draftFilters.groupOrgId}
+                      placeholder="请选择商户组织"
                       value={draftFilters.merchantOrgId}
-                      onChange={(event) => {
+                      onChange={(value) => {
                         setDraftFilters((prev) => ({
                           ...prev,
-                          merchantOrgId: event.target.value,
+                          merchantOrgId: value,
+                          storeOrgId: '',
                         }));
                       }}
-                      onPressEnter={handleSearch}
                     />
                   ),
                 },
@@ -518,19 +526,19 @@ const SpeakerListPage: React.FC = () => {
             ? [
                 {
                   key: 'storeOrgId',
-                  label: '门店组织ID',
+                  label: '门店组织',
                   content: (
-                    <Input
-                      allowClear
-                      placeholder="请输入门店组织ID"
+                    <OrgOptionsSelect
+                      orgLevelCode={ORG_LEVEL_CODE.store}
+                      parentOrgId={draftFilters.merchantOrgId}
+                      placeholder="请选择门店组织"
                       value={draftFilters.storeOrgId}
-                      onChange={(event) => {
+                      onChange={(value) => {
                         setDraftFilters((prev) => ({
                           ...prev,
-                          storeOrgId: event.target.value,
+                          storeOrgId: value,
                         }));
                       }}
-                      onPressEnter={handleSearch}
                     />
                   ),
                 },

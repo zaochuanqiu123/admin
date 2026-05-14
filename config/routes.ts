@@ -120,6 +120,19 @@ const routes = [
     component: './iframe-view',
   },
   {
+    name: '我的应用',
+    path: '/app/my-app',
+    component: './app/my-app',
+    backendPathUrls: ['/Retail/Application/index'],
+    hideInMenu: true,
+  },
+  {
+    name: '应用配置',
+    path: '/app/my-app/sub-app',
+    component: './app/my-app/sub-app',
+    hideInMenu: true,
+  },
+  {
     name: '设备',
     path: '/device',
     component: './iframe-view',
@@ -223,6 +236,13 @@ const routes = [
     hideInMenu: true,
   },
   {
+    name: '金融手持POS',
+    path: '/device/mpos',
+    component: './device/mpos/index',
+    backendPathUrls: ['/device/mpos'],
+    hideInMenu: true,
+  },
+  {
     name: '终端列表',
     path: '/device/terminal',
     component: './device/terminal/index',
@@ -268,6 +288,13 @@ const routes = [
     path: '/receipt/receipt-orders',
     component: './receipt/receipt-orders/index',
     backendPathUrls: ['/Retail/Orders/index'],
+    hideInMenu: true,
+  },
+  {
+    name: '退款订单',
+    path: '/receipt/refund-orders',
+    component: './receipt/refund-orders/index',
+    backendPathUrls: ['/Retail/RefundOrders/index'],
     hideInMenu: true,
   },
   {

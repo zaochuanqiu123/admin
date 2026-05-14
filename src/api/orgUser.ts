@@ -57,6 +57,19 @@ export type OrgUserDetailRecord = {
   [key: string]: any;
 };
 
+export type CashierOptionsParams = {
+  nickName?: string;
+  storeOrgId?: string;
+};
+
+export type CashierOptionRecord = {
+  cashierId?: string;
+  id?: string;
+  nickName?: string;
+  userId?: string;
+  [key: string]: any;
+};
+
 export type AddOrgUserParams = {
   phone: string;
   name?: string;
@@ -138,6 +151,20 @@ export async function updateOrgUserState(
     method: 'GET',
     ...(options || {}),
   });
+}
+
+export async function getCashierOptions(
+  data: CashierOptionsParams,
+  options?: { [key: string]: any },
+) {
+  return apiData<CashierOptionRecord[]>(
+    '/api/admin/org/v1/orgUser/getCashierOptions',
+    {
+      method: 'POST',
+      data,
+      ...(options || {}),
+    },
+  );
 }
 
 export async function getOrgUserFavoriteMenuList(options?: {

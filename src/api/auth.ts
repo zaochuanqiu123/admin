@@ -21,6 +21,24 @@ export function login(data: API.LoginParams, options?: AppRequestOptions) {
   });
 }
 
+export type CaptchaRequiredInfo = {
+  required?: boolean;
+  failedCount?: number;
+  threshold?: number;
+};
+
+export function checkCaptchaRequired(
+  username: string,
+  options?: AppRequestOptions,
+) {
+  return apiData<CaptchaRequiredInfo>('/api/admin/auth/v1/captcha/check', {
+    ...(options || {}),
+    method: 'GET',
+    params: { username },
+    skipErrorHandler: true,
+  });
+}
+
 /**
  * 退出登录接口
  * 后端路径: /auth/login/logout

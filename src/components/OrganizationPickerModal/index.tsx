@@ -18,12 +18,6 @@ type OrganizationPickerModalProps = {
 
 const DEFAULT_PAGE_SIZE = 10;
 
-function getOrgPhone(record?: AgentOrgRecord | null) {
-  return String(
-    record?.contactPhone || record?.mobile || record?.phone || '',
-  ).trim();
-}
-
 function buildOrgQueryParams(
   current: number,
   pageSize: number,
@@ -50,8 +44,8 @@ function buildOrgQueryParams(
 
 const columns: ColumnsType<AgentOrgRecord> = [
   {
-    title: 'ID',
-    dataIndex: 'id',
+    title: '机构编号',
+    dataIndex: 'orgCode',
     width: 100,
     render: (value: string) => String(value || '-'),
   },
@@ -60,12 +54,6 @@ const columns: ColumnsType<AgentOrgRecord> = [
     dataIndex: 'orgName',
     width: 240,
     render: (value: string) => String(value || '-'),
-  },
-  {
-    title: '联系电话',
-    dataIndex: 'contactPhone',
-    width: 180,
-    render: (_, record) => getOrgPhone(record) || '-',
   },
 ];
 

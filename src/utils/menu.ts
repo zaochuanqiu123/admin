@@ -165,10 +165,6 @@ function pickPath(
   sourceSystem: number | undefined,
   targetId: string | undefined,
 ): string | undefined {
-  if (sourceSystem === 1 && targetId) {
-    return '/app';
-  }
-
   const pathCandidates = collectPathCandidates(node, sourceSystem);
 
   // 优先通过 backendPathUrls 映射表查找
@@ -178,6 +174,10 @@ function pickPath(
     if (mappedLocalPath) {
       return mappedLocalPath;
     }
+  }
+
+  if (sourceSystem === 1 && targetId) {
+    return '/app';
   }
 
   // 然后在已知路由路径中精确匹配

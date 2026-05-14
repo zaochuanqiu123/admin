@@ -95,6 +95,8 @@ type CropDraft = {
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_CANVAS_WIDTH = 500;
 const MAX_CANVAS_HEIGHT = 600;
+const CROP_PREVIEW_WIDTH = 420;
+const CROP_PREVIEW_MAX_HEIGHT = 420;
 const QR_TEMPLATE_PREVIEW_VALUE =
   'https://demo.suifida.local/pay/template-preview';
 const QR_TEMPLATE_PREVIEW_SN = 'NO. 20260320';
@@ -120,6 +122,26 @@ const DEFAULT_EDITOR_STATE: EditorStateModel = {
 function clamp(value: number, min: number, max: number) {
   if (Number.isNaN(value)) return min;
   return Math.min(Math.max(value, min), max);
+}
+
+function getCropPreviewSize(draft: CropDraft | null, state: EditorStateModel) {
+  if (!draft || draft.naturalWidth <= 0 || draft.naturalHeight <= 0) {
+    return {
+      width: CROP_PREVIEW_WIDTH,
+      height: Math.round(
+        CROP_PREVIEW_WIDTH * (state.canvasHeight / state.canvasWidth),
+      ),
+    };
+  }
+
+  const previewScale = Math.min(
+    CROP_PREVIEW_WIDTH / draft.naturalWidth,
+    CROP_PREVIEW_MAX_HEIGHT / draft.naturalHeight,
+  );
+  return {
+    width: Math.round(draft.naturalWidth * previewScale),
+    height: Math.round(draft.naturalHeight * previewScale),
+  };
 }
 
 function clampCodeTextOffset(
@@ -156,6 +178,46 @@ function canvasToFile(canvas: HTMLCanvasElement, fileName: string) {
       resolve(new File([blob], fileName, { type: blob.type || 'image/png' }));
     }, 'image/png');
   });
+}
+
+async function createContainedBackgroundFile(
+  image: HTMLImageElement,
+  state: Pick<EditorStateModel, 'canvasWidth' | 'canvasHeight'>,
+  sourceRect?: { x: number; y: number; width: number; height: number },
+) {
+  const canvas = document.createElement('canvas');
+  canvas.width = state.canvasWidth;
+  canvas.height = state.canvasHeight;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('canvas context unavailable');
+
+  const source = sourceRect || {
+    x: 0,
+    y: 0,
+    width: image.naturalWidth,
+    height: image.naturalHeight,
+  };
+  const scale = Math.min(
+    state.canvasWidth / source.width,
+    state.canvasHeight / source.height,
+  );
+  const imageWidth = source.width * scale;
+  const imageHeight = source.height * scale;
+  const imageLeft = (state.canvasWidth - imageWidth) / 2;
+  const imageTop = (state.canvasHeight - imageHeight) / 2;
+
+  context.drawImage(
+    image,
+    source.x,
+    source.y,
+    source.width,
+    source.height,
+    imageLeft,
+    imageTop,
+    imageWidth,
+    imageHeight,
+  );
+  return canvasToFile(canvas, 'qr-template-bg.png');
 }
 
 function drawPreviewQrCode(
@@ -356,6 +418,8 @@ const QrTemplateListPage: React.FC = () => {
       backgroundImage: null,
     }));
     setCropDraft(null);
+    setCropModalOpen(false);
+    setCropDragState(null);
   }, [releaseBackgroundResources]);
 
   const resetEditorState = useCallback(() => {
@@ -464,12 +528,28 @@ const QrTemplateListPage: React.FC = () => {
     const handleMouseMove = (event: MouseEvent) => {
       setCropDraft((prev) => {
         if (!prev) return prev;
+        const { width: previewWidth, height: previewHeight } =
+          getCropPreviewSize(prev, editorState);
+        const baseScale = Math.min(
+          previewWidth / prev.naturalWidth,
+          previewHeight / prev.naturalHeight,
+        );
+        const imageDrawWidth = prev.naturalWidth * baseScale * prev.zoom;
+        const imageDrawHeight = prev.naturalHeight * baseScale * prev.zoom;
+        const maxOffsetX = Math.max(0, (imageDrawWidth - previewWidth) / 2);
+        const maxOffsetY = Math.max(0, (imageDrawHeight - previewHeight) / 2);
         return {
           ...prev,
-          offsetX:
+          offsetX: clamp(
             cropDragState.initialX + (event.clientX - cropDragState.startX),
-          offsetY:
+            -maxOffsetX,
+            maxOffsetX,
+          ),
+          offsetY: clamp(
             cropDragState.initialY + (event.clientY - cropDragState.startY),
+            -maxOffsetY,
+            maxOffsetY,
+          ),
         };
       });
     };
@@ -484,7 +564,7 @@ const QrTemplateListPage: React.FC = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [cropDragState]);
+  }, [cropDragState, editorState]);
 
   const loadTemplates = useCallback(async () => {
     setLoading(true);
@@ -735,7 +815,11 @@ const QrTemplateListPage: React.FC = () => {
 
   const handleCanvasWidthChange = (value: number | null) => {
     setEditorState((prev) => {
-      const canvasWidth = clamp(Number(value || 0), 120, MAX_CANVAS_WIDTH);
+      const canvasWidth = clamp(
+        Number(value || 0),
+        120,
+        Math.max(MAX_CANVAS_WIDTH, prev.canvasWidth),
+      );
       const nextSize = clamp(
         prev.qrcode.size,
         72,
@@ -757,7 +841,11 @@ const QrTemplateListPage: React.FC = () => {
 
   const handleCanvasHeightChange = (value: number | null) => {
     setEditorState((prev) => {
-      const canvasHeight = clamp(Number(value || 0), 120, MAX_CANVAS_HEIGHT);
+      const canvasHeight = clamp(
+        Number(value || 0),
+        120,
+        Math.max(MAX_CANVAS_HEIGHT, prev.canvasHeight),
+      );
       const nextSize = clamp(
         prev.qrcode.size,
         72,
@@ -849,6 +937,41 @@ const QrTemplateListPage: React.FC = () => {
 
       try {
         const image = await loadImage(sourceUrl);
+        const canvasWidth = image.naturalWidth;
+        const canvasHeight = image.naturalHeight;
+        const nextQrcodeSize = clamp(
+          editorState.qrcode.size,
+          72,
+          Math.min(canvasWidth, canvasHeight),
+        );
+        const nextQrcode = {
+          ...editorState.qrcode,
+          size: nextQrcodeSize,
+          x: clamp(
+            editorState.qrcode.x,
+            0,
+            Math.max(0, canvasWidth - nextQrcodeSize),
+          ),
+          y: clamp(
+            editorState.qrcode.y,
+            0,
+            Math.max(0, canvasHeight - nextQrcodeSize),
+          ),
+        };
+        setEditorState((prev) => ({
+          ...prev,
+          canvasWidth,
+          canvasHeight,
+          qrcode: nextQrcode,
+          codeText: {
+            ...prev.codeText,
+            offsetY: clampCodeTextOffset(prev.codeText.offsetY, {
+              canvasHeight,
+              qrcode: nextQrcode,
+              codeText: prev.codeText,
+            }),
+          },
+        }));
         setCropDraft({
           sourceUrl,
           naturalWidth: image.naturalWidth,
@@ -876,15 +999,9 @@ const QrTemplateListPage: React.FC = () => {
     setCropLoading(true);
     try {
       const image = await loadImage(cropDraft.sourceUrl);
-      const exportCanvas = document.createElement('canvas');
-      exportCanvas.width = editorState.canvasWidth;
-      exportCanvas.height = editorState.canvasHeight;
-      const context = exportCanvas.getContext('2d');
-      if (!context) throw new Error('canvas context unavailable');
-
-      const previewWidth = 420;
-      const previewHeight = Math.round(
-        previewWidth * (editorState.canvasHeight / editorState.canvasWidth),
+      const { width: previewWidth, height: previewHeight } = getCropPreviewSize(
+        cropDraft,
+        editorState,
       );
       const baseScale = Math.min(
         previewWidth / cropDraft.naturalWidth,
@@ -893,24 +1010,40 @@ const QrTemplateListPage: React.FC = () => {
       const totalScale = baseScale * cropDraft.zoom;
       const imageDrawWidth = cropDraft.naturalWidth * totalScale;
       const imageDrawHeight = cropDraft.naturalHeight * totalScale;
-      const previewLeft =
-        (previewWidth - imageDrawWidth) / 2 + cropDraft.offsetX;
-      const previewTop =
-        (previewHeight - imageDrawHeight) / 2 + cropDraft.offsetY;
-      const ratioX = editorState.canvasWidth / previewWidth;
-      const ratioY = editorState.canvasHeight / previewHeight;
-
-      context.drawImage(
-        image,
-        previewLeft * ratioX,
-        previewTop * ratioY,
-        imageDrawWidth * ratioX,
-        imageDrawHeight * ratioY,
+      const maxOffsetX = Math.max(0, (imageDrawWidth - previewWidth) / 2);
+      const maxOffsetY = Math.max(0, (imageDrawHeight - previewHeight) / 2);
+      const offsetX = clamp(cropDraft.offsetX, -maxOffsetX, maxOffsetX);
+      const offsetY = clamp(cropDraft.offsetY, -maxOffsetY, maxOffsetY);
+      const previewLeft = (previewWidth - imageDrawWidth) / 2 + offsetX;
+      const previewTop = (previewHeight - imageDrawHeight) / 2 + offsetY;
+      const sourceX = clamp(
+        -previewLeft / totalScale,
+        0,
+        cropDraft.naturalWidth,
+      );
+      const sourceY = clamp(
+        -previewTop / totalScale,
+        0,
+        cropDraft.naturalHeight,
+      );
+      const sourceWidth = Math.min(
+        cropDraft.naturalWidth - sourceX,
+        previewWidth / totalScale,
+      );
+      const sourceHeight = Math.min(
+        cropDraft.naturalHeight - sourceY,
+        previewHeight / totalScale,
       );
 
-      const backgroundFile = await canvasToFile(
-        exportCanvas,
-        'qr-template-bg.png',
+      const backgroundFile = await createContainedBackgroundFile(
+        image,
+        editorState,
+        {
+          x: sourceX,
+          y: sourceY,
+          width: sourceWidth,
+          height: sourceHeight,
+        },
       );
       const previewUrl = URL.createObjectURL(backgroundFile);
       const backgroundImageAttachment = await uploadImageAttachment(
@@ -924,11 +1057,22 @@ const QrTemplateListPage: React.FC = () => {
       if (!backgroundImageAttachmentId) {
         throw new Error('上传接口未返回背景图附件 ID');
       }
+
       revokeObjectUrl(backgroundObjectUrlRef.current);
+      revokeObjectUrl(backgroundSourceObjectUrlRef.current);
       backgroundObjectUrlRef.current = previewUrl;
+      backgroundSourceObjectUrlRef.current = null;
       backgroundFileRef.current = backgroundFile;
       backgroundUploadedAttachmentIdRef.current = backgroundImageAttachmentId;
       backgroundUploadedUrlRef.current = backgroundImageUrl;
+      setCropDraft({
+        sourceUrl: previewUrl,
+        naturalWidth: editorState.canvasWidth,
+        naturalHeight: editorState.canvasHeight,
+        zoom: 1,
+        offsetX: 0,
+        offsetY: 0,
+      });
       setEditorState((prev) => ({
         ...prev,
         backgroundImage: previewUrl,
@@ -938,7 +1082,7 @@ const QrTemplateListPage: React.FC = () => {
       message.success('背景图裁剪完成');
     } catch (error) {
       console.error('crop background image failed:', error);
-      message.error('背景图裁剪失败，请重试');
+      message.error(getErrorMessage(error, '背景图裁剪失败，请重试'));
     } finally {
       setCropLoading(false);
     }
@@ -1066,10 +1210,8 @@ const QrTemplateListPage: React.FC = () => {
     editorState.qrcode.y +
     editorState.qrcode.size +
     editorState.codeText.offsetY;
-  const cropPreviewWidth = 420;
-  const cropPreviewHeight = Math.round(
-    cropPreviewWidth * (editorState.canvasHeight / editorState.canvasWidth),
-  );
+  const { width: cropPreviewWidth, height: cropPreviewHeight } =
+    getCropPreviewSize(cropDraft, editorState);
   const cropBaseScale = cropDraft
     ? Math.min(
         cropPreviewWidth / cropDraft.naturalWidth,
@@ -1307,7 +1449,7 @@ const QrTemplateListPage: React.FC = () => {
                     <span className="qr-template-editor-label">画布宽度</span>
                     <InputNumber
                       min={120}
-                      max={MAX_CANVAS_WIDTH}
+                      max={Math.max(MAX_CANVAS_WIDTH, editorState.canvasWidth)}
                       addonAfter="px"
                       value={editorState.canvasWidth}
                       onChange={handleCanvasWidthChange}
@@ -1317,7 +1459,10 @@ const QrTemplateListPage: React.FC = () => {
                     <span className="qr-template-editor-label">画布高度</span>
                     <InputNumber
                       min={120}
-                      max={MAX_CANVAS_HEIGHT}
+                      max={Math.max(
+                        MAX_CANVAS_HEIGHT,
+                        editorState.canvasHeight,
+                      )}
                       addonAfter="px"
                       value={editorState.canvasHeight}
                       onChange={handleCanvasHeightChange}
@@ -1325,8 +1470,7 @@ const QrTemplateListPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="qr-template-editor-limit-note">
-                  当前先限制为宽 {MAX_CANVAS_WIDTH}px、高 {MAX_CANVAS_HEIGHT}
-                  px。
+                  上传背景图后，画布尺寸会同步为图片原始宽高。
                 </div>
                 <div className="qr-template-editor-actions">
                   <Upload {...backgroundUploadProps}>
@@ -1545,14 +1689,32 @@ const QrTemplateListPage: React.FC = () => {
               step={0.05}
               value={cropDraft?.zoom ?? 1}
               onChange={(value) => {
-                setCropDraft((prev) =>
-                  prev
-                    ? {
-                        ...prev,
-                        zoom: Number(value),
-                      }
-                    : prev,
-                );
+                setCropDraft((prev) => {
+                  if (!prev) return prev;
+                  const zoom = Number(value);
+                  const { width: previewWidth, height: previewHeight } =
+                    getCropPreviewSize(prev, editorState);
+                  const baseScale = Math.min(
+                    previewWidth / prev.naturalWidth,
+                    previewHeight / prev.naturalHeight,
+                  );
+                  const imageDrawWidth = prev.naturalWidth * baseScale * zoom;
+                  const imageDrawHeight = prev.naturalHeight * baseScale * zoom;
+                  const maxOffsetX = Math.max(
+                    0,
+                    (imageDrawWidth - previewWidth) / 2,
+                  );
+                  const maxOffsetY = Math.max(
+                    0,
+                    (imageDrawHeight - previewHeight) / 2,
+                  );
+                  return {
+                    ...prev,
+                    zoom,
+                    offsetX: clamp(prev.offsetX, -maxOffsetX, maxOffsetX),
+                    offsetY: clamp(prev.offsetY, -maxOffsetY, maxOffsetY),
+                  };
+                });
               }}
             />
             <span className="qr-template-crop-toolbar-value">
